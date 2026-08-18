@@ -1184,18 +1184,20 @@ export function Details({
                     </select>
                   </label>
                 )}
-                <button
-                  className="circle-button"
-                  onClick={() => {
-                    window.clearTimeout(autoPlayTimer.current);
-                    sourceAbort.current?.abort();
-                    sourceRequest.current += 1;
-                    setSourceOpen(false);
-                  }}
-                >
-                  <X />
-                </button>
               </div>
+              {/* Outside the tools group so a phone can wrap the pickers onto
+                  their own row and leave the way out at the top right. */}
+              <button
+                className="circle-button"
+                onClick={() => {
+                  window.clearTimeout(autoPlayTimer.current);
+                  sourceAbort.current?.abort();
+                  sourceRequest.current += 1;
+                  setSourceOpen(false);
+                }}
+              >
+                <X />
+              </button>
             </header>
             {sourceBusy ? (
               <div className="sheet-loading">Fetching addon sources…</div>

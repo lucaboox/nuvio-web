@@ -1149,12 +1149,19 @@ a {
   min-height: 0;
 }
 /* The panel used to be the scroller. Now the header is pinned inside this
-   column, so the list scrolls and the column stays put. */
+   column, so the list scrolls and the column stays put.
+
+   `align-content: start` and content-sized rows are what make it scroll at
+   all: a grid handed a definite height sizes its auto rows to fit it, so the
+   cards were squashed — long ones clipped mid-content — until the total came
+   out exactly the height of the box and there was never anything to scroll. */
 .source-column > .source-list {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
+  align-content: start;
+  grid-auto-rows: max-content;
 }
 .source-column > header,
 .source-column > .source-list,
@@ -1191,6 +1198,10 @@ a {
     max-height: 190px;
     object-fit: contain;
     object-position: left center;
+    /* .title-logo centres itself with `margin: 0 auto` for the hero. Here the
+       episode line under it is left-aligned, so a centred logo sits over on
+       its own with nothing beneath it. */
+    margin: 0;
   }
   .source-stage h2 {
     font-size: 40px;
@@ -1241,11 +1252,54 @@ a {
   padding: max(14px, env(safe-area-inset-top)) 0 12px;
   border-bottom: 1px solid var(--panel-border);
 }
-/* Both halves may shrink, and the title stays on one line rather than
-   wrapping into the height the pinned header keeps for the whole scroll. */
-.source-column > header > :first-child,
+/* Beside the artwork, an opaque header reads as a black bar laid across it.
+   It still has to hide the cards passing beneath, so it fades out rather than
+   ending on an edge, and the rule under it goes with the edge.
+
+   After the rule above, not with the rest of the desktop layout: both select
+   the same element, so the later one is the one that lands. */
+@media (min-width: 1000px) {
+  .source-column > header {
+    background: linear-gradient(
+      180deg,
+      var(--app-bg) 0%,
+      var(--app-bg) 68%,
+      transparent 100%
+    );
+    border-bottom: 0;
+    padding-bottom: 20px;
+  }
+}
+/* The title takes the slack so the pickers and the way out stay together on
+   the right, and both halves may shrink rather than wrapping into height the
+   pinned header would then keep for the whole scroll. */
+.source-column > header > :first-child {
+  flex: 1 1 auto;
+  min-width: 0;
+}
 .source-sheet-tools {
   min-width: 0;
+}
+/* Two pickers and a close button do not fit a phone on one line — they put
+   the X off the side of the screen, which is the only way out of here. The
+   title keeps the X beside it and the pickers take the row below. */
+@media (max-width: 999px) {
+  .source-column > header {
+    flex-wrap: wrap;
+    row-gap: 10px;
+  }
+  .source-sheet-tools {
+    order: 1;
+    flex: 1 0 100%;
+  }
+  .source-sheet-tools .source-player {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+  .source-sheet-tools select {
+    min-width: 0;
+    width: 100%;
+  }
 }
 .source-sheet h2 {
   margin: 5px 0;
@@ -1275,19 +1329,27 @@ a {
   background: transparent;
   color: white;
   display: grid;
-  grid-template-columns: 42px 1fr;
+  grid-template-columns: 1fr 42px;
   text-align: left;
   gap: 12px;
   padding: 16px;
   cursor: pointer;
 }
+/* The addon badge sits opposite the text, centred against however tall the
+   row runs. Placed rather than reordered so the name is still read first. */
 .source-main > span {
+  grid-area: 1 / 2;
+  align-self: center;
   width: 38px;
   height: 38px;
   border-radius: 10px;
   background: #262c32;
   display: grid;
   place-items: center;
+}
+.source-main > div {
+  grid-area: 1 / 1;
+  min-width: 0;
 }
 .source-main img {
   max-width: 28px;

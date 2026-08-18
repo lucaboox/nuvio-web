@@ -1148,6 +1148,14 @@ a {
   flex-direction: column;
   min-height: 0;
 }
+/* The panel used to be the scroller. Now the header is pinned inside this
+   column, so the list scrolls and the column stays put. */
+.source-column > .source-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
 .source-column > header,
 .source-column > .source-list,
 .source-column > .sheet-loading {
@@ -1215,7 +1223,7 @@ a {
     animation: none;
   }
 }
-.source-sheet > header,
+.source-column > header,
 .setting-card > header {
   display: flex;
   justify-content: space-between;
@@ -1224,7 +1232,7 @@ a {
 /* Which source you are choosing, which player it will open in, and the way
    out stay put: a long list otherwise scrolls all three away, and on a phone
    the way out is then several flicks back up. */
-.source-sheet > header {
+.source-column > header {
   position: sticky;
   top: 0;
   z-index: 2;
@@ -1235,7 +1243,7 @@ a {
 }
 /* Both halves may shrink, and the title stays on one line rather than
    wrapping into the height the pinned header keeps for the whole scroll. */
-.source-sheet > header > :first-child,
+.source-column > header > :first-child,
 .source-sheet-tools {
   min-width: 0;
 }

@@ -1138,7 +1138,7 @@ export function Details({
                 </p>
               )}
             </div>
-            <div className="source-main">
+            <div className="source-column">
             <header>
               <div>
                 {sourceResume ? (

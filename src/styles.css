@@ -1141,14 +1141,16 @@ a {
 .source-stage {
   display: none;
 }
-.source-main {
+/* Named apart from .source-main, which is the button inside each source row —
+   sharing the name gave this wrapper that button's 42px grid. */
+.source-column {
   display: flex;
   flex-direction: column;
   min-height: 0;
 }
-.source-main > header,
-.source-main > .source-list,
-.source-main > .sheet-loading {
+.source-column > header,
+.source-column > .source-list,
+.source-column > .sheet-loading {
   width: min(980px, 100%);
   margin-inline: auto;
 }
@@ -1190,13 +1192,13 @@ a {
     color: #c3cad2;
     font-size: 15px;
   }
-  .source-main {
+  .source-column {
     padding-right: 26px;
     overflow: hidden;
   }
-  .source-main > header,
-  .source-main > .source-list,
-  .source-main > .sheet-loading {
+  .source-column > header,
+  .source-column > .source-list,
+  .source-column > .sheet-loading {
     width: 100%;
   }
 }

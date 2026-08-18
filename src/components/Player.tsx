@@ -41,7 +41,12 @@ import {
   resolveNextEpisode,
   shouldShowNextEpisode,
 } from "../lib/nextEpisode";
-import { episodePercent, watchKey, type WatchIndex } from "../lib/progress";
+import {
+  episodePercent,
+  remainingShort,
+  watchKey,
+  type WatchIndex,
+} from "../lib/progress";
 import { EpisodeRow } from "./Details";
 import {
   activeSkipSegment,
@@ -175,6 +180,28 @@ export function Player({
   const [skipSegments, setSkipSegments] = useState<SkipSegment[]>([]);
   /** True from choosing an episode until its stream arrives. */
   const [switching, setSwitching] = useState(false);
+  /**
+   * Ticks so the finish time keeps up while paused.
+   *
+   * Playing, `currentTime` moves and this recomputes with it. Paused, what is
+   * left stops changing but the clock does not, so the finish time has to walk
+   * forward on its own — otherwise it silently claims you will finish at a
+   * time that passed twenty minutes ago.
+   */
+  const [clockTick, setClockTick] = useState(0);
+  useEffect(() => {
+    const timer = window.setInterval(() => setClockTick((n) => n + 1), 10_000);
+    return () => window.clearInterval(timer);
+  }, []);
+  const endsAt = useMemo(() => {
+    const left = duration - currentTime;
+    if (!Number.isFinite(left) || left <= 0 || duration <= 0) return "";
+    void clockTick;
+    return new Date(Date.now() + left * 1000).toLocaleTimeString(undefined, {
+      hour: "numeric",
+      minute: "2-digit",
+    });
+  }, [duration, currentTime, clockTick]);
   const seasons = useMemo(
     () =>
       [...new Set((episodes ?? []).map((item) => item.season ?? 0))].sort(
@@ -892,6 +919,11 @@ export function Player({
           </small>
           <strong>{video?.title || meta.name}</strong>
         </div>
+        {endsAt && (
+          <span className="player-ends-at" title="Estimated finish time">
+            Ends at {endsAt}
+          </span>
+        )}
       </div>
       {!error && waiting && settings.showLoadingOverlay && (
         <div className="player-center player-center-busy" aria-label="Loading">
@@ -1190,6 +1222,7 @@ export function Player({
                     rating={item.imdbRating ? Number(item.imdbRating) : undefined}
                     watched={watchIndex?.watched.has(key) ?? false}
                     percent={watchIndex ? episodePercent(watchIndex, key) : 0}
+                    remaining={watchIndex ? remainingShort(watchIndex, key) : ""}
                     blurred={false}
                     onPlay={() => {
                       if (item.id === video?.id || switching) return;

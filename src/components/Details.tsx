@@ -20,7 +20,12 @@ import {
   type MetadataEnrichmentConfig,
 } from "../lib/metadataEnrichment";
 import { externalPlayerOptions } from "../lib/externalPlayer";
-import { episodePercent, watchKey, type WatchIndex } from "../lib/progress";
+import {
+  episodePercent,
+  remainingShort,
+  watchKey,
+  type WatchIndex,
+} from "../lib/progress";
 import { seriesPlaybackTarget } from "../lib/seriesPlayback";
 import type {
   MetaScreenSectionKey,
@@ -929,6 +934,10 @@ export function Details({
                     watchIndex,
                     watchKey(meta.id, video.season, video.episode),
                   )}
+                  remaining={remainingShort(
+                    watchIndex,
+                    watchKey(meta.id, video.season, video.episode),
+                  )}
                   blurred={
                     metaScreenSettings.blurUnwatchedEpisodes &&
                     !watchIndex.watched.has(
@@ -1218,6 +1227,7 @@ export function EpisodeRow({
   rating,
   watched,
   percent,
+  remaining,
   blurred,
   onPlay,
   onMenu,
@@ -1227,6 +1237,8 @@ export function EpisodeRow({
   rating?: number;
   watched: boolean;
   percent: number;
+  /** How much is left, for a part-watched episode. */
+  remaining?: string;
   blurred: boolean;
   onPlay(): void;
   onMenu(x: number, y: number): void;
@@ -1255,10 +1267,14 @@ export function EpisodeRow({
         <i className="episode-code">
           S{video.season}E{video.episode}
         </i>
-        {watched && (
+        {/* The corner the watched mark uses, since an episode is either
+            finished or part-way through, never both. */}
+        {watched ? (
           <i className="episode-watched" aria-label="Watched">
             <Eye size={13} strokeWidth={2.6} />
           </i>
+        ) : (
+          remaining && <i className="episode-remaining">{remaining} left</i>
         )}
         {percent > 0 && percent < 90 && (
           <i className="episode-progress" style={{ width: `${percent}%` }} />

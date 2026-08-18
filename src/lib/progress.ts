@@ -237,6 +237,23 @@ export function episodePercent(index: WatchIndex, key: string): number {
 
 export const progressPercent = (card: ContinueCard) =>
   card.progress ? percent(card.progress) : 0;
+/**
+ * How much of an episode is left, short enough to sit on a thumbnail.
+ *
+ * Empty where nothing has been watched or it is effectively finished: a badge
+ * reading "0m left" on an episode you have not started is noise.
+ */
+export function remainingShort(index: WatchIndex, key: string): string {
+  const row = index.progress.get(key);
+  if (!row?.durationMs || row.positionMs <= 0) return "";
+  const left = row.durationMs - row.positionMs;
+  if (left <= 30_000) return "";
+  const minutes = Math.max(1, Math.round(left / 60_000));
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  return hours ? `${hours}h${rest ? ` ${rest}m` : ""}` : `${minutes}m`;
+}
+
 export function remainingLabel(entry?: ProgressRow) {
   if (!entry?.durationMs) return "Continue";
   const minutes = Math.max(

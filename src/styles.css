@@ -1279,6 +1279,23 @@ a {
   background: linear-gradient(#000d, transparent);
   pointer-events: none;
 }
+/* Pushed to the far end of the bar, clear of the title beside it. */
+.player-ends-at {
+  margin-left: auto;
+  padding: 6px 12px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: #d9dde1;
+  background: #0b0e1199;
+  white-space: nowrap;
+}
+@media (max-width: 760px) {
+  .player-ends-at {
+    font-size: 11px;
+    padding: 5px 9px;
+  }
+}
 .player-top button {
   pointer-events: auto;
 }
@@ -3094,6 +3111,24 @@ body,
   border-radius: 50%;
   color: #06210f;
   background: #59d98b;
+  box-shadow: 0 2px 8px #0009;
+}
+/* The corner the watched mark uses, in the same shape — the two never appear
+   together, so they can share the spot without crowding it. */
+.episode-remaining {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  padding: 0 7px;
+  height: 21px;
+  display: grid;
+  place-items: center;
+  border-radius: 11px;
+  font-size: 11px;
+  font-weight: 600;
+  font-style: normal;
+  color: #e9eef2;
+  background: #0b0e11d9;
   box-shadow: 0 2px 8px #0009;
 }
 .episode-progress {
@@ -5045,7 +5080,25 @@ body.is-locked {
     color: white;
     background: var(--accent);
   }
-  .episode-progress {
+  /* The corner the watched mark uses, in the same shape — the two never appear
+   together, so they can share the spot without crowding it. */
+.episode-remaining {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  padding: 0 7px;
+  height: 21px;
+  display: grid;
+  place-items: center;
+  border-radius: 11px;
+  font-size: 11px;
+  font-weight: 600;
+  font-style: normal;
+  color: #e9eef2;
+  background: #0b0e11d9;
+  box-shadow: 0 2px 8px #0009;
+}
+.episode-progress {
     right: 4px;
     bottom: 8px;
     left: 4px;

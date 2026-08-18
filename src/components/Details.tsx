@@ -444,6 +444,35 @@ export function Details({
   const [streams, setStreams] = useState<Stream[]>([]);
   const [sourceBusy, setSourceBusy] = useState(false);
   const [sourceVideo, setSourceVideo] = useState<Video | undefined>();
+  /** "" is every addon. Reset whenever the panel opens on something new. */
+  const [sourceAddon, setSourceAddon] = useState("");
+  const sourceAddons = useMemo(
+    () => [...new Set(streams.map((item) => item.addonName).filter(Boolean))],
+    [streams],
+  );
+  const visibleStreams = useMemo(
+    () =>
+      sourceAddon
+        ? streams.filter((item) => item.addonName === sourceAddon)
+        : streams,
+    [streams, sourceAddon],
+  );
+  /** Where this would resume from, which is the useful thing to say up here. */
+  const sourceResume = useMemo(() => {
+    const row = watchIndex.progress.get(
+      watchKey(meta.id, sourceVideo?.season, sourceVideo?.episode),
+    );
+    if (!row?.positionMs || row.positionMs < 15_000) return "";
+    if (row.durationMs && row.positionMs / row.durationMs > 0.95) return "";
+    const total = Math.floor(row.positionMs / 1000);
+    const hours = Math.floor(total / 3600);
+    const minutes = Math.floor((total % 3600) / 60);
+    const seconds = total % 60;
+    const pad = (value: number) => String(value).padStart(2, "0");
+    return hours
+      ? `${hours}:${pad(minutes)}:${pad(seconds)}`
+      : `${minutes}:${pad(seconds)}`;
+  }, [watchIndex, meta.id, sourceVideo]);
   /**
    * The player everything opens in, changed from here as readily as from
    * Settings. It was reset each time the panel opened, on the reasoning that
@@ -1083,11 +1112,40 @@ export function Details({
           <section
             className="source-sheet"
             onClick={(event) => event.stopPropagation()}
+            style={
+              meta.background
+                ? ({
+                    "--source-art": `url("${meta.background.replace(/"/g, "%22")}")`,
+                  } as CSSProperties)
+                : undefined
+            }
           >
+            {/* What you are choosing a source for. Desktop only: on a phone the
+                list needs the whole screen, and the title bar above already
+                says which episode this is. */}
+            <div className="source-stage" aria-hidden="true">
+              {meta.logo ? (
+                <img src={meta.logo} className="title-logo" alt="" />
+              ) : (
+                <h2>{meta.name}</h2>
+              )}
+              {sourceVideo && (
+                <p>
+                  {sourceVideo.season != null && sourceVideo.episode != null
+                    ? `S${sourceVideo.season}E${sourceVideo.episode}`
+                    : ""}
+                  {sourceVideo.title ? ` - ${sourceVideo.title}` : ""}
+                </p>
+              )}
+            </div>
+            <div className="source-main">
             <header>
               <div>
-                <span className="eyebrow">PLAYBACK</span>
-                <h2>Choose a source</h2>
+                {sourceResume ? (
+                  <h2>Resume from {sourceResume}</h2>
+                ) : (
+                  <h2>{sourceVideo ? sourceVideo.title || meta.name : meta.name}</h2>
+                )}
               </div>
               <div className="source-sheet-tools">
                 {/* Picking the player here rather than in Settings: which one
@@ -1110,6 +1168,22 @@ export function Details({
                     ))}
                   </select>
                 </label>
+                {sourceAddons.length > 1 && (
+                  <label className="source-player">
+                    <span>Addon</span>
+                    <select
+                      value={sourceAddon}
+                      onChange={(event) => setSourceAddon(event.target.value)}
+                    >
+                      <option value="">All addons</option>
+                      {sourceAddons.map((name) => (
+                        <option key={name} value={name}>
+                          {name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                )}
                 <button
                   className="circle-button"
                   onClick={() => {
@@ -1125,9 +1199,9 @@ export function Details({
             </header>
             {sourceBusy ? (
               <div className="sheet-loading">Fetching addon sources…</div>
-            ) : streams.length ? (
+            ) : visibleStreams.length ? (
               <div className="source-list">
-                {streams.map((stream, index) => (
+                {visibleStreams.map((stream, index) => (
                   <article key={`${stream.addonName}:${index}`}>
                     <button
                       className="source-main"
@@ -1195,11 +1269,6 @@ export function Details({
                         >
                           <Copy size={16} /> Copy
                         </button>
-                        {safeHttpUrl(stream.url) && (
-                          <a href={safeHttpUrl(stream.url)!} target="_blank" rel="noopener noreferrer">
-                            <ExternalLink size={16} /> Open
-                          </a>
-                        )}
                       </div>
                     )}
                   </article>
@@ -1210,6 +1279,7 @@ export function Details({
                 No sources were returned by the installed addons.
               </div>
             )}
+            </div>
           </section>
         </div>
       )}

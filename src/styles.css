@@ -1127,6 +1127,7 @@ a {
      detail page behind it. */
   overscroll-behavior: contain;
   background: var(--app-bg);
+  background-color: var(--app-bg);
   border: 0;
   border-radius: 0;
   /* No top padding of its own: that belongs to the sticky header below, which
@@ -1134,13 +1135,70 @@ a {
   padding: 0 26px max(28px, env(safe-area-inset-bottom));
   animation: source-sheet-in 0.16s ease-out;
 }
-/* The content stays a readable column on a wide screen even though the
-   surface behind it now runs edge to edge. */
-.source-sheet > header,
-.source-sheet > .source-list,
-.source-sheet > .sheet-loading {
+/* One column on a phone, two on a desktop: the artwork it belongs to on the
+   left, the list on the right. The backdrop sits behind both, dimmed hard
+   under the list so filenames stay readable over it. */
+.source-stage {
+  display: none;
+}
+.source-main {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.source-main > header,
+.source-main > .source-list,
+.source-main > .sheet-loading {
   width: min(980px, 100%);
   margin-inline: auto;
+}
+@media (min-width: 1000px) {
+  /* The artwork only where there is room for it beside the list. On a phone
+     the list uses the full width, and the lightest part of the gradient would
+     fall straight under the filenames. */
+  .source-sheet {
+    background-image:
+      linear-gradient(90deg, #05070ce6 0%, #05070cb8 42%, #05070cf5 62%),
+      linear-gradient(0deg, #05070c 0%, transparent 60%),
+      var(--source-art, none);
+    background-size: cover;
+    background-position: center;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(560px, 46%);
+    gap: 30px;
+    padding-inline: 0;
+  }
+  .source-stage {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 14px;
+    padding: 0 12px 0 58px;
+    min-width: 0;
+  }
+  .source-stage .title-logo {
+    max-width: min(440px, 100%);
+    max-height: 190px;
+    object-fit: contain;
+    object-position: left center;
+  }
+  .source-stage h2 {
+    font-size: 40px;
+    line-height: 1.1;
+  }
+  .source-stage p {
+    color: #c3cad2;
+    font-size: 15px;
+  }
+  .source-main {
+    padding-right: 26px;
+    overflow: hidden;
+  }
+  .source-main > header,
+  .source-main > .source-list,
+  .source-main > .sheet-loading {
+    width: 100%;
+  }
 }
 @keyframes source-sheet-in {
   from {

@@ -42,3 +42,27 @@ test("a corrupt store reads as empty rather than throwing", () => {
   rememberBingeGroup("tt1", "g1");
   assert.equal(bingeGroupFor("tt1"), "g1");
 });
+
+test("a burst of writes evicts the oldest, not the newest", () => {
+  // Every one of these lands in the same millisecond, so the timestamps are
+  // identical and only the counter separates them. Ordering by time alone got
+  // this backwards — and only sometimes, which is worse than always.
+  store.clear();
+  for (let i = 0; i < 70; i += 1) rememberBingeGroup(`s${i}`, `g${i}`);
+  assert.equal(bingeGroupFor("s69"), "g69", "the newest must survive");
+  assert.equal(bingeGroupFor("s9"), undefined, "the oldest must be dropped");
+  assert.equal(
+    Object.keys(JSON.parse(store.get("nuvio-web-binge-groups"))).length,
+    60,
+  );
+});
+
+test("pruning twice does not reverse the order it keeps", () => {
+  // The stored order changes once a prune has rewritten it, which is what
+  // made this intermittent rather than plainly wrong.
+  store.clear();
+  for (let i = 0; i < 65; i += 1) rememberBingeGroup(`a${i}`, `v${i}`);
+  for (let i = 0; i < 65; i += 1) rememberBingeGroup(`b${i}`, `w${i}`);
+  assert.equal(bingeGroupFor("b64"), "w64");
+  assert.equal(bingeGroupFor("a0"), undefined);
+});

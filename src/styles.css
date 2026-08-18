@@ -6491,3 +6491,34 @@ body.is-locked {
     font-size: 13px;
   }
 }
+
+/* The way out of a stream this browser cannot decode. */
+.player-error-players {
+  display: grid;
+  gap: 7px;
+  margin: 4px 0 2px;
+}
+.player-error-players > small {
+  color: #8d97a2;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.player-error-players > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+.player-error-players button {
+  height: 34px;
+  padding: 0 13px;
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+  background: var(--panel-soft);
+  color: inherit;
+  cursor: pointer;
+  font-size: 13px;
+}
+.player-error-players button:hover {
+  border-color: #46505b;
+}

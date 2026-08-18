@@ -59,25 +59,17 @@ export function ExternalWatchPrompt({
   onFinished,
   onStopped,
   onDismiss,
-  onPasted,
 }: {
   meta: Meta;
   video?: Video;
   onFinished(): void;
   onStopped(positionMs: number, durationMs: number): void;
   onDismiss(): void;
-  /**
-   * Hands over whatever the clipboard holds, for the one route where a player
-   * can say where it stopped but cannot deliver it. Returns null when it was
-   * used, or why it could not be. Absent where the route is not in use.
-   */
-  onPasted?(text: string): string | null;
 }) {
   const known = runtimeMinutes(meta, video);
   const [partial, setPartial] = useState(false);
   const [stoppedAt, setStoppedAt] = useState("");
   const [total, setTotal] = useState("");
-  const [pasteError, setPasteError] = useState("");
 
   // The runtime the addon reported, when it reported one — shown rather than
   // asked for, so there is nothing to mistype.
@@ -109,36 +101,6 @@ export function ExternalWatchPrompt({
           Nothing reports back from an external player, so tell Nuvio what
           happened and it will sync like any other playback.
         </p>
-        {/* The Shortcut route: the player does say where it stopped, and the
-            Shortcut copies it, but iOS opens an installed web app at its own
-            start address and drops everything else — so the clipboard is the
-            only thing that crosses. Reading it needs a tap of its own, which
-            is what this is. */}
-        {onPasted && !partial && (
-          <>
-            <button
-              type="button"
-              className="secondary"
-              onClick={async () => {
-                setPasteError("");
-                try {
-                  const text = await navigator.clipboard.readText();
-                  // A reason, or nothing at all — the one outcome to avoid is
-                  // a tap that appears to do nothing, which is what happens
-                  // when a report is read but has no position in it.
-                  setPasteError(onPasted(text) ?? "");
-                } catch {
-                  setPasteError("iOS did not allow the clipboard to be read.");
-                }
-              }}
-            >
-              Read the position from the Shortcut
-            </button>
-            {pasteError && (
-              <p className="watch-prompt-hint is-error">{pasteError}</p>
-            )}
-          </>
-        )}
         {partial ? (
           <>
             <div className="watch-prompt-fields">

@@ -124,7 +124,6 @@ import {
 } from "./lib/returnRelay";
 import {
   clearExternalHandoff,
-  parseExternalReport,
   readExternalHandoff,
   rememberExternalHandoff,
   takeExternalReport,
@@ -374,13 +373,6 @@ export function App() {
     ) as ExternalPlayerMode | null;
     return stored && isExternalPlayerAvailable(stored) ? stored : "internal";
   });
-  /**
-   * Off until the Shortcut it depends on is installed. Nothing about the
-   * device says whether it is, so this is the answer to being asked.
-   */
-  const [shortcutReturn, setShortcutReturn] = useState(
-    () => localStorage.getItem("nuvio-web-shortcut-return") === "1",
-  );
   const [active, setActive] = useState<NavKey>("home");
   // The nav highlight follows `active` immediately; the page body renders from
   // the deferred copy, so a tap paints the new tab first and the heavy list
@@ -1943,11 +1935,6 @@ export function App() {
             credentialsReady={credentialsReady}
             onProviderCredential={saveProviderCredential}
             externalPlayer={externalPlayer}
-            shortcutReturn={shortcutReturn}
-            onShortcutReturn={(value) => {
-              localStorage.setItem("nuvio-web-shortcut-return", value ? "1" : "0");
-              setShortcutReturn(value);
-            }}
             onExternalPlayer={(mode) => {
               setExternalPlayer(mode);
               localStorage.setItem("nuvio-web-external-player", mode);
@@ -1993,22 +1980,6 @@ export function App() {
         <ExternalWatchPrompt
           meta={externalWatch.meta}
           video={externalWatch.video}
-          onPasted={
-            shortcutReturn && !canReturnToApp()
-              ? (text) => {
-                  const report = parseExternalReport(text);
-                  if (!report)
-                    return "The clipboard does not hold anything from the Shortcut.";
-                  // The address arrived but the player's own numbers were
-                  // never in it. Saying so beats a tap that looks like it did
-                  // nothing, which is exactly what this used to be.
-                  if (report.outcome === "stopped" && report.positionMs <= 0)
-                    return "The Shortcut copied the address, but the player did not put a position in it.";
-                  applyExternalReport(report);
-                  return null;
-                }
-              : undefined
-          }
           /* Answered here, so there is nothing left to resume on a later open. */
           onDismiss={() => {
             clearExternalHandoff();
@@ -2167,6 +2138,10 @@ export function App() {
           }}
           onLibrary={toggleLibrary}
           defaultPlayer={externalPlayer}
+          onDefaultPlayer={(mode) => {
+            localStorage.setItem("nuvio-web-external-player", mode);
+            setExternalPlayer(mode);
+          }}
           onPlay={(stream, meta, video, player) => {
             // The picker in the sources panel wins for this launch only.
             const chosen = player ?? externalPlayer;
@@ -3064,8 +3039,6 @@ function SettingsPage({
   onProviderCredential,
   externalPlayer,
   onExternalPlayer,
-  shortcutReturn,
-  onShortcutReturn,
   onSignOut,
 }: {
   addons: InstalledAddon[];
@@ -3103,9 +3076,6 @@ function SettingsPage({
   ): Promise<void>;
   externalPlayer: ExternalPlayerMode;
   onExternalPlayer(mode: ExternalPlayerMode): void;
-  /** Whether the Shortcut that reopens this installed web app is set up. */
-  shortcutReturn: boolean;
-  onShortcutReturn(value: boolean): void;
   onSignOut(): void;
 }) {
   const [category, setCategory] = useState<SettingsCategory>("appearance");
@@ -3829,19 +3799,6 @@ function SettingsPage({
               </span>
               <Download />
             </a>
-            <label className="setting-select-row">
-              <span>
-                <strong>Return through the Shortcut</strong>
-              </span>
-              <span className="switch">
-                <input
-                  type="checkbox"
-                  checked={shortcutReturn}
-                  onChange={(event) => onShortcutReturn(event.target.checked)}
-                />
-                <i />
-              </span>
-            </label>
           </>
         )}
         <p>

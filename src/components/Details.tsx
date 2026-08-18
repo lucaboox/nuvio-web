@@ -341,6 +341,7 @@ export function Details({
   initialVideoId,
   openSourcesOnLoad = false,
   defaultPlayer,
+  onDefaultPlayer,
 }: {
   seed: Meta;
   addons: InstalledAddon[];
@@ -365,8 +366,9 @@ export function Details({
   onSetWatched(meta: Meta, video: Video | undefined, watched: boolean): void;
   initialVideoId?: string;
   openSourcesOnLoad?: boolean;
-  /** The player chosen in Settings, which the picker starts on. */
+  /** The player chosen in Settings, which this picker also sets. */
   defaultPlayer: ExternalPlayerMode;
+  onDefaultPlayer(mode: ExternalPlayerMode): void;
 }) {
   const [menu, setMenu] = useState<{ x: number; y: number; video: Video } | null>(
     null,
@@ -438,13 +440,12 @@ export function Details({
   const [sourceBusy, setSourceBusy] = useState(false);
   const [sourceVideo, setSourceVideo] = useState<Video | undefined>();
   /**
-   * Starts on the Settings default and lasts as long as the panel is open, so
-   * reaching for a different player once does not silently become the choice
-   * for everything after it.
+   * The player everything opens in, changed from here as readily as from
+   * Settings. It was reset each time the panel opened, on the reasoning that
+   * one awkward source should not redecide everything — but choosing a player
+   * and finding it forgotten by the next episode is the worse surprise.
    */
-  const [sheetPlayer, setSheetPlayer] =
-    useState<ExternalPlayerMode>(defaultPlayer);
-  useEffect(() => setSheetPlayer(defaultPlayer), [defaultPlayer, sourceOpen]);
+  const sheetPlayer = defaultPlayer;
   const autoPlayTimer = useRef<number | undefined>(undefined);
   const sourceRequest = useRef(0);
   const sourceAbort = useRef<AbortController | null>(null);
@@ -1088,7 +1089,7 @@ export function Details({
                   <select
                     value={sheetPlayer}
                     onChange={(event) =>
-                      setSheetPlayer(event.target.value as ExternalPlayerMode)
+                      onDefaultPlayer(event.target.value as ExternalPlayerMode)
                     }
                   >
                     <option value="internal">Nuvio web player</option>

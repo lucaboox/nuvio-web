@@ -1242,6 +1242,24 @@ export function Player({
           <small className="player-error-hint">
             {errorCopied ? "Copied" : "Tap the message to copy it"}
           </small>
+          {/* What can play it, offered where it failed. Being told the
+              browser cannot decode something is only half an answer; the other
+              half is the list of things that can. */}
+          {externalUrl && !!externalPlayerOptions("player").length && (
+            <div className="player-error-players">
+              <small>Play it in</small>
+              <div>
+                {externalPlayerOptions("player").map((option) => (
+                  <button
+                    key={option.mode}
+                    onClick={() => openExternalPlayer(option.mode)}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
           <div>
             {externalUrl && (
               <>

@@ -15,7 +15,16 @@ const KEY = "nuvio-web-binge-groups";
 /** Enough for any plausible number of series on the go, and bounded. */
 const LIMIT = 60;
 
-type Entry = { group: string; at: number };
+/**
+ * `seq` orders these, not `at`.
+ *
+ * Several series can be written within one millisecond, which leaves their
+ * timestamps equal and the order down to whatever the object happens to
+ * iterate in — and that flips once the list has been pruned and rewritten. A
+ * counter that only ever climbs says which is newer without needing a clock
+ * fine enough or an iteration order that holds still.
+ */
+type Entry = { group: string; at: number; seq?: number };
 
 function read(): Record<string, Entry> {
   try {
@@ -33,10 +42,12 @@ export function rememberBingeGroup(metaId: string, group?: string) {
   if (!metaId || !group) return;
   try {
     const all = read();
-    all[metaId] = { group, at: Date.now() };
-    // Oldest first out, so a long history cannot grow without bound.
+    const next =
+      Math.max(0, ...Object.values(all).map((entry) => entry?.seq ?? 0)) + 1;
+    all[metaId] = { group, at: Date.now(), seq: next };
+    // Oldest out first, so a long history cannot grow without bound.
     const entries = Object.entries(all).sort(
-      (left, right) => (right[1]?.at ?? 0) - (left[1]?.at ?? 0),
+      (left, right) => (right[1]?.seq ?? 0) - (left[1]?.seq ?? 0),
     );
     localStorage.setItem(
       KEY,

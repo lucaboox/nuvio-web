@@ -1073,6 +1073,8 @@ export function Details({
                       {
                         label: "Reset progress",
                         icon: <RotateCcw size={16} />,
+                        // It throws away where you were, and there is no undo.
+                        danger: true,
                         onSelect: () => onResetProgress(meta, menu.video),
                       },
                     ]

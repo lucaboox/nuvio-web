@@ -739,12 +739,20 @@ a {
 .mobile-detail-header {
   display: none;
 }
+/* Built like .episode-remaining in the opposite corner — same height, same
+   radius, centred the same way. Padding plus `line-height: 1` sized this one
+   two pixels shorter and sat the glyphs high in it. */
 .episode-code {
   position: absolute;
   z-index: 1;
-  top: 7px;
-  left: 7px;
-  padding: 4px 7px;
+  /* 6px like the two marks in the opposite corner, so all three sit on one
+     line across the top of the thumbnail. */
+  top: 6px;
+  left: 6px;
+  display: grid;
+  place-items: center;
+  height: 21px;
+  padding: 0 7px;
   border-radius: 7px;
   color: #f6f7f8;
   background: #090b0edb;
@@ -752,7 +760,6 @@ a {
   font-size: 11px;
   font-style: normal;
   font-weight: 800;
-  line-height: 1;
 }
 .detail-hero {
   min-height: 680px;
@@ -3250,7 +3257,7 @@ body,
   height: 21px;
   display: grid;
   place-items: center;
-  border-radius: 11px;
+  border-radius: 7px;
   font-size: 11px;
   font-weight: 600;
   font-style: normal;
@@ -3258,12 +3265,15 @@ body,
   background: #0b0e11d9;
   box-shadow: 0 2px 8px #0009;
 }
+/* Held off the edges. Flush, the thumbnail's own rounding ate both ends of
+   the bar and it read as though it started somewhere past the corner. */
 .episode-progress {
   position: absolute;
-  right: 0;
-  bottom: 0;
-  left: 0;
+  right: 6px;
+  bottom: 6px;
+  left: 6px;
   height: 3px;
+  border-radius: 99px;
   background: var(--accent);
 }
 .episode-row.is-watched .episode-thumb img {
@@ -5182,30 +5192,11 @@ body.is-locked {
     width: 28px;
     height: 28px;
   }
-  /* The corner the watched mark uses, in the same shape — the two never appear
-   together, so they can share the spot without crowding it. */
-.episode-remaining {
-  position: absolute;
-  top: 6px;
-  right: 6px;
-  padding: 0 7px;
-  height: 21px;
-  display: grid;
-  place-items: center;
-  border-radius: 11px;
-  font-size: 11px;
-  font-weight: 600;
-  font-style: normal;
-  color: #e9eef2;
-  background: #0b0e11d9;
-  box-shadow: 0 2px 8px #0009;
-}
-.episode-progress {
+  .episode-progress {
     right: 4px;
     bottom: 8px;
     left: 4px;
     height: 4px;
-    border-radius: 99px;
   }
 
   /* Theme-aware floating navigation capsule. */

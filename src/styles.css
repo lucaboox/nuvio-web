@@ -1189,18 +1189,18 @@ a {
     display: flex;
     flex-direction: column;
     justify-content: center;
+    align-items: center;
+    text-align: center;
     gap: 14px;
-    padding: 0 12px 0 58px;
+    padding: 0 46px;
     min-width: 0;
   }
   .source-stage .title-logo {
     max-width: min(440px, 100%);
     max-height: 190px;
     object-fit: contain;
-    object-position: left center;
-    /* .title-logo centres itself with `margin: 0 auto` for the hero. Here the
-       episode line under it is left-aligned, so a centred logo sits over on
-       its own with nothing beneath it. */
+    /* `align-items` centres it here. Its own `margin: 0 auto` centred it
+       against a full-width box instead, which put it off the middle. */
     margin: 0;
   }
   .source-stage h2 {
@@ -1210,6 +1210,9 @@ a {
   .source-stage p {
     color: #c3cad2;
     font-size: 15px;
+    /* Its default margin sits on top of the gap above and pushes the pair off
+       the middle, since centring counts the margin under it too. */
+    margin: 0;
   }
   .source-column {
     padding-right: 26px;
@@ -1252,22 +1255,16 @@ a {
   padding: max(14px, env(safe-area-inset-top)) 0 12px;
   border-bottom: 1px solid var(--panel-border);
 }
-/* Beside the artwork, an opaque header reads as a black bar laid across it.
-   It still has to hide the cards passing beneath, so it fades out rather than
-   ending on an edge, and the rule under it goes with the edge.
+/* Beside the artwork, any fill here reads as a black bar laid across it — and
+   nothing needs one: the list is its own scrollport starting below the
+   header, so no card ever passes under it. The artwork shows through instead.
 
    After the rule above, not with the rest of the desktop layout: both select
    the same element, so the later one is the one that lands. */
 @media (min-width: 1000px) {
   .source-column > header {
-    background: linear-gradient(
-      180deg,
-      var(--app-bg) 0%,
-      var(--app-bg) 68%,
-      transparent 100%
-    );
+    background: none;
     border-bottom: 0;
-    padding-bottom: 20px;
   }
 }
 /* The title takes the slack so the pickers and the way out stay together on

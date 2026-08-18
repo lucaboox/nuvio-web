@@ -155,11 +155,33 @@ a {
   min-height: 100vh;
   min-height: 100dvh;
 }
+/* The scroller. Moving between slides is the browser scrolling, so a drag
+   tracks the finger, reverses halfway, and carries a flick's momentum — none
+   of which a transform driven by pointer events can do. */
+.hero-carousel {
+  position: relative;
+  margin-bottom: 22px;
+}
+.hero-track {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  border-radius: 24px;
+  /* The bar would sit over the artwork, and the dots already say where you
+     are. */
+  scrollbar-width: none;
+}
+.hero-track::-webkit-scrollbar {
+  display: none;
+}
 .hero {
   position: relative;
   min-height: 520px;
-  /* A slide change remounts the section, so this plays per slide. */
-  animation: hero-in-next 0.48s cubic-bezier(0.2, 0.75, 0.25, 1);
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
   border-radius: 24px;
   background-color: #11161b;
   background-size: cover;
@@ -168,15 +190,8 @@ a {
   align-items: flex-end;
   justify-content: center;
   padding: 58px;
-  margin-bottom: 22px;
   overflow: hidden;
-  touch-action: pan-y;
-  transform: translate3d(var(--hero-drag-x,0),0,0);
-  opacity: var(--hero-drag-opacity,1);
-  transition: transform .26s cubic-bezier(.2,.75,.25,1),opacity .2s ease;
-  will-change: transform,opacity;
 }
-.hero.is-dragging { animation: none; transition: none; }
 .hero-copy {
   width: min(650px, 100%);
   max-width: 650px;
@@ -1841,6 +1856,10 @@ a {
   .notice {
     top: 75px;
     margin: 6px 12px;
+  }
+  /* Squared off edge to edge, so the scroller must lose its corners too. */
+  .hero-track {
+    border-radius: 0;
   }
   .hero {
     min-height: 520px;
@@ -3907,35 +3926,13 @@ body.is-locked {
 }
 
 /* ---- Hero carousel ----------------------------------------------------- */
-@keyframes hero-in-next {
-  from {
-    opacity: 0.18;
-    transform: translateX(18px) scale(0.994);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0) scale(1);
-  }
-}
-@keyframes hero-in-previous {
-  from {
-    opacity: 0.18;
-    transform: translateX(-18px) scale(0.994);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0) scale(1);
-  }
-}
-.hero-transition-previous {
-  animation-name: hero-in-previous;
-}
 .hero-dots {
   position: absolute;
   right: 34px;
   bottom: 30px;
   display: flex;
   gap: 9px;
+  z-index: 2;
 }
 .hero-dots button {
   width: 9px;

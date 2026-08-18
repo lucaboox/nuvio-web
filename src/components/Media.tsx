@@ -117,12 +117,24 @@ export function MediaRow({
 
 const HERO_ROTATE_MS = 9000;
 
+const prefersReducedMotion = () =>
+  window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
 /**
  * Rotating hero carousel.
  *
+ * Every slide is laid out side by side in one horizontal scroller, and moving
+ * between them is the browser scrolling — the same mechanism the catalog rows
+ * use. It was a single slide translated under the finger before, which meant
+ * the artwork moved but nothing behind it did, the gesture could not be
+ * reversed halfway, and a flick had no momentum. Scroll snapping gives all of
+ * that for free, and it is the one implementation the platform tunes per
+ * device.
+ *
  * Nine seconds between slides, matching the desktop client. Rotation pauses
- * while the pointer is over it, so it cannot slide out from under a click, and
- * stops entirely for anyone who has asked for reduced motion.
+ * while the pointer is over it, so it cannot slide out from under a click,
+ * pauses while a finger is down, and stops entirely for anyone who has asked
+ * for reduced motion.
  */
 export function Hero({
   items,
@@ -133,125 +145,96 @@ export function Hero({
   onOpen(item: Meta): void;
   onMenu?: MediaMenuHandler;
 }) {
+  const track = useRef<HTMLDivElement>(null);
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
-  const [transitionDirection, setTransitionDirection] = useState<
-    "next" | "previous"
-  >("next");
-  const [dragX, setDragX] = useState(0);
-  const [dragging, setDragging] = useState(false);
-  const swipe = useRef({ active: false, pointerId: -1, x: 0, y: 0 });
-  const active = items[index % Math.max(items.length, 1)];
+  const active = items[Math.min(index, Math.max(items.length - 1, 0))];
   const hold = useLongPress((x, y) => {
     if (active) onMenu?.(active, x, y);
   });
-  const move = (direction: -1 | 1) => {
-    setTransitionDirection(direction > 0 ? "next" : "previous");
-    setIndex((current) =>
-      (current + direction + items.length) % items.length,
-    );
+
+  /** Which slide the scroller has settled on. */
+  const readIndex = () => {
+    const element = track.current;
+    if (!element || !element.clientWidth) return;
+    const next = Math.round(element.scrollLeft / element.clientWidth);
+    setIndex((current) => (next === current ? current : next));
   };
 
-  const select = (nextIndex: number) => {
-    if (nextIndex === index) return;
-    setTransitionDirection(nextIndex > index ? "next" : "previous");
-    setIndex(nextIndex);
+  const scrollTo = (next: number, smooth = true) => {
+    const element = track.current;
+    if (!element) return;
+    element.scrollTo({
+      left: next * element.clientWidth,
+      behavior: smooth && !prefersReducedMotion() ? "smooth" : "auto",
+    });
   };
-
-  useEffect(() => {
-    if (index >= items.length) setIndex(0);
-  }, [index, items.length]);
 
   useEffect(() => {
     if (items.length < 2 || paused) return;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const timer = window.setInterval(() => move(1), HERO_ROTATE_MS);
+    if (prefersReducedMotion()) return;
+    const timer = window.setInterval(() => {
+      const element = track.current;
+      if (!element) return;
+      // Never while a finger is on it: scrolling underneath a drag fights it.
+      if (document.activeElement && element.contains(document.activeElement))
+        return;
+      scrollTo((index + 1) % items.length);
+    }, HERO_ROTATE_MS);
     return () => window.clearInterval(timer);
   }, [items.length, paused, index]);
 
   if (!active) return null;
-  const artwork = active.background || active.banner || active.poster;
   return (
     <section
-      // Keyed so a slide change restarts the fade rather than cross-fading
-      // two backgrounds into mud.
-      key={`${active.type}:${active.id}`}
-      className={`hero hero-transition-${transitionDirection}${dragging ? " is-dragging" : ""}`}
-      {...(onMenu ? hold : {})}
+      className="hero-carousel"
       onPointerEnter={() => setPaused(true)}
-      onPointerLeave={() => {
-        if (!swipe.current.active) setPaused(false);
-      }}
-      onPointerDown={(event) => {
-        if (items.length < 2 || (event.target as HTMLElement).closest("button"))
-          return;
-        swipe.current = {
-          active: true,
-          pointerId: event.pointerId,
-          x: event.clientX,
-          y: event.clientY,
-        };
-        event.currentTarget.setPointerCapture(event.pointerId);
-        setPaused(true);
-      }}
-      onPointerMove={(event) => {
-        const start = swipe.current;
-        if (!start.active || start.pointerId !== event.pointerId) return;
-        const x = event.clientX - start.x;
-        const y = event.clientY - start.y;
-        if (!dragging && Math.abs(x) < 7) return;
-        if (!dragging && Math.abs(x) <= Math.abs(y)) return;
-        setDragging(true);
-        setDragX(Math.max(-170, Math.min(170, x)));
-      }}
-      onPointerUp={(event) => {
-        const start = swipe.current;
-        if (!start.active || start.pointerId !== event.pointerId) return;
-        swipe.current.active = false;
-        if (event.currentTarget.hasPointerCapture(event.pointerId))
-          event.currentTarget.releasePointerCapture(event.pointerId);
-        const x = event.clientX - start.x;
-        const y = event.clientY - start.y;
-        setDragging(false);
-        setDragX(0);
-        if (Math.abs(x) >= 48 && Math.abs(x) > Math.abs(y) * 1.15)
-          move(x < 0 ? 1 : -1);
-        setPaused(false);
-      }}
-      onPointerCancel={(event) => {
-        if (swipe.current.pointerId !== event.pointerId) return;
-        swipe.current.active = false;
-        setDragging(false);
-        setDragX(0);
-        setPaused(false);
-      }}
-      style={
-        {
-          ...(artwork
-            ? {
-                backgroundImage: `linear-gradient(90deg, rgba(5,7,9,.98) 0%, rgba(5,7,9,.67) 46%, rgba(5,7,9,.12) 100%), linear-gradient(0deg, #080a0d 0%, transparent 55%), url("${artwork.replace(/"/g, "%22")}")`,
-              }
-            : {}),
-          "--hero-drag-x": `${dragX}px`,
-          "--hero-drag-opacity": Math.max(0.62, 1 - Math.abs(dragX) / 430),
-        } as CSSProperties
-      }
+      onPointerLeave={() => setPaused(false)}
+      // A finger on the slides should stop the rotation until it lifts.
+      onTouchStart={() => setPaused(true)}
+      onTouchEnd={() => setPaused(false)}
+      onTouchCancel={() => setPaused(false)}
     >
-      <div className="hero-copy">
-        {active.logo ? (
-          <img src={active.logo} className="title-logo" alt={active.name} />
-        ) : (
-          <h1>{active.name}</h1>
-        )}
-        <div className="hero-meta home-hero-meta">
-          <span>{active.type === "series" ? "Series" : "Movie"}</span>
-          {active.genres[0] && <span>{active.genres[0]}</span>}
-          {active.releaseInfo && <span>{active.releaseInfo}</span>}
-        </div>
-        <button className="primary" onClick={() => onOpen(active)}>
-          <Play size={18} fill="currentColor" /> View details
-        </button>
+      <div
+        className="hero-track"
+        ref={track}
+        onScroll={readIndex}
+        {...(onMenu ? hold : {})}
+      >
+        {items.map((item) => {
+          const artwork = item.background || item.banner || item.poster;
+          return (
+            <article
+              key={`${item.type}:${item.id}`}
+              className="hero"
+              style={
+                artwork
+                  ? {
+                      backgroundImage: `linear-gradient(90deg, rgba(5,7,9,.98) 0%, rgba(5,7,9,.67) 46%, rgba(5,7,9,.12) 100%), linear-gradient(0deg, #080a0d 0%, transparent 55%), url("${artwork.replace(/"/g, "%22")}")`,
+                    }
+                  : undefined
+              }
+            >
+              <div className="hero-copy">
+                {item.logo ? (
+                  <img src={item.logo} className="title-logo" alt={item.name} />
+                ) : (
+                  <h1>{item.name}</h1>
+                )}
+                <div className="hero-meta home-hero-meta">
+                  <span>{item.type === "series" ? "Series" : "Movie"}</span>
+                  {item.genres[0] && <span>{item.genres[0]}</span>}
+                  {item.releaseInfo && <span>{item.releaseInfo}</span>}
+                </div>
+                <button className="primary" onClick={() => onOpen(item)}>
+                  <Play size={18} fill="currentColor" /> View details
+                </button>
+              </div>
+            </article>
+          );
+        })}
       </div>
+      {/* Outside the scroller, so they stay put while it moves. */}
       {items.length > 1 && (
         <div className="hero-dots" role="tablist" aria-label="Featured titles">
           {items.map((item, dot) => (
@@ -261,7 +244,7 @@ export function Hero({
               aria-selected={dot === index}
               aria-label={item.name}
               className={dot === index ? "active" : undefined}
-              onClick={() => select(dot)}
+              onClick={() => scrollTo(dot)}
             />
           ))}
         </div>

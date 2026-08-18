@@ -67,6 +67,7 @@ import {
   type HomeLayout,
   loadSettingsBlob,
   loadProviderCredentials,
+  clearProgress,
   loadWatchedItems,
   pushSettingsBlob,
   pushProgress,
@@ -1587,6 +1588,47 @@ export function App() {
       );
     }
   }
+  /**
+   * Sends one episode back to never-started: no resume point, no progress bar,
+   * and Continue Watching stops offering it. Its watched mark is left alone —
+   * that is what the toggle beside this is for.
+   *
+   * Optimistic like the toggle above, and restores the row it removed if the
+   * server refuses, so the bar cannot vanish from a reset that never landed.
+   */
+  async function resetProgress(meta: Meta, video: Video | undefined) {
+    if (!profile) return;
+    const profileIndex = profile.profileIndex;
+    const generation = profileGeneration.current;
+    const isCurrent = () =>
+      generation === profileGeneration.current &&
+      activeProfileIndexRef.current === profileIndex;
+    const key = watchKey(meta.id, video?.season, video?.episode);
+    const previousProgress = progress;
+    setProgress((current) =>
+      current.filter(
+        (row) => watchKey(row.contentId, row.season, row.episode) !== key,
+      ),
+    );
+    try {
+      await clearProgress(
+        profileIndex,
+        {
+          contentId: meta.id,
+          contentType: meta.type,
+          season: video?.season,
+          episode: video?.episode,
+        },
+        previousProgress,
+      );
+    } catch (error) {
+      if (!isCurrent()) return;
+      setProgress(previousProgress);
+      setMessage(
+        error instanceof Error ? error.message : "Could not reset progress",
+      );
+    }
+  }
   const openDetails = useCallback((item: Meta) => {
     setDetailLaunch(null);
     setSelected(item);
@@ -2129,6 +2171,7 @@ export function App() {
           initialVideoId={detailLaunch?.videoId}
           openSourcesOnLoad={detailLaunch?.openSources}
           onSetWatched={toggleWatched}
+          onResetProgress={resetProgress}
           inLibrary={library.some(
             (item) => item.id === selected.id && item.type === selected.type,
           )}

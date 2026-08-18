@@ -715,6 +715,26 @@ export async function setWatched(
 }
 
 /**
+ * Drops the resume point for one title/episode, leaving its watched mark alone.
+ *
+ * `setWatched` also clears progress, but only as a consequence of deciding
+ * watched or not. A part-watched episode is neither: it reads as unwatched, so
+ * the only toggle on offer marks it watched — which is not what starting it
+ * over means. This is the way back to untouched.
+ */
+export async function clearProgress(
+  profileIndex: number,
+  identity: WatchIdentity,
+  progressRows: ProgressRow[],
+): Promise<void> {
+  await rpc("sync_delete_watch_progress", {
+    p_profile_id: profileIndex,
+    p_keys: [resolveProgressKey(progressRows, identity)],
+    p_origin_client_id: CLIENT_ID,
+  });
+}
+
+/**
  * Adds one title to the synced library.
  *
  * Field-for-field with the desktop client's `library::add`. Two details are

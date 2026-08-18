@@ -1,4 +1,3 @@
-import { loadEpisodeRatings, type EpisodeRatings } from "../lib/episodeRatings";
 import {
   ArrowLeft,
   Check,
@@ -8,6 +7,7 @@ import {
   ExternalLink,
   Play,
   Plus,
+  RotateCcw,
   Search,
   X,
 } from "lucide-react";
@@ -54,17 +54,6 @@ import { ContextMenu } from "./ContextMenu";
 const DEFAULT_DETAIL_COLOR = "18 22 26";
 
 const publicAsset = (fileName: string) => `${import.meta.env.BASE_URL}${fileName}`;
-
-/**
- * Episode scores.
- *
- * Addons do supply these — Cinemeta sends a `rating` on each video, and while
- * its coverage is uneven (all 67 Breaking Bad episodes, none of Game of
- * Thrones'), an addon that populates it gives a real IMDb number needing no
- * key, proxy or third-party service. TMDB enrichment fills the gaps with its
- * own vote average, which is a different measure and says so.
- */
-const EPISODE_RATINGS_ENABLED = true;
 
 const RATING_VISUALS = [
   { source: "imdb", name: "IMDb", icon: publicAsset("rating_imdb.png"), color: "#f5c518", format: oneDecimal, wide: true },
@@ -343,6 +332,7 @@ export function Details({
   onLibrary,
   onPlay,
   onSetWatched,
+  onResetProgress,
   initialVideoId,
   openSourcesOnLoad = false,
   defaultPlayer,
@@ -369,6 +359,8 @@ export function Details({
     player?: ExternalPlayerMode,
   ): void;
   onSetWatched(meta: Meta, video: Video | undefined, watched: boolean): void;
+  /** Clears the resume point without touching the watched mark. */
+  onResetProgress(meta: Meta, video: Video | undefined): void;
   initialVideoId?: string;
   openSourcesOnLoad?: boolean;
   /** The player chosen in Settings, which this picker also sets. */
@@ -431,11 +423,6 @@ export function Details({
     ),
   );
   const [busy, setBusy] = useState(true);
-  // Fetched per series rather than per episode, cached for half an hour, and
-  // empty when no ratings service is configured — in which case no badge shows.
-  const [episodeRatings, setEpisodeRatings] = useState<EpisodeRatings>(
-    () => new Map(),
-  );
   const [sourceOpen, setSourceOpen] = useState(false);
   // The sources panel is drawn inside this overlay, so the back gesture has to
   // stand down while it is up: a swipe there would otherwise carry both away
@@ -511,16 +498,6 @@ export function Details({
   }, [meta.id, swipeRef]);
   useEffect(() => setDescriptionExpanded(false), [meta.id]);
 
-  useEffect(() => {
-    if (!EPISODE_RATINGS_ENABLED || meta.type !== "series") return;
-    let live = true;
-    void loadEpisodeRatings(meta.id).then((ratings) => {
-      if (live) setEpisodeRatings(ratings);
-    });
-    return () => {
-      live = false;
-    };
-  }, [meta.id, meta.type]);
   useEffect(() => {
     initialSourceConsumed.current = false;
   }, [seed.id, initialVideoId, openSourcesOnLoad]);
@@ -952,10 +929,6 @@ export function Details({
                 <EpisodeRow
                   key={video.id}
                   video={video}
-                  rating={
-                    episodeRatings.get(`${video.season}:${video.episode}`) ??
-                    (video.imdbRating ? Number(video.imdbRating) : undefined)
-                  }
                   watched={watchIndex.watched.has(
                     watchKey(meta.id, video.season, video.episode),
                   )}
@@ -1079,6 +1052,11 @@ export function Details({
         (() => {
           const key = watchKey(meta.id, menu.video.season, menu.video.episode);
           const isWatched = watchIndex.watched.has(key);
+          // Only where a resume point is actually stranded. Never started,
+          // there is nothing to reset; finished, "Mark as unwatched" already
+          // clears the row, and two entries doing one thing is worse than one.
+          const percent = episodePercent(watchIndex, key);
+          const partWatched = percent > 0 && percent < 90;
           return (
             <ContextMenu
               x={menu.x}
@@ -1090,6 +1068,15 @@ export function Details({
                   icon: isWatched ? <EyeOff size={16} /> : <Eye size={16} />,
                   onSelect: () => onSetWatched(meta, menu.video, !isWatched),
                 },
+                ...(partWatched
+                  ? [
+                      {
+                        label: "Reset progress",
+                        icon: <RotateCcw size={16} />,
+                        onSelect: () => onResetProgress(meta, menu.video),
+                      },
+                    ]
+                  : []),
                 {
                   label: "Play",
                   icon: <Play size={16} />,
@@ -1296,7 +1283,6 @@ export function Details({
  */
 export function EpisodeRow({
   video,
-  rating,
   watched,
   percent,
   remaining,
@@ -1305,8 +1291,6 @@ export function EpisodeRow({
   onMenu,
 }: {
   video: Video;
-  /** From the addon when it supplies one, otherwise from TMDB enrichment. */
-  rating?: number;
   watched: boolean;
   percent: number;
   /** How much is left, for a part-watched episode. */
@@ -1351,26 +1335,6 @@ export function EpisodeRow({
         {percent > 0 && percent < 90 && (
           <i className="episode-progress" style={{ width: `${percent}%` }} />
         )}
-        {EPISODE_RATINGS_ENABLED &&
-          rating != null &&
-          (() => {
-            // Same mark and colour the details page uses, chosen by source —
-            // an IMDb badge over a TMDB vote average would be a small lie.
-            const visual =
-              RATING_VISUALS.find(
-                (item) => item.source === (video.ratingSource ?? "tmdb"),
-              ) ?? RATING_VISUALS[0];
-            return (
-              <i
-                className="episode-rating"
-                style={{ color: visual.color }}
-                title={`${visual.name} ${rating.toFixed(1)}`}
-              >
-                <img src={visual.icon} alt={visual.name} />
-                {rating.toFixed(1)}
-              </i>
-            );
-          })()}
       </span>
       <span>
         <small>

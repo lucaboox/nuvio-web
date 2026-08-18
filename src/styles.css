@@ -2896,7 +2896,7 @@ body,
 .continue-progress b {
   display: block;
   height: 100%;
-  background: #f2f3f4;
+  background: var(--accent);
 }
 .continue-card.style-wide {
   flex-basis: 470px;
@@ -3236,8 +3236,8 @@ body,
   width: 21px;
   height: 21px;
   border-radius: 50%;
-  color: #06210f;
-  background: #59d98b;
+  color: var(--accent-ink);
+  background: var(--accent);
   box-shadow: 0 2px 8px #0009;
 }
 /* The corner the watched mark uses, in the same shape — the two never appear
@@ -3264,30 +3264,7 @@ body,
   bottom: 0;
   left: 0;
   height: 3px;
-  background: #f0454f;
-}
-/* The mark plus its own colour, matching the details page. A filled pill read
-   as app chrome; the logo and gold text read as a rating. */
-.episode-rating {
-  position: absolute;
-  z-index: 2;
-  bottom: 7px;
-  left: 7px;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 2px 6px 2px 4px;
-  border-radius: 5px;
-  background: #0b0b0bd9;
-  font-size: 10px;
-  font-style: normal;
-  font-weight: 800;
-  text-shadow: 0 1px 2px #000;
-}
-.episode-rating img {
-  width: 22px;
-  height: auto;
-  object-fit: contain;
+  background: var(--accent);
 }
 .episode-row.is-watched .episode-thumb img {
   opacity: 0.45;
@@ -5204,8 +5181,6 @@ body.is-locked {
     right: 8px;
     width: 28px;
     height: 28px;
-    color: white;
-    background: var(--accent);
   }
   /* The corner the watched mark uses, in the same shape — the two never appear
    together, so they can share the spot without crowding it. */

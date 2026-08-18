@@ -1219,7 +1219,6 @@ export function Player({
                   <EpisodeRow
                     key={item.id}
                     video={item}
-                    rating={item.imdbRating ? Number(item.imdbRating) : undefined}
                     watched={watchIndex?.watched.has(key) ?? false}
                     percent={watchIndex ? episodePercent(watchIndex, key) : 0}
                     remaining={watchIndex ? remainingShort(watchIndex, key) : ""}

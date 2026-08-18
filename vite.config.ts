@@ -42,10 +42,6 @@ export default defineConfig(({ mode }) => {
       "import.meta.env.VITE_NUVIO_SUPABASE_URL": JSON.stringify(env.VITE_NUVIO_SUPABASE_URL || env.NUVIO_SUPABASE_URL || ""),
       "import.meta.env.VITE_NUVIO_SUPABASE_FALLBACK_URL": JSON.stringify(env.VITE_NUVIO_SUPABASE_FALLBACK_URL || env.NUVIO_SUPABASE_FALLBACK_URL || ""),
       "import.meta.env.VITE_NUVIO_SUPABASE_ANON_KEY": JSON.stringify(env.VITE_NUVIO_SUPABASE_ANON_KEY || env.NUVIO_SUPABASE_ANON_KEY || ""),
-      // Episode scores come from the same service the official clients use;
-      // the URL is a secret there too, so it stays out of the repo.
-      "import.meta.env.VITE_IMDB_RATINGS_BASE_URL": JSON.stringify(env.VITE_IMDB_RATINGS_BASE_URL || env.IMDB_TAPFRAME_API_BASE_URL || ""),
-      "import.meta.env.VITE_IMDB_RATINGS_FALLBACK_URL": JSON.stringify(env.VITE_IMDB_RATINGS_FALLBACK_URL || env.IMDB_RATINGS_API_BASE_URL || ""),
     },
     plugins: [
       react(),

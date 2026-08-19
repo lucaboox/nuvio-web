@@ -2776,61 +2776,6 @@ function UpdateModal({ onLater }: { onLater(): void }) {
   );
 }
 
-/**
- * What this screen actually is, in the units the layout is written in.
- *
- * "It looks different on their phone" cannot be answered from a screenshot:
- * device pixels, browser chrome and the system display-size setting all move
- * independently of the CSS width every rule here keys off. One line someone
- * can read aloud ends the guessing.
- */
-function ScreenReadout() {
-  const describe = () => ({
-    width: window.innerWidth,
-    height: window.innerHeight,
-    // Reported as a float with every bit of its imprecision — a 3.5 screen
-    // says 3.4999999403953552 — and the digits after the first two carry
-    // nothing anyone reading this aloud needs.
-    ratio: Math.round(window.devicePixelRatio * 100) / 100,
-    // A tab and an installed app get different heights from one device.
-    installed:
-      window.matchMedia("(display-mode: standalone)").matches ||
-      (navigator as unknown as { standalone?: boolean }).standalone === true,
-    /**
-     * How much width the scrollbar takes from the page.
-     *
-     * Zero on a phone, which overlays it, and about 15px on a desktop, which
-     * does not. `100vw` counts that space either way — the spec says to assume
-     * no scrollbar exists — so anything sized from it is too wide by exactly
-     * this much wherever it is not zero.
-     */
-    scrollbar: window.innerWidth - document.documentElement.clientWidth,
-    /** Set when something is actually wider than the space available. */
-    overflowing:
-      document.documentElement.scrollWidth >
-      document.documentElement.clientWidth,
-  });
-  const [screen, setScreen] = useState(describe);
-  useEffect(() => {
-    const update = () => setScreen(describe());
-    window.addEventListener("resize", update);
-    return () => window.removeEventListener("resize", update);
-  }, []);
-  return (
-    <div className="theme-row">
-      <span>
-        <strong>This screen</strong>
-        <small>
-          {screen.width} × {screen.height} CSS px at {screen.ratio}× ·{" "}
-          {screen.installed ? "installed app" : "browser tab"}
-          {screen.scrollbar > 0 ? ` · ${screen.scrollbar}px scrollbar` : ""}
-          {screen.overflowing ? " · overflowing" : ""}
-        </small>
-      </span>
-    </div>
-  );
-}
-
 function UpdateRow() {
   const [state, setState] = useState<"idle" | "checking" | "current" | "pending">(
     updateReady() ? "pending" : "idle",
@@ -4439,7 +4384,6 @@ function SettingsPage({
           <h2>App version</h2>
         </header>
         <UpdateRow />
-        <ScreenReadout />
       </div>
       <div
         className="setting-card settings-category-card"

@@ -1169,18 +1169,9 @@ a {
   flex-direction: column;
   min-height: 0;
 }
-/* The panel used to be the scroller. Now the header is pinned inside this
-   column, so the list scrolls and the column stays put.
-
-   `align-content: start` and content-sized rows are what make it scroll at
-   all: a grid handed a definite height sizes its auto rows to fit it, so the
-   cards were squashed — long ones clipped mid-content — until the total came
-   out exactly the height of the box and there was never anything to scroll. */
+/* Content-sized rows, at every width: a grid handed a definite height sizes
+   its auto rows to fit it, which squashed the cards and clipped long ones. */
 .source-column > .source-list {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  overscroll-behavior: contain;
   align-content: start;
   grid-auto-rows: max-content;
 }
@@ -1238,6 +1229,18 @@ a {
   .source-column {
     padding-right: 26px;
     overflow: hidden;
+  }
+  /* The list is the scroller only here, beside the artwork, where the column
+     is clipped to the viewport. Below this width the sheet scrolls as a whole
+     — and leaving `overflow-y: auto` on the list there made it a scroll
+     container with nothing to scroll, whose `contain` then refused to pass
+     the wheel up to the sheet. Scrolling worked over the sticky header, which
+     has no scroller in the way, and nowhere else. */
+  .source-column > .source-list {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
   }
   .source-column > header,
   .source-column > .source-list,

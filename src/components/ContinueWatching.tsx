@@ -41,14 +41,16 @@ function ContinueCardView({
 }: {
   card: ContinueCard;
   settings: ContinueWatchingSettings;
-  onOpen(item: ContinueCard["item"]): void;
+  /**
+   * The whole card, not just its title. Continuing needs to know which episode
+   * and where in it — handed only the title, the caller can do no more than
+   * open the page, which is what tapping one of these used to do.
+   */
+  onOpen(card: ContinueCard): void;
   onMenu?(card: ContinueCard, x: number, y: number): void;
 }) {
   const artwork = artworkFor(card, settings);
   const progress = progressPercent(card);
-  const selected = card.video
-    ? { ...card.item, selectedVideoId: card.video.id }
-    : card.item;
   const blur =
     settings.blurNextUp && settings.useEpisodeThumbnails && card.nextUp;
   const hold = useLongPress((x, y) => onMenu?.(card, x, y));
@@ -56,7 +58,7 @@ function ContinueCardView({
     <button
       className={`continue-card style-${settings.style.toLowerCase()}`}
       onClick={() => {
-        if (!hold.consumedTap()) onOpen(selected);
+        if (!hold.consumedTap()) onOpen(card);
       }}
       {...(onMenu ? hold : {})}
     >
@@ -99,7 +101,12 @@ function ContinueRow({
   title: string;
   cards: ContinueCard[];
   settings: ContinueWatchingSettings;
-  onOpen(item: ContinueCard["item"]): void;
+  /**
+   * The whole card, not just its title. Continuing needs to know which episode
+   * and where in it — handed only the title, the caller can do no more than
+   * open the page, which is what tapping one of these used to do.
+   */
+  onOpen(card: ContinueCard): void;
   onMenu?(card: ContinueCard, x: number, y: number): void;
 }) {
   const rowRef = useDragScroll<HTMLDivElement>();
@@ -132,7 +139,12 @@ export function ContinueWatching({
 }: {
   cards: ContinueCard[];
   settings: ContinueWatchingSettings;
-  onOpen(item: ContinueCard["item"]): void;
+  /**
+   * The whole card, not just its title. Continuing needs to know which episode
+   * and where in it — handed only the title, the caller can do no more than
+   * open the page, which is what tapping one of these used to do.
+   */
+  onOpen(card: ContinueCard): void;
   onMenu?(card: ContinueCard, x: number, y: number): void;
 }) {
   if (!settings.isVisible) return null;

@@ -1907,6 +1907,7 @@ export function App() {
             continueSettings={webSettings.continueWatching}
             index={watchIndex}
             onOpen={openDetails}
+            onContinue={(card) => openContinueSources(card, false)}
             onMenu={(item, x, y) => setTitleMenu({ item, x, y })}
             onContinueMenu={(card, x, y) => setContinueMenu({ card, x, y })}
             onSeeAll={setCatalog}
@@ -2229,6 +2230,7 @@ function HomeView({
   continueSettings,
   index,
   onOpen,
+  onContinue,
   onSeeAll,
   onOpenFolder,
   onMenu,
@@ -2240,6 +2242,8 @@ function HomeView({
   continueSettings: ContinueWatchingSettings;
   index: WatchIndex;
   onOpen(item: Meta): void;
+  /** Separate from `onOpen`: a poster opens a page, this one resumes. */
+  onContinue(card: ContinueCard): void;
   onSeeAll(section: CatalogSection): void;
   onOpenFolder(folder: CollectionFolder): void;
   onMenu(item: Meta, x: number, y: number): void;
@@ -2257,7 +2261,7 @@ function HomeView({
         <ContinueWatching
           cards={continueItems}
           settings={continueSettings}
-          onOpen={onOpen}
+          onOpen={onContinue}
           onMenu={onContinueMenu}
         />
       )}

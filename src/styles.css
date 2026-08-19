@@ -4754,6 +4754,14 @@ body.is-locked {
     background: var(--app-bg);
   }
 }
+/* Everything else in settings sits in one of these, and a page had lost it —
+   the fixed layer is the backdrop, this is the surface. */
+.integration-page-card {
+  padding: 22px;
+  border: 1px solid var(--panel-border);
+  border-radius: 20px;
+  background: var(--panel-bg);
+}
 /* Closed, it must take no room and catch nothing. The `hidden` attribute says
    so, but the swipe leaves inline styles behind, so the state says it too. */
 .integrations-card:not(.has-page) > .integration-page {

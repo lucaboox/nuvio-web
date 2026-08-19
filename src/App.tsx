@@ -3494,6 +3494,9 @@ function SettingsPage({
           className="integration-page"
           hidden={integrationPage === null}
         >
+        {/* The card the rest of settings is written in. The fixed layer is the
+            backdrop behind it, not the surface itself. */}
+        <div className="integration-page-card">
         {integrationPage && (
           <IntegrationPageHeader
             page={INTEGRATION_PAGES.find((item) => item.key === integrationPage)!}
@@ -3635,6 +3638,7 @@ function SettingsPage({
               already resolve links for playback on the web.
             </p>
           </div>
+        </div>
         </div>
         </div>
       </div>

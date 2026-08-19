@@ -243,7 +243,7 @@ export function Hero({
                   {item.releaseInfo && <span>{item.releaseInfo}</span>}
                 </div>
                 <button className="primary" onClick={() => onOpen(item)}>
-                  <Play size={18} fill="currentColor" /> View details
+                  View details
                 </button>
               </div>
             </article>

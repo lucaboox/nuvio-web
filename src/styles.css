@@ -565,10 +565,14 @@ a {
   padding: 0 11px;
   color: #7d8791;
 }
+/* Smaller than a general primary button and sitting lower, so it reads as
+   part of the slide rather than a call to action stacked above the dots. */
 .hero-copy > .primary {
   display: flex;
   width: fit-content;
-  margin: 24px auto 0;
+  margin: 16px auto 0;
+  padding: 11px 26px;
+  font-size: 14px;
 }
 .detail-view.background-dominant_color {
   background:
@@ -5218,11 +5222,18 @@ body.is-locked {
     font: inherit;
     font-size: 14px;
   }
-  .hero-copy > .primary,
   .detail-actions > .primary {
     min-height: 58px;
     padding-inline: 38px;
     border-radius: 999px;
+  }
+  /* Smaller than the detail page's action, which is the primary thing on that
+     screen; here it sits under the artwork and above the dots. */
+  .hero-copy > .primary {
+    min-height: 46px;
+    padding-inline: 28px;
+    border-radius: 999px;
+    font-size: 15px;
   }
   .detail-actions {
     order: 3;

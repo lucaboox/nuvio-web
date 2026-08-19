@@ -1122,9 +1122,12 @@ a {
   position: fixed;
   z-index: 10;
   inset: 0;
-  /* The backdrop is not a scroller, so a wheel over it would otherwise reach
-     the detail view underneath. */
-  overscroll-behavior: contain;
+  /* No overscroll-behavior here. It is defined for scroll containers and this
+     is not one, so it did not do the job the comment claimed — and Chromium
+     treats it as a scroll-chain boundary anyway, swallowing wheel and touch
+     before they reach the sheet. Dragging the scrollbar still worked, because
+     that bypasses the chain; WebKit ignores it, which is why iOS was fine.
+     The sheet, which is the real scroller, carries `contain` itself. */
   background: #000a;
   display: flex;
   align-items: flex-end;

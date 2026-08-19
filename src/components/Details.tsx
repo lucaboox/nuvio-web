@@ -492,19 +492,29 @@ export function Details({
     const scroller = swipeRef.current;
     const hero = heroRef.current;
     if (!scroller || !hero) return;
-    const update = () => {
-      const mobile = window.matchMedia("(max-width: 760px)").matches;
-      const threshold = mobile
+    // Queried once and kept, rather than per scroll event. `matchMedia` and
+    // `offsetTop` both read layout, and doing that on every frame of a fling
+    // is work the phone spends where it can least afford to.
+    const viewport = window.matchMedia("(max-width: 760px)");
+    let threshold = 0;
+    const measure = () => {
+      threshold = viewport.matches
         ? hero.offsetTop + window.innerHeight * 0.62
         : hero.offsetTop + hero.offsetHeight - 84;
-      setCompactHeader(scroller.scrollTop >= threshold);
     };
-    update();
+    const update = () => setCompactHeader(scroller.scrollTop >= threshold);
+    const remeasure = () => {
+      measure();
+      update();
+    };
+    remeasure();
     scroller.addEventListener("scroll", update, { passive: true });
-    const observer = new ResizeObserver(update);
+    viewport.addEventListener("change", remeasure);
+    const observer = new ResizeObserver(remeasure);
     observer.observe(hero);
     return () => {
       scroller.removeEventListener("scroll", update);
+      viewport.removeEventListener("change", remeasure);
       observer.disconnect();
     };
   }, [meta.id, swipeRef]);

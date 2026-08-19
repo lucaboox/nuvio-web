@@ -38,11 +38,14 @@ a {
   color: inherit;
 }
 .app-shell {
-  /* dvh for the same reason the auth screen uses it: on iOS 100vh measures the
-     screen rather than the visible viewport, so the page ends up taller than
-     what you can see and scrolls by exactly that difference. */
+  /* svh, not dvh, because this one scrolls.
+     100vh on iOS measures the screen rather than the visible viewport, so the
+     page ends up taller than what you can see. dvh fixes that but is itself
+     dynamic: on Android it grows as Chrome's address bar retracts, which
+     resizes the page mid-scroll and makes a fling stutter. svh is the stable
+     one — always the smaller viewport, so nothing moves while scrolling. */
   min-height: 100vh;
-  min-height: 100dvh;
+  min-height: 100svh;
   padding-left: 84px;
 }
 .rail {
@@ -152,8 +155,11 @@ a {
 }
 .content {
   padding: 90px 26px 70px;
+  /* svh for the same reason as .app-shell above: this scrolls, and a height
+     that tracks Android's retracting address bar reflows the page under the
+     finger. */
   min-height: 100vh;
-  min-height: 100dvh;
+  min-height: 100svh;
 }
 /* The scroller. Moving between slides is the browser scrolling, so a drag
    tracks the finger, reverses halfway, and carries a flick's momentum — none

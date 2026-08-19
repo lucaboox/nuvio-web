@@ -170,19 +170,35 @@ export function Hero({
     });
   };
 
+  /**
+   * Only rotates while it is actually on screen.
+   *
+   * A programmatic scroll cancels an in-progress touch fling on Android, so a
+   * carousel rotating out of view would cut short a flick down the page — the
+   * page simply stops, seconds after the finger left it, for no visible
+   * reason. Off screen there is also nothing to rotate for.
+   */
+  const [onScreen, setOnScreen] = useState(true);
   useEffect(() => {
-    if (items.length < 2 || paused) return;
+    const element = track.current;
+    if (!element || typeof IntersectionObserver === "undefined") return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setOnScreen(entry.isIntersecting),
+      { threshold: 0.35 },
+    );
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (items.length < 2 || paused || !onScreen) return;
     if (prefersReducedMotion()) return;
     const timer = window.setInterval(() => {
-      const element = track.current;
-      if (!element) return;
-      // Never while a finger is on it: scrolling underneath a drag fights it.
-      if (document.activeElement && element.contains(document.activeElement))
-        return;
+      if (!track.current) return;
       scrollTo((index + 1) % items.length);
     }, HERO_ROTATE_MS);
     return () => window.clearInterval(timer);
-  }, [items.length, paused, index]);
+  }, [items.length, paused, onScreen, index]);
 
   if (!active) return null;
   return (

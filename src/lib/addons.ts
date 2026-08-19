@@ -1,4 +1,10 @@
 import { resolveTmdbSource } from "./tmdbCollections";
+import {
+  createHostLimiter,
+  isRetryable,
+  retryAfterMs,
+  MAX_RETRIES,
+} from "./requestPolicy.ts";
 import { mediaTypeLabel, type HomeLayout } from "./account";
 import type {
   AddonManifest,
@@ -43,12 +49,32 @@ export function addonConfigureUrl(manifestUrl: string): string {
   return url.toString();
 }
 
-async function fetchJson<T>(
+/** Shared by every addon request, so the whole app counts as one caller. */
+const limitPerHost = createHostLimiter();
+
+const wait = (ms: number, signal?: AbortSignal) =>
+  new Promise<void>((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(new Error("Aborted"));
+      return;
+    }
+    const timer = setTimeout(() => {
+      signal?.removeEventListener("abort", onAbort);
+      resolve();
+    }, ms);
+    function onAbort() {
+      clearTimeout(timer);
+      reject(new Error("Aborted"));
+    }
+    signal?.addEventListener("abort", onAbort, { once: true });
+  });
+
+/** One attempt, with its own timeout so a retry starts the clock again. */
+async function fetchJsonOnce<T>(
   url: string,
-  timeoutMs = 14_000,
-  signal?: AbortSignal,
+  timeoutMs: number,
+  signal: AbortSignal | undefined,
 ): Promise<T> {
-  safeAddonUrl(url);
   const controller = new AbortController();
   const abort = () => controller.abort();
   if (signal?.aborted) controller.abort();
@@ -60,7 +86,15 @@ async function fetchJson<T>(
       credentials: "omit",
       referrerPolicy: "no-referrer",
     });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    if (!response.ok) {
+      const error = new Error(`HTTP ${response.status}`) as Error & {
+        status?: number;
+        retryAfter?: string | null;
+      };
+      error.status = response.status;
+      error.retryAfter = response.headers.get("retry-after");
+      throw error;
+    }
     const declared = Number(response.headers.get("content-length") ?? 0);
     if (declared > JSON_LIMIT) throw new Error("Addon response is too large.");
     const body = await response.text();
@@ -78,6 +112,41 @@ async function fetchJson<T>(
     clearTimeout(timeout);
     signal?.removeEventListener("abort", abort);
   }
+}
+
+/**
+ * Every addon request goes through here, which is what makes the limit mean
+ * anything: a home screen full of catalogs from one addon queues against
+ * itself instead of arriving all at once and being rate-limited.
+ */
+async function fetchJson<T>(
+  url: string,
+  timeoutMs = 14_000,
+  signal?: AbortSignal,
+): Promise<T> {
+  safeAddonUrl(url);
+  return limitPerHost(url, async () => {
+    for (let attempt = 0; ; attempt += 1) {
+      try {
+        return await fetchJsonOnce<T>(url, timeoutMs, signal);
+      } catch (error) {
+        const status = (error as { status?: number }).status;
+        if (
+          attempt >= MAX_RETRIES ||
+          status === undefined ||
+          !isRetryable(status) ||
+          signal?.aborted
+        )
+          throw error;
+        // The host asked for later, so wait the time it named rather than
+        // trying again straight away and earning another 429.
+        await wait(
+          retryAfterMs((error as { retryAfter?: string | null }).retryAfter, attempt),
+          signal,
+        );
+      }
+    }
+  });
 }
 
 function resourceUrl(

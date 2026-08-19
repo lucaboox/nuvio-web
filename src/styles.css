@@ -4281,8 +4281,10 @@ body.is-locked {
 /* A button, not an input, so focusing it never summons a keyboard. The keypad
    below is the only way in. */
 .timecode-field > button {
-  height: 46px;
-  padding: 0 13px;
+  display: flex;
+  align-items: center;
+  min-height: 46px;
+  padding: 7px 13px;
   border: 1px solid #2e353d;
   border-radius: 12px;
   background: #191d22;
@@ -6324,6 +6326,9 @@ body.is-locked {
   gap: 4px;
 }
 .home-layout-actions .icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: 34px;
   height: 34px;
   min-height: 34px;
@@ -6577,10 +6582,15 @@ body.is-locked {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* "Play" already centred itself because .primary makes it a flex box for its
+   icon; "Not now" was left to the browser's default and sat high on Safari. */
 .player-next button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   flex: none;
-  height: 38px;
-  padding: 0 14px;
+  min-height: 38px;
+  padding: 7px 14px;
   border: 0;
   border-radius: 10px;
   background: none;
@@ -6717,9 +6727,15 @@ body.is-locked {
   flex-wrap: wrap;
   gap: 7px;
 }
+/* Centred explicitly and sized by padding. A button's text is only centred in
+   a fixed height by the browser's own default, and Safari does not apply that
+   default the way Chromium does — it lays the label against the top. */
 .player-error-players button {
-  height: 34px;
-  padding: 0 13px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  padding: 7px 13px;
   border: 1px solid var(--panel-border);
   border-radius: 10px;
   background: var(--panel-soft);

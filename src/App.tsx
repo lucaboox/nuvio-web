@@ -1636,7 +1636,12 @@ export function App() {
 
   const openContinueSources = useCallback(
     (card: ContinueCard, startAtBeginning: boolean) => {
+      // Claimed before anything else, so tapping a second card supersedes the
+      // first: without this an overtaken lookup still finished and opened its
+      // own episode over the one just asked for.
+      const generation = ++episodeSwitch.current;
       const openTitle = () => {
+        setLoading(false);
         setDetailLaunch({
           videoId: card.video?.id,
           openSources: true,
@@ -1659,8 +1664,16 @@ export function App() {
         openTitle();
         return;
       }
-      const generation = ++episodeSwitch.current;
-      setMessage("Finding where you left off…");
+      // The same veil and spinner every other wait uses. This used to announce
+      // itself in the notice strip, which is where outcomes go — "Added to your
+      // library", "Saved your position" — so a wait arrived looking like
+      // something that had already happened.
+      setLoading(true);
+      // Only the run that still owns the screen puts the spinner away; an
+      // overtaken one leaves it to whichever replaced it.
+      const finish = () => {
+        if (generation === episodeSwitch.current) setLoading(false);
+      };
       // The full metadata alongside the sources: without it the player has no
       // episode list, so next-up and the episode picker would both be empty.
       void Promise.all([
@@ -1670,7 +1683,7 @@ export function App() {
         .then(([streams, meta]) => {
           if (generation !== episodeSwitch.current) return;
           const chosen = pickBingeStream(streams, group);
-          setMessage("");
+          finish();
           if (!chosen) {
             openTitle();
             return;
@@ -1684,7 +1697,7 @@ export function App() {
         })
         .catch(() => {
           if (generation !== episodeSwitch.current) return;
-          setMessage("");
+          finish();
           openTitle();
         });
     },

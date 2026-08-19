@@ -4173,8 +4173,10 @@ body.is-locked {
   }
 }
 @media (max-width: 760px) {
+  /* Just enough to clear the dots. 48px held the button a whole row above
+     them, which read as the copy floating rather than sitting on the slide. */
   .hero-copy {
-    padding-bottom: 48px;
+    padding-bottom: 20px;
   }
   .hero-dots {
     right: 0;

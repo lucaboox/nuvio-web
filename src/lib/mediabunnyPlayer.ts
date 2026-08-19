@@ -1,6 +1,7 @@
 // Extension included so Node's resolver finds it under the test runner, which
 // does not resolve like the bundler does.
-import { probeSource, statusReason } from "./sourceProbe.ts";
+import { describeTransfer, probeSource, statusReason } from "./sourceProbe.ts";
+import { probeDecoders, summariseDecoders } from "./decoderSupport.ts";
 import { readRetryDelay } from "./requestPolicy.ts";
 import {
   ALL_FORMATS,
@@ -322,8 +323,16 @@ export class MediabunnyPlayer {
     // Before anything commits to the file. Everything below reads it over
     // range requests, and a host that will not serve them does not fail here —
     // it stalls, with no status to report and nothing to decode.
-    const reachable = await this.stage("Checking the source…", () =>
-      probeSource(this.url, this.options.requestHeaders),
+    //
+    // Alongside it, what this browser can decode at all: local, quick, and the
+    // answer to the question any later failure raises.
+    const [reachable] = await this.stage("Checking the source…", () =>
+      Promise.all([
+        probeSource(this.url, this.options.requestHeaders),
+        probeDecoders().then((support) => {
+          this.decoders = summariseDecoders(support);
+        }),
+      ]),
     );
     if (!reachable.ok) {
       this.report("error", reachable.reason);
@@ -349,6 +358,8 @@ export class MediabunnyPlayer {
     // what the host said rather than by which step was waiting on it.
     let lastStatus = 0;
     let lastNetworkError = "";
+    let requests = 0;
+    let bytes = 0;
     const input = new Input({
       formats: ALL_FORMATS,
       source: new UrlSource(this.url, {
@@ -360,9 +371,14 @@ export class MediabunnyPlayer {
         // and lets the error through.
         getRetryDelay: readRetryDelay,
         fetchFn: async (resource, init) => {
+          requests += 1;
           try {
             const response = await fetch(resource, init);
             if (!response.ok) lastStatus = response.status;
+            // Counted from the header rather than by reading the body, which
+            // belongs to the reader and may only be consumed once.
+            const length = Number(response.headers.get("content-length") ?? 0);
+            if (Number.isFinite(length) && length > 0) bytes += length;
             return response;
           } catch (error) {
             lastNetworkError =
@@ -374,13 +390,25 @@ export class MediabunnyPlayer {
     });
     this.input = input;
     /** Whatever the host last said, ready to append to a failure. */
+    const transfer = () =>
+      describeTransfer(bytes, requests, reachable.ranges);
     const hostSaid = () =>
       (lastStatus
         ? ` ${statusReason(lastStatus)}`
         : lastNetworkError
           ? ` The last request failed with: ${lastNetworkError}.`
-          : "") + rangeNote;
+          : "") +
+      ` Got ${transfer()}.` +
+      rangeNote;
 
+    // The one step that can legitimately take a while, so it says how it is
+    // getting on. Bytes climbing means it is reading and merely slow; bytes
+    // stuck at nothing means the requests are going nowhere, and those two
+    // are indistinguishable from a phone without being told.
+    const ticker = window.setInterval(
+      () => this.report("loading", `Reading the stream… ${transfer()}`),
+      1000,
+    );
     const [video, audioTracks] = await this.stage(
       "Reading the stream…",
       () =>
@@ -388,14 +416,13 @@ export class MediabunnyPlayer {
           input.getPrimaryVideoTrack(),
           input.getAudioTracks(),
         ]).catch((error: unknown) => {
-          const detail = hostSaid();
-          throw detail
-            ? new Error(`Could not read this stream.${detail}`)
-            : error;
+          throw new Error(`Could not read this stream.${hostSaid()}`, {
+            cause: error,
+          });
         }),
       READ_TIMEOUT_MS,
       hostSaid,
-    );
+    ).finally(() => window.clearInterval(ticker));
     this.audioOptions = audioTracks;
     // Asked of every track up front rather than of the chosen one afterwards:
     // it is what decides the choice, not a check on it.
@@ -666,8 +693,19 @@ export class MediabunnyPlayer {
     context.drawImage(frame.canvas, 0, 0, this.canvas.width, this.canvas.height);
   }
 
+  /**
+   * Asked once, early, and remembered — so any failure can say whether this
+   * browser could ever have played the thing, which is the first question and
+   * the one a failure before the container is read cannot otherwise answer.
+   */
+  private decoders = "";
+
   private report(state: PlayerState, message: string) {
-    if (!this.stopped) this.onStatus({ state, message });
+    if (this.stopped) return;
+    // Only on failures: while it is working, what it cannot decode is noise.
+    const full =
+      state === "error" && this.decoders ? `${message} ${this.decoders}` : message;
+    this.onStatus({ state, message: full });
   }
 
   /** Video and audio each run their own loop, both reading the same clock. */

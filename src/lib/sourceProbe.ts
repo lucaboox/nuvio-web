@@ -49,6 +49,31 @@ export function mixedContentProblem(
 }
 
 /** What an HTTP status means for a stream, in the terms that matter here. */
+/**
+ * What the reader has actually managed to pull, in plain words.
+ *
+ * Shown while it works and repeated if it gives up, because the difference
+ * between nothing arriving and megabytes arriving slowly is the difference
+ * between a blocked request and a file being read the long way round — and
+ * from a phone, that difference is otherwise invisible.
+ */
+export function describeTransfer(
+  bytes: number,
+  requests: number,
+  ranges: RangeSupport,
+): string {
+  const size =
+    bytes >= 1_000_000
+      ? `${(bytes / 1_000_000).toFixed(1)} MB`
+      : bytes > 0
+        ? `${Math.round(bytes / 1000)} kB`
+        : "nothing";
+  const tries = `${requests} request${requests === 1 ? "" : "s"}`;
+  const note =
+    ranges === "yes" ? "" : ranges === "no" ? ", no ranges" : ", ranges unknown";
+  return `${size} in ${tries}${note}`;
+}
+
 export function statusReason(status: number): string {
   if (status === 401 || status === 403)
     return `The host refused this link (${status}). Debrid links expire, so re-fetching the sources usually fixes it.`;

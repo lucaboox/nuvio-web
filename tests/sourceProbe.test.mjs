@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  describeTransfer,
   mixedContentProblem,
   probeSource,
   rangeSupport,
@@ -88,4 +89,20 @@ test("the probe asks for a small range and passes the stream's own headers", asy
   });
   assert.equal(seen.Range, "bytes=0-1023");
   assert.equal(seen.Authorization, "Bearer x");
+});
+
+test("the transfer readout distinguishes stalled from slow", () => {
+  // The whole point: from a phone these two look identical without it.
+  assert.match(describeTransfer(0, 3, "yes"), /^nothing in 3 requests/);
+  assert.match(describeTransfer(4_200_000, 12, "yes"), /^4\.2 MB in 12 requests/);
+});
+
+test("small transfers are readable too", () => {
+  assert.match(describeTransfer(48_000, 1, "yes"), /^48 kB in 1 request$/);
+});
+
+test("the range verdict rides along, since it explains a slow read", () => {
+  assert.match(describeTransfer(1_000_000, 2, "no"), /no ranges/);
+  assert.match(describeTransfer(1_000_000, 2, "unknown"), /ranges unknown/);
+  assert.doesNotMatch(describeTransfer(1_000_000, 2, "yes"), /ranges/);
 });

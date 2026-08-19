@@ -4483,13 +4483,31 @@ body.is-locked {
   color: #8d97a2;
   font-size: 12px;
 }
+/* The native control is dropped for the same reason the trailer picker drops
+   it: iOS lays a menulist select's own text out to its intrinsic height and
+   ignores the one set here, so the label sits high in the box rather than on
+   its middle. Owning the box puts the text where the padding says. */
 .source-player select {
   height: 34px;
-  padding: 0 8px;
+  padding: 0 30px 0 10px;
+  appearance: none;
+  -webkit-appearance: none;
   border-radius: 9px;
-  background: var(--panel-soft);
+  background:
+    linear-gradient(45deg, transparent 50%, #9ba4ad 50%)
+      calc(100% - 15px) 50% / 6px 6px no-repeat,
+    linear-gradient(135deg, #9ba4ad 50%, transparent 50%)
+      calc(100% - 11px) 50% / 6px 6px no-repeat,
+    var(--panel-soft);
   border: 1px solid var(--panel-border);
   color: inherit;
+  font: inherit;
+  font-size: 13px;
+  text-overflow: ellipsis;
+}
+.source-player select:focus-visible {
+  border-color: var(--accent);
+  outline: 0;
 }
 @media (max-width: 760px) {
   /* The label is the one thing a phone can lose here — the list of players

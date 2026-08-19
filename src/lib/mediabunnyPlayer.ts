@@ -1,3 +1,6 @@
+// Extension included so Node's resolver finds it under the test runner, which
+// does not resolve like the bundler does.
+import { probeSource } from "./sourceProbe.ts";
 import {
   ALL_FORMATS,
   AudioBufferSink,
@@ -31,12 +34,14 @@ import {
  */
 
 /**
- * How long any one startup step may take before it is called a failure.
+ * How long a startup step may take before it is called a failure.
  *
- * Generous enough for a cold debrid link on a slow connection, and far short
- * of the forever these otherwise wait.
+ * Reading a large Matroska header is many round trips and legitimately slow on
+ * a phone, so it gets its own budget — the probe has already established by
+ * then that the host answers at all, which is what the short budgets are for.
  */
 const STAGE_TIMEOUT_MS = 30_000;
+const READ_TIMEOUT_MS = 90_000;
 
 /** Registered once per page, and only when something actually needs it. */
 let dolbyDecoder: Promise<void> | null = null;
@@ -274,7 +279,11 @@ export class MediabunnyPlayer {
    * `.catch()` does nothing for a promise that never resolves. That is the
    * difference between a player that says what went wrong and one that spins.
    */
-  private async stage<T>(label: string, work: () => Promise<T>): Promise<T> {
+  private async stage<T>(
+    label: string,
+    work: () => Promise<T>,
+    budgetMs = STAGE_TIMEOUT_MS,
+  ): Promise<T> {
     this.report("loading", label);
     let timer: ReturnType<typeof setTimeout> | undefined;
     try {
@@ -285,10 +294,10 @@ export class MediabunnyPlayer {
             () =>
               reject(
                 new Error(
-                  `Gave up ${label.replace(/…$/, "").toLowerCase()}. This browser may not be able to decode this file — try an external player.`,
+                  `Gave up ${label.replace(/…$/, "").toLowerCase()} after ${Math.round(budgetMs / 1000)}s. Try another source, or an external player.`,
                 ),
               ),
-            STAGE_TIMEOUT_MS,
+            budgetMs,
           );
         }),
       ]);
@@ -308,6 +317,17 @@ export class MediabunnyPlayer {
       );
       return;
     }
+    // Before anything commits to the file. Everything below reads it over
+    // range requests, and a host that will not serve them does not fail here —
+    // it stalls, with no status to report and nothing to decode.
+    const reachable = await this.stage("Checking the source…", () =>
+      probeSource(this.url, this.options.requestHeaders),
+    );
+    if (!reachable.ok) {
+      this.report("error", reachable.reason);
+      return;
+    }
+
     // Before any track is asked whether it can be decoded, because the answer
     // for Dolby depends on this. No browser's own AudioDecoder handles AC-3 or
     // E-AC-3, and most of what needs this player at all carries one of them —
@@ -325,8 +345,10 @@ export class MediabunnyPlayer {
     });
     this.input = input;
 
-    const [video, audioTracks] = await this.stage("Reading the stream…", () =>
-      Promise.all([input.getPrimaryVideoTrack(), input.getAudioTracks()]),
+    const [video, audioTracks] = await this.stage(
+      "Reading the stream…",
+      () => Promise.all([input.getPrimaryVideoTrack(), input.getAudioTracks()]),
+      READ_TIMEOUT_MS,
     );
     this.audioOptions = audioTracks;
     // Asked of every track up front rather than of the chosen one afterwards:
@@ -373,8 +395,10 @@ export class MediabunnyPlayer {
       return;
     }
 
-    this.duration = await this.stage("Measuring the stream…", () =>
-      input.computeDuration().catch(() => 0),
+    this.duration = await this.stage(
+      "Measuring the stream…",
+      () => input.computeDuration().catch(() => 0),
+      READ_TIMEOUT_MS,
     );
 
     if (this.audioTrack)

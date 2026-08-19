@@ -14,8 +14,8 @@ compatibility_date = "2026-08-01"
 # being it, so this widens nothing for anyone else.
 ALLOWED_APP_HOSTS = "lucaboox.github.io,localhost:4180"
 
-# The two upstream addresses are secrets, not vars — they are build secrets in
+# The upstream address is a secret, not a var — it is a build secret in
 # the official clients and this repository is public:
 #
 #   npx wrangler secret put IMDB_RATINGS_BASE_URL
-#   npx wrangler secret put IMDB_RATINGS_FALLBACK_URL
+

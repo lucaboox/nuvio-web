@@ -31,21 +31,6 @@ export function imdbIdFrom(value: string | undefined): string {
   return /^tt\d{5,12}$/.test(head) ? head : "";
 }
 
-/** TMDB ids appear as `tmdb:1399` on some addons, and bare elsewhere. */
-export function tmdbIdFrom(value: string | undefined): string {
-  const raw = (value ?? "").trim().toLowerCase();
-  const tagged = /^tmdb:(\d{1,9})$/.exec(raw);
-  if (tagged) return tagged[1];
-  return /^\d{1,9}$/.test(raw) ? raw : "";
-}
-
-/** The query the Worker takes, or empty when there is nothing to ask about. */
-export function ratingsQuery(imdbId: string, tmdbId: string): string {
-  const parts: string[] = [];
-  if (imdbId) parts.push(`imdb=${encodeURIComponent(imdbId)}`);
-  if (tmdbId) parts.push(`tmdb=${encodeURIComponent(tmdbId)}`);
-  return parts.join("&");
-}
 
 /**
  * One decimal, always.
@@ -61,24 +46,25 @@ export function formatRating(rating: number): string {
 
 export async function loadEpisodeRatings(
   metaId: string,
-  tmdbId?: string,
 ): Promise<EpisodeRatings> {
+  // A show without an IMDb id simply has no ratings here. The alternative was
+  // a TMDB-keyed fallback, which answers with a different measure entirely.
   const imdb = imdbIdFrom(metaId);
-  const tmdb = tmdbIdFrom(tmdbId) || tmdbIdFrom(metaId);
-  const query = ratingsQuery(imdb, tmdb);
-  if (!query) return new Map();
+  if (!imdb) return new Map();
 
-  const cached = cache.get(query);
+  const cached = cache.get(imdb);
   if (cached && Date.now() - cached.at < CACHE_TTL_MS) return cached.ratings;
 
   // Shared, so opening a show twice while the first ask is in the air makes
   // one request rather than two.
-  const existing = inFlight.get(query);
+  const existing = inFlight.get(imdb);
   if (existing) return existing;
 
   const task = (async () => {
     try {
-      const response = await fetch(`${WORKER_URL}/season-ratings?${query}`);
+      const response = await fetch(
+        `${WORKER_URL}/season-ratings?imdb=${encodeURIComponent(imdb)}`,
+      );
       if (!response.ok) return new Map<string, number>();
       const payload = (await response.json()) as {
         ratings?: Record<string, number>;
@@ -86,16 +72,16 @@ export async function loadEpisodeRatings(
       const ratings: EpisodeRatings = new Map(
         Object.entries(payload.ratings ?? {}),
       );
-      cache.set(query, { at: Date.now(), ratings });
+      cache.set(imdb, { at: Date.now(), ratings });
       return ratings;
     } catch {
       // No badges rather than an error: a score is decoration, and the
       // episode list has to render without one.
       return new Map<string, number>();
     } finally {
-      inFlight.delete(query);
+      inFlight.delete(imdb);
     }
   })();
-  inFlight.set(query, task);
+  inFlight.set(imdb, task);
   return task;
 }

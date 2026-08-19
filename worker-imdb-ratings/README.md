@@ -23,24 +23,25 @@ separating costs nothing.
 
 ## What it receives
 
-The IMDb or TMDB id of a series. No account, no profile, no episode, nothing
+The IMDb id of a series. No account, no profile, no episode, nothing
 about what was played. Requests are not logged.
 
 ## Endpoint
 
 ```
-GET /season-ratings?imdb=tt0944947&tmdb=1399
+GET /season-ratings?imdb=tt0944947
 ```
 
-Either id may be omitted. Both are validated against `^tt\d{5,12}$` and
-`^\d{1,9}$` before they become part of a path on another host.
+Validated against `^tt\d{5,12}$` before it becomes part of a path on another
+host.
 
-The IMDb-keyed service is asked first and the TMDB-keyed one only when the
-first knows nothing — the same order, and the same "a zero vote average means
-unrated" rule, as `ImdbEpisodeRatingsRepository` in the official clients.
+IMDb only. The official clients also fall back to a TMDB-keyed service, which
+answers with TMDB's vote average — a different measure that would then be shown
+under an IMDb mark. A show with no IMDb id gets no ratings instead, which is the
+honest answer. The "a zero vote average means unrated" rule is kept.
 
 ```json
-{ "ratings": { "1:1": 8.9, "1:2": 8.6 }, "source": "imdb" }
+{ "ratings": { "1:1": 8.9, "1:2": 8.6 } }
 ```
 
 Flattening here rather than in the browser keeps the rule about what counts as
@@ -65,9 +66,8 @@ has no ratings yet is not written off for the rest of the day.
 nothing here names a private address:
 
 ```bash
-npx wrangler secret put IMDB_RATINGS_BASE_URL       # keyed by IMDb id
-npx wrangler secret put IMDB_RATINGS_FALLBACK_URL   # keyed by TMDB id
-npx wrangler secret put EXTRA_APP_HOSTS             # a private test instance
+npx wrangler secret put IMDB_RATINGS_BASE_URL   # keyed by IMDb id
+npx wrangler secret put EXTRA_APP_HOSTS         # a private test instance
 ```
 
 Only the configured origins may read an answer. That is not a defence against a

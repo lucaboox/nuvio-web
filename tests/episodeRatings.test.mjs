@@ -1,11 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import {
-  formatRating,
-  imdbIdFrom,
-  ratingsQuery,
-  tmdbIdFrom,
-} from "../src/lib/episodeRatings.ts";
+import { formatRating, imdbIdFrom } from "../src/lib/episodeRatings.ts";
 
 // Addon ids carry episode coordinates; only the head identifies the series.
 test("an episode id yields its show's imdb id", () => {
@@ -20,22 +15,11 @@ test("anything that is not an imdb id is refused", () => {
   }
 });
 
-test("tmdb ids are read tagged or bare", () => {
-  assert.equal(tmdbIdFrom("tmdb:1399"), "1399");
-  assert.equal(tmdbIdFrom("1399"), "1399");
-  assert.equal(tmdbIdFrom("tt0944947"), "");
-  assert.equal(tmdbIdFrom(undefined), "");
-});
-
-test("the query carries whichever ids there are", () => {
-  assert.equal(ratingsQuery("tt0944947", "1399"), "imdb=tt0944947&tmdb=1399");
-  assert.equal(ratingsQuery("tt0944947", ""), "imdb=tt0944947");
-  assert.equal(ratingsQuery("", "1399"), "tmdb=1399");
-});
-
-// Nothing to ask about must produce no request at all, not a bare one.
-test("no ids means no query", () => {
-  assert.equal(ratingsQuery("", ""), "");
+// IMDb only, by choice. A TMDB-keyed fallback answers with TMDB's vote
+// average, which is a different measure and would sit under an IMDb mark.
+test("a show identified only by tmdb gets no ratings rather than the wrong ones", () => {
+  assert.equal(imdbIdFrom("tmdb:1399"), "");
+  assert.equal(imdbIdFrom("1399"), "");
 });
 
 test("scores always read to one decimal", () => {

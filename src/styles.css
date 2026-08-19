@@ -301,6 +301,7 @@ a {
   overscroll-behavior-x: contain;
   scroll-snap-type: x proximity;
   padding: 8px 3px 14px;
+  scroll-padding-inline: 3px;
   scrollbar-width: none;
 }
 .poster-card {
@@ -2016,13 +2017,18 @@ a {
     top: 75px;
     margin: 6px 12px;
   }
-  /* Squared off edge to edge, so the scroller must lose its corners too. */
+  /* Inset to the same 16px the rows below use, so the page has one margin
+     down both sides rather than a full-bleed hero over content that stops
+     short of it. */
+  .hero-carousel {
+    margin-inline: 16px;
+  }
   .hero-track {
-    border-radius: 0;
+    border-radius: 18px;
   }
   .hero {
     min-height: 520px;
-    border-radius: 0;
+    border-radius: 18px;
     padding: 30px 20px;
     background-position: center;
     align-items: flex-end;
@@ -2055,6 +2061,12 @@ a {
   .media-row {
     padding-left: 16px;
     padding-right: 16px;
+    /* Snapping aligns a card to the scrollport edge, which is inside the
+       padding — so the row snapped the first card to x=0 and swallowed the
+       gutter. Drag it right and it springs straight back. scroll-padding is
+       what tells snapping where the content actually starts. */
+    scroll-padding-left: 16px;
+    scroll-padding-right: 16px;
   }
   .poster-card {
     flex-basis: 132px;
@@ -2821,6 +2833,7 @@ body,
   gap: 16px;
   overflow-x: auto;
   padding: 8px 3px 14px;
+  scroll-padding-inline: 3px;
   scroll-snap-type: x proximity;
   scrollbar-width: none;
 }
@@ -3157,6 +3170,8 @@ body,
   .continue-row {
     padding-left: 16px;
     padding-right: 16px;
+    scroll-padding-left: 16px;
+    scroll-padding-right: 16px;
   }
   .continue-card {
     flex-basis: 285px;

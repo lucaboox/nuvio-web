@@ -121,6 +121,22 @@ async function resolveTmdbId(
   return number(rows[0]?.id);
 }
 
+/**
+ * The show's TMDB id, for callers that need one and have only an IMDb id.
+ *
+ * Shares `resolveTmdbId`'s cache, so asking here costs nothing once metadata
+ * enrichment has already looked the same title up.
+ */
+export async function tmdbIdForMeta(
+  meta: Meta,
+  config: MetadataEnrichmentConfig["tmdb"],
+): Promise<string> {
+  const direct = tmdbIdFrom(meta.id);
+  if (direct) return String(direct);
+  if (!config.enabled || !config.apiKey) return "";
+  return String((await resolveTmdbId(meta, config)) ?? "");
+}
+
 /** Resolve the identifier expected by Nuvio plugin getStreams handlers. */
 export async function resolvePluginTmdbId(
   meta: Meta,

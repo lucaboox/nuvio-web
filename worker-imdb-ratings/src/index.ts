@@ -17,7 +17,15 @@
  */
 
 export interface Env {
-  /** Keyed by IMDb id. Set with `wrangler secret put IMDB_RATINGS_BASE_URL`. */
+  /**
+   * The ratings service, looked up by TMDB id.
+   *
+   * It serves IMDb's own scores — the payload carries `tconst` and
+   * `num_votes`, IMDb's fields, under TMDB-shaped names — merged with TMDB
+   * artwork, which is why TMDB's id is the key.
+   *
+   * Set with `wrangler secret put IMDB_RATINGS_BASE_URL`.
+   */
   IMDB_RATINGS_BASE_URL: string;
   /** Hosts allowed to read an answer, comma separated. */
   ALLOWED_APP_HOSTS: string;
@@ -35,7 +43,7 @@ const BROWSER_TTL_SECONDS = 6 * 60 * 60;
 /** Long enough that an upstream hiccup does not become a blank page. */
 const STALE_TTL_SECONDS = 24 * 60 * 60;
 
-const IMDB_ID = /^tt\d{5,12}$/;
+const TMDB_ID = /^\d{1,9}$/;
 
 type UpstreamEpisode = {
   season_number?: number | null;
@@ -129,10 +137,10 @@ export default {
 
     // Validated rather than passed through: this becomes a path on another
     // host, and anything that is not plainly an id has no business there.
-    const imdbId = (url.searchParams.get("imdb") ?? "").trim().toLowerCase();
-    const imdb = IMDB_ID.test(imdbId) ? imdbId : "";
-    if (!imdb)
-      return new Response(JSON.stringify({ error: "Give an imdb id." }), {
+    const tmdbId = (url.searchParams.get("tmdb") ?? "").trim();
+    const tmdb = TMDB_ID.test(tmdbId) ? tmdbId : "";
+    if (!tmdb)
+      return new Response(JSON.stringify({ error: "Give a tmdb id." }), {
         status: 400,
         headers: { ...cors, "Content-Type": "application/json" },
       });
@@ -140,7 +148,7 @@ export default {
     // Keyed on the id alone, so two origins asking about one show share an
     // answer and the Origin header does not fragment the cache.
     const cacheKey = new Request(
-      `https://ratings.invalid/season-ratings?imdb=${imdb}`,
+      `https://ratings.invalid/season-ratings?tmdb=${tmdb}`,
       { method: "GET" },
     );
     const cache = caches.default;
@@ -157,10 +165,7 @@ export default {
       });
     }
 
-    // The IMDb-keyed service only. The official clients also fall back to a
-    // TMDB-keyed one, which answers with TMDB's vote average — a different
-    // measure that would be shown under an IMDb mark. Better to show nothing.
-    const ratings = await fetchSeasonRatings(env.IMDB_RATINGS_BASE_URL, imdb);
+    const ratings = await fetchSeasonRatings(env.IMDB_RATINGS_BASE_URL, tmdb);
 
     const body = JSON.stringify({ ratings });
     // An empty answer is cached too, but briefly: a show with no ratings yet

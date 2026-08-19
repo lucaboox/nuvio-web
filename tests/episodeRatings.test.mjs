@@ -1,25 +1,18 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { formatRating, imdbIdFrom } from "../src/lib/episodeRatings.ts";
+import { formatRating, tmdbIdFrom } from "../src/lib/episodeRatings.ts";
 
-// Addon ids carry episode coordinates; only the head identifies the series.
-test("an episode id yields its show's imdb id", () => {
-  assert.equal(imdbIdFrom("tt0944947:1:2"), "tt0944947");
-  assert.equal(imdbIdFrom("tt0944947"), "tt0944947");
-  assert.equal(imdbIdFrom("TT0944947"), "tt0944947");
+// The service files IMDb's scores under TMDB's id, so that is the only key it
+// takes — an IMDb id returns an empty list from it.
+test("a plain tmdb id is accepted", () => {
+  assert.equal(tmdbIdFrom("1399"), "1399");
+  assert.equal(tmdbIdFrom(" 1399 "), "1399");
 });
 
-test("anything that is not an imdb id is refused", () => {
-  for (const value of ["", undefined, "1399", "tmdb:1399", "tt12", "kitsu:42"]) {
-    assert.equal(imdbIdFrom(value), "", String(value));
+test("anything that is not a bare tmdb id is refused", () => {
+  for (const value of ["", undefined, "tt0944947", "tmdb:1399", "kitsu:42", "12a"]) {
+    assert.equal(tmdbIdFrom(value), "", String(value));
   }
-});
-
-// IMDb only, by choice. A TMDB-keyed fallback answers with TMDB's vote
-// average, which is a different measure and would sit under an IMDb mark.
-test("a show identified only by tmdb gets no ratings rather than the wrong ones", () => {
-  assert.equal(imdbIdFrom("tmdb:1399"), "");
-  assert.equal(imdbIdFrom("1399"), "");
 });
 
 test("scores always read to one decimal", () => {

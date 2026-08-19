@@ -22,6 +22,7 @@ import { assessPlayback, shouldUseRemuxFallback } from "../lib/playback";
 import { safeHttpUrl } from "../lib/security";
 import {
   enrichMetadata,
+  tmdbIdForMeta,
   type MetadataEnrichmentConfig,
 } from "../lib/metadataEnrichment";
 import { externalPlayerOptions } from "../lib/externalPlayer";
@@ -512,13 +513,18 @@ export function Details({
     if (meta.type !== "series") return;
     let live = true;
     setEpisodeRatings(new Map());
-    void loadEpisodeRatings(meta.id).then((ratings) => {
-      if (live) setEpisodeRatings(ratings);
-    });
+    // The service files these under TMDB's id, so the show's id is resolved
+    // first — through the same cache metadata enrichment already fills, so a
+    // title it has enriched costs no extra lookup.
+    void tmdbIdForMeta(meta, metadataEnrichment.tmdb)
+      .then((tmdbId) => (tmdbId ? loadEpisodeRatings(tmdbId) : new Map()))
+      .then((ratings) => {
+        if (live) setEpisodeRatings(ratings as EpisodeRatings);
+      });
     return () => {
       live = false;
     };
-  }, [meta.id, meta.type]);
+  }, [meta, meta.id, meta.type, metadataEnrichment.tmdb]);
 
   useEffect(() => {
     initialSourceConsumed.current = false;

@@ -5,9 +5,9 @@ itself.
 
 ## Why it exists
 
-The two services Nuvio reads episode scores from send no cross-origin headers.
-A browser is refused outright — not a 403 it could report, but `Failed to
-fetch` before the request is made. Nothing in the page can work around that.
+The service Nuvio reads episode scores from sends no cross-origin headers. A
+browser is refused outright — not a 403 it could report, but `Failed to fetch`
+before the request is made. Nothing in the page can work around that.
 
 It also keeps the upstream addresses out of the app. They are build-time
 secrets in the official clients, and this repository is public: anything the
@@ -23,22 +23,28 @@ separating costs nothing.
 
 ## What it receives
 
-The IMDb id of a series. No account, no profile, no episode, nothing
+The TMDB id of a series. No account, no profile, no episode, nothing
 about what was played. Requests are not logged.
 
 ## Endpoint
 
 ```
-GET /season-ratings?imdb=tt0944947
+GET /season-ratings?tmdb=1399
 ```
 
-Validated against `^tt\d{5,12}$` before it becomes part of a path on another
-host.
+Validated against `^\d{1,9}$` before it becomes part of a path on another host.
 
-IMDb only. The official clients also fall back to a TMDB-keyed service, which
-answers with TMDB's vote average — a different measure that would then be shown
-under an IMDb mark. A show with no IMDb id gets no ratings instead, which is the
-honest answer. The "a zero vote average means unrated" rule is kept.
+The scores are IMDb's, though the key is TMDB's: the payload carries `tconst`
+and `num_votes`, which are IMDb's own fields, under TMDB-shaped names. The
+service merges IMDb ratings with TMDB artwork, which is why TMDB's id is what
+it files them under.
+
+The official clients try an IMDb-keyed service first and fall back to this one.
+That service has been serving an expired certificate over a 502 since August
+2026, so the official clients have been reaching this one all along. There is
+nothing to fall back to that is not already here, so this asks it directly.
+
+The "a zero vote average means unrated" rule is kept.
 
 ```json
 { "ratings": { "1:1": 8.9, "1:2": 8.6 } }

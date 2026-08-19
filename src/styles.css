@@ -368,9 +368,18 @@ a {
   color: var(--accent-ink);
   box-shadow: 0 2px 8px #0009;
 }
-.watched-dot svg {
+/* `display: block` because an inline svg sits on a text baseline and reserves
+   descender space beneath it, which centres the box and not the glyph — the
+   eye sat a pixel or two high in the circle. */
+.watched-dot svg,
+.episode-watched svg {
+  display: block;
   width: 18px;
   height: 18px;
+}
+.episode-watched svg {
+  width: 13px;
+  height: 13px;
 }
 .poster-progress {
   position: absolute;

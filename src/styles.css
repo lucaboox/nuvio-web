@@ -1985,7 +1985,9 @@ a {
   .topbar {
     left: 0;
     height: 74px;
-    padding: max(12px, env(safe-area-inset-top)) 14px 8px;
+    /* 16px, matching the rows and the hero rather than sitting 2px closer to
+       the edge than everything under it. */
+    padding: max(12px, env(safe-area-inset-top)) 16px 8px;
     justify-content: flex-start;
   }
   .topbar form {
@@ -2014,13 +2016,18 @@ a {
     top: 75px;
     margin: 6px 12px;
   }
-  /* Squared off edge to edge, so the scroller must lose its corners too. */
+  /* Inset to the same 16px every row below it uses, so the page has one
+     margin rather than a full-bleed hero above content that stops short of
+     the edge — which is what read as everything crowding the sides. */
+  .hero-carousel {
+    margin-inline: 16px;
+  }
   .hero-track {
-    border-radius: 0;
+    border-radius: 18px;
   }
   .hero {
     min-height: 520px;
-    border-radius: 0;
+    border-radius: 18px;
     padding: 30px 20px;
     background-position: center;
     align-items: flex-end;

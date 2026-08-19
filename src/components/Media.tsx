@@ -43,8 +43,11 @@ export const PosterCard = memo(function PosterCard({
   // A movie is watched outright; a series is only badged once nothing is
   // part-watched, which the row-level index cannot tell us, so keep it to the
   // explicit movie case rather than badging a show mid-season.
-  const watched =
-    item.type !== "series" && index.watched.has(watchKey(item.id));
+  // A series counts when the show itself is marked watched, which is what
+  // finishing one records. Episode-level marks are deliberately not summed
+  // here: a poster carries no episode list, so "some episodes" cannot be told
+  // from "all of them", and badging mid-season would be worse than not.
+  const watched = index.watched.has(watchKey(item.id));
   return (
     <button
       className="poster-card"

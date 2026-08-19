@@ -352,17 +352,25 @@ a {
   font-size: 52px;
   color: #4c5661;
 }
+/* The accent, like every other watched mark — this one was the last left on
+   a hardcoded white. Larger too: at 27px it read as a dot rather than a
+   state, against the episode list's 21px badge on a much smaller thumbnail. */
 .watched-dot {
   position: absolute;
   top: 8px;
   right: 8px;
-  width: 27px;
-  height: 27px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   display: grid;
   place-items: center;
-  background: white;
-  color: #111;
+  background: var(--accent);
+  color: var(--accent-ink);
+  box-shadow: 0 2px 8px #0009;
+}
+.watched-dot svg {
+  width: 18px;
+  height: 18px;
 }
 .poster-progress {
   position: absolute;

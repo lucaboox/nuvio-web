@@ -56,6 +56,22 @@ type UpstreamSeason = { episodes?: UpstreamEpisode[] | null };
 export type RatingMap = Record<string, number>;
 
 /**
+ * Tidies a base address that came from a shell.
+ *
+ * `echo "https://host" | wrangler secret put` keeps the quotes on Windows —
+ * cmd.exe treats them as part of the string — and the stored value then builds
+ * a URL that cannot parse. Costing nothing to strip is cheaper than expecting
+ * everyone to know which shell they are in.
+ */
+export function normalizeBaseUrl(value: string | undefined): string {
+  return (value ?? "")
+    .trim()
+    .replace(/^['"]+|['"]+$/g, "")
+    .trim()
+    .replace(/\/+$/, "");
+}
+
+/**
  * Flattened here rather than in the browser, so the rule that decides what
  * counts as a rating lives in one place.
  *
@@ -119,7 +135,7 @@ async function fetchSeasonRatings(
   baseUrl: string | undefined,
   showId: string,
 ): Promise<{ ratings: RatingMap; upstream: string }> {
-  const base = (baseUrl ?? "").trim().replace(/\/+$/, "");
+  const base = normalizeBaseUrl(baseUrl);
   if (!base) return { ratings: {}, upstream: "not configured" };
   const response = await fetch(`${base}/api/shows/${showId}/season-ratings`, {
     headers: { Accept: "application/json" },

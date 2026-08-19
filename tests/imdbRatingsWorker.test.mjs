@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { toRatingMap } from "../worker-imdb-ratings/src/index.ts";
+import { normalizeBaseUrl, toRatingMap } from "../worker-imdb-ratings/src/index.ts";
 
 // Shape taken from the DTOs the official clients decode.
 const SEASONS = [
@@ -73,4 +73,21 @@ test("a non-numeric score is refused rather than coerced", () => {
     },
   ]);
   assert.deepEqual(map, {});
+});
+
+// cmd.exe keeps the quotes when echoing into `wrangler secret put`, so the
+// stored value builds a URL that cannot parse. Cheaper to strip than to
+// expect everyone to know which shell they are in.
+test("a base url survives shell quoting", () => {
+  assert.equal(normalizeBaseUrl('"https://seriesgraph.com"'), "https://seriesgraph.com");
+  assert.equal(normalizeBaseUrl("'https://seriesgraph.com'"), "https://seriesgraph.com");
+  assert.equal(normalizeBaseUrl(' "https://seriesgraph.com" '), "https://seriesgraph.com");
+});
+
+test("trailing slashes and blanks are handled too", () => {
+  assert.equal(normalizeBaseUrl("https://seriesgraph.com/"), "https://seriesgraph.com");
+  assert.equal(normalizeBaseUrl('"https://seriesgraph.com/"'), "https://seriesgraph.com");
+  assert.equal(normalizeBaseUrl(""), "");
+  assert.equal(normalizeBaseUrl(undefined), "");
+  assert.equal(normalizeBaseUrl('""'), "");
 });

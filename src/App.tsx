@@ -2776,6 +2776,43 @@ function UpdateModal({ onLater }: { onLater(): void }) {
   );
 }
 
+/**
+ * What this screen actually is, in the units the layout is written in.
+ *
+ * "It looks different on their phone" cannot be answered from a screenshot:
+ * device pixels, browser chrome and the system display-size setting all move
+ * independently of the CSS width every rule here keys off. One line someone
+ * can read aloud ends the guessing.
+ */
+function ScreenReadout() {
+  const describe = () => ({
+    width: window.innerWidth,
+    height: window.innerHeight,
+    ratio: window.devicePixelRatio,
+    // A tab and an installed app get different heights from one device.
+    installed:
+      window.matchMedia("(display-mode: standalone)").matches ||
+      (navigator as unknown as { standalone?: boolean }).standalone === true,
+  });
+  const [screen, setScreen] = useState(describe);
+  useEffect(() => {
+    const update = () => setScreen(describe());
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
+  return (
+    <div className="theme-row">
+      <span>
+        <strong>This screen</strong>
+        <small>
+          {screen.width} × {screen.height} CSS px at {screen.ratio}× ·{" "}
+          {screen.installed ? "installed app" : "browser tab"}
+        </small>
+      </span>
+    </div>
+  );
+}
+
 function UpdateRow() {
   const [state, setState] = useState<"idle" | "checking" | "current" | "pending">(
     updateReady() ? "pending" : "idle",
@@ -4384,6 +4421,7 @@ function SettingsPage({
           <h2>App version</h2>
         </header>
         <UpdateRow />
+        <ScreenReadout />
       </div>
       <div
         className="setting-card settings-category-card"

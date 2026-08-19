@@ -2017,18 +2017,14 @@ a {
     top: 75px;
     margin: 6px 12px;
   }
-  /* Inset to the same 16px the rows below use, so the page has one margin
-     down both sides rather than a full-bleed hero over content that stops
-     short of it. */
-  .hero-carousel {
-    margin-inline: 16px;
-  }
+  /* Full bleed on purpose — it is the one thing meant to reach the edges, so
+     it takes no gutter and the scroller loses its corners with it. */
   .hero-track {
-    border-radius: 18px;
+    border-radius: 0;
   }
   .hero {
     min-height: 520px;
-    border-radius: 18px;
+    border-radius: 0;
     padding: 30px 20px;
     background-position: center;
     align-items: flex-end;

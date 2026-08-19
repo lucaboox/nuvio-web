@@ -3401,11 +3401,7 @@ function SettingsPage({
           </div>
           <ActiveCategoryIcon aria-hidden="true" />
         </header>
-        {/* The page gesture lives here, not on the card inside it. It arms
-            only within 30px of the screen edge and the card starts at 16, so
-            a swipe from the true edge landed on the panel and never reached
-            it — you had to start on the box. This spans the full width. */}
-        <div ref={integrationSwipeRef} className="mobile-settings-panel-content">
+        <div className="mobile-settings-panel-content">
       <div
         className="settings-category-card addon-settings-category"
         hidden={category !== "addons"}
@@ -3490,7 +3486,14 @@ function SettingsPage({
               </button>
             ))}
         </div>
-        <div className="integration-page" hidden={integrationPage === null}>
+        {/* The gesture moves this and nothing else, so the hub stays put and
+            is what you see behind it. As a fixed layer it starts at x=0, so
+            it reaches the edge zone the gesture arms in without help. */}
+        <div
+          ref={integrationSwipeRef}
+          className="integration-page"
+          hidden={integrationPage === null}
+        >
         {integrationPage && (
           <IntegrationPageHeader
             page={INTEGRATION_PAGES.find((item) => item.key === integrationPage)!}

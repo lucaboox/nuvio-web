@@ -3447,12 +3447,15 @@ function SettingsPage({
         </div>
       </div>
       <div
-        ref={integrationSwipeRef}
-        className="setting-card integrations-card settings-category-card"
+        className={`setting-card integrations-card settings-category-card${
+          integrationPage ? " has-page" : ""
+        }`}
         hidden={category !== "integrations"}
       >
-        {integrationPage === null ? (
-          <>
+        {/* The hub stays mounted underneath, so a page sliding away reveals it
+            rather than an empty panel. Both occupy one grid cell, which also
+            means the card is as tall as whichever is showing. */}
+        <div className="integration-hub">
             <header>
               <h2>Integrations</h2>
               <span>Credentials sync separately and securely</span>
@@ -3482,8 +3485,13 @@ function SettingsPage({
                 <ChevronRight />
               </button>
             ))}
-          </>
-        ) : (
+        </div>
+        <div
+          ref={integrationSwipeRef}
+          className="integration-page"
+          hidden={integrationPage === null}
+        >
+        {integrationPage && (
           <IntegrationPageHeader
             page={INTEGRATION_PAGES.find((item) => item.key === integrationPage)!}
             onBack={() => setIntegrationPage(null)}
@@ -3624,6 +3632,7 @@ function SettingsPage({
               already resolve links for playback on the web.
             </p>
           </div>
+        </div>
         </div>
       </div>
       <div

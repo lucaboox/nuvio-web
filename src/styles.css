@@ -4728,6 +4728,29 @@ body.is-locked {
   color: #87919b;
 }
 /* ---- Integrations hub -------------------------------------------------- */
+/* Hub and page share one grid cell while a page is open: the hub stays
+   mounted underneath so a swipe reveals it instead of an empty panel, and the
+   cell takes the height of the taller, so a long page is never clipped. */
+.integrations-card.has-page {
+  display: grid;
+  align-items: start;
+}
+.integrations-card.has-page > .integration-hub,
+.integrations-card.has-page > .integration-page {
+  grid-area: 1 / 1;
+}
+.integration-page {
+  /* Opaque, or the hub reads through it. Stretched over the card's padding so
+     nothing of the hub shows around its edges. */
+  margin: -22px;
+  padding: 22px;
+  border-radius: inherit;
+  background: var(--panel-bg);
+}
+.integrations-card.has-page > .integration-hub {
+  /* Present for the reveal, but not reachable behind the page. */
+  pointer-events: none;
+}
 /* One row per provider, carrying its own mark — the same shape the official
    clients use, where each of these is a page rather than a section of one. */
 .integration-row {

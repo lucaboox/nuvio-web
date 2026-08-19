@@ -9,7 +9,31 @@
  * all of them are worth saying precisely rather than blaming the file.
  */
 
-export type SourceProbe = { ok: true; ranges: boolean } | { ok: false; reason: string };
+/**
+ * `ranges` is a hint and nothing more.
+ *
+ * "unknown" is the common answer, not the rare one: a host may answer 200 to a
+ * probe range and still serve ranges perfectly, and `Accept-Ranges` is only
+ * readable cross-origin when the host chooses to expose it. Nothing may be
+ * refused on this — the reader copes without ranges, just more slowly — so it
+ * exists only to make a later failure easier to explain.
+ */
+export type RangeSupport = "yes" | "no" | "unknown";
+
+export type SourceProbe =
+  | { ok: true; ranges: RangeSupport }
+  | { ok: false; reason: string };
+
+/** What the response says about serving parts of the file. */
+export function rangeSupport(
+  status: number,
+  acceptRanges: string | null,
+): RangeSupport {
+  if (status === 206) return "yes";
+  if (acceptRanges && /bytes/i.test(acceptRanges)) return "yes";
+  if (acceptRanges && /none/i.test(acceptRanges)) return "no";
+  return "unknown";
+}
 
 /**
  * A page on https may not fetch http, and the browser blocks it before the
@@ -38,10 +62,11 @@ export function statusReason(status: number): string {
 }
 
 /**
- * One byte, so the answer costs nothing and arrives quickly.
+ * A small range, so the answer costs nothing and arrives quickly.
  *
- * A 206 also confirms range requests work, which the reader depends on: a host
- * that ignores Range hands back the whole file for every seek.
+ * A kilobyte rather than the single byte this asked for first: `bytes=0-0` is
+ * an edge case some hosts answer 200 to while serving ordinary ranges fine,
+ * which made the answer look worse than the truth.
  */
 export async function probeSource(
   url: string,
@@ -60,13 +85,19 @@ export async function probeSource(
   try {
     const response = await fetchImpl(url, {
       method: "GET",
-      headers: { ...(headers ?? {}), Range: "bytes=0-0" },
+      headers: { ...(headers ?? {}), Range: "bytes=0-1023" },
       signal: controller.signal,
     });
     // Nothing here reads the body; letting it stream would download the file.
     void response.body?.cancel().catch(() => undefined);
-    if (response.status === 206) return { ok: true, ranges: true };
-    if (response.ok) return { ok: true, ranges: false };
+    if (response.ok || response.status === 206)
+      return {
+        ok: true,
+        ranges: rangeSupport(
+          response.status,
+          response.headers.get("accept-ranges"),
+        ),
+      };
     return { ok: false, reason: statusReason(response.status) };
   } catch {
     if (controller.signal.aborted)

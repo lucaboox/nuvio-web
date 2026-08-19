@@ -329,17 +329,14 @@ export class MediabunnyPlayer {
       this.report("error", reachable.reason);
       return;
     }
-    // A host that ignores Range hands back the whole file for every read, so
-    // reaching the tracks means downloading gigabytes first. Worth saying:
-    // otherwise it looks like a stall rather than a host that cannot be
-    // streamed from at all.
-    if (!reachable.ranges) {
-      this.report(
-        "error",
-        "This host does not support range requests, so the file cannot be read a piece at a time — the whole thing would have to download first. Use an external player, or pick another source.",
-      );
-      return;
-    }
+    // Deliberately not a reason to refuse: the reader falls back to reading
+    // sequentially, which is slower but works, and the probe cannot tell the
+    // difference between a host that has no ranges and one that simply did not
+    // say so. It is only worth mentioning if something later actually fails.
+    const rangeNote =
+      reachable.ranges === "no"
+        ? " This host does not appear to serve ranges, so the file has to be read from the start."
+        : "";
 
     // Before any track is asked whether it can be decoded, because the answer
     // for Dolby depends on this. No browser's own AudioDecoder handles AC-3 or
@@ -378,11 +375,11 @@ export class MediabunnyPlayer {
     this.input = input;
     /** Whatever the host last said, ready to append to a failure. */
     const hostSaid = () =>
-      lastStatus
+      (lastStatus
         ? ` ${statusReason(lastStatus)}`
         : lastNetworkError
           ? ` The last request failed with: ${lastNetworkError}.`
-          : "";
+          : "") + rangeNote;
 
     const [video, audioTracks] = await this.stage(
       "Reading the stream…",

@@ -4501,6 +4501,28 @@ body.is-locked {
 .shortcut-banner:hover {
   border-color: #46505b;
 }
+/* A caveat, not a failure — amber rather than red, and beside the thing it is
+   about rather than at the top of the page. */
+.setting-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 2px 0 6px;
+  padding: 11px 13px;
+  border: 1px solid #5c4a1e;
+  border-radius: 12px;
+  background: #211a0c;
+  color: #d8c79a;
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+.setting-warning > svg {
+  flex: none;
+  width: 17px;
+  height: 17px;
+  margin-top: 1px;
+  color: #e0b445;
+}
 .source-player {
   display: flex;
   align-items: center;

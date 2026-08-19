@@ -29,6 +29,7 @@ import {
   Search,
   Settings,
   Trash2,
+  TriangleAlert,
   UserRound,
 } from "lucide-react";
 import {
@@ -3978,6 +3979,18 @@ function SettingsPage({
               </span>
               <Download />
             </a>
+            {/* Said plainly because it is the one thing about this route that
+                someone might object to, and they cannot object to what they
+                are not told. */}
+            <p className="setting-warning">
+              <TriangleAlert aria-hidden="true" />
+              <span>
+                Outplayer saves your position when you close it, and reaching
+                you back here sends the stream URL through a Cloudflare Worker.
+                Nothing is logged and nobody can read it — the Worker holds a
+                position for a few minutes, hands it back, and forgets it.
+              </span>
+            </p>
           </>
         )}
         <p>

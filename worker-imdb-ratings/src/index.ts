@@ -101,25 +101,45 @@ function corsHeaders(request: Request, env: Env) {
   return {
     "Access-Control-Allow-Origin": origin,
     "Access-Control-Allow-Methods": "GET, OPTIONS",
+    // Readable from the page, which is the only place anyone will look.
+    "Access-Control-Expose-Headers": "X-Nuvio-Cache",
     Vary: "Origin",
   };
 }
 
+/**
+ * Reports how it went as well as what it got.
+ *
+ * An empty map and a failed request looked identical from the browser, which
+ * made "no ratings for this show" and "the upstream is down" the same screen —
+ * the diagnosis that cost days on the player. `upstream` never names the host,
+ * only what it did.
+ */
 async function fetchSeasonRatings(
   baseUrl: string | undefined,
   showId: string,
-): Promise<RatingMap> {
+): Promise<{ ratings: RatingMap; upstream: string }> {
   const base = (baseUrl ?? "").trim().replace(/\/+$/, "");
-  if (!base) return {};
+  if (!base) return { ratings: {}, upstream: "not configured" };
   const response = await fetch(`${base}/api/shows/${showId}/season-ratings`, {
     headers: { Accept: "application/json" },
     // Cached at the edge as well as in front of it, so a cold browser for a
     // show someone else opened still costs no upstream request.
     cf: { cacheTtl: EDGE_TTL_SECONDS, cacheEverything: true },
-  }).catch(() => null);
-  if (!response || !response.ok) return {};
+  }).catch((error: unknown) => {
+    // A dead certificate and a refused connection both land here.
+    return error instanceof Error ? error.message : "unreachable";
+  });
+  if (typeof response === "string")
+    return { ratings: {}, upstream: `unreachable: ${response}` };
+  if (!response.ok) return { ratings: {}, upstream: `HTTP ${response.status}` };
   const payload = await response.json().catch(() => null);
-  return toRatingMap(payload);
+  if (payload === null) return { ratings: {}, upstream: "unreadable body" };
+  const ratings = toRatingMap(payload);
+  return {
+    ratings,
+    upstream: Object.keys(ratings).length ? "ok" : "ok, no ratings for this show",
+  };
 }
 
 export default {
@@ -165,9 +185,12 @@ export default {
       });
     }
 
-    const ratings = await fetchSeasonRatings(env.IMDB_RATINGS_BASE_URL, tmdb);
+    const { ratings, upstream } = await fetchSeasonRatings(
+      env.IMDB_RATINGS_BASE_URL,
+      tmdb,
+    );
 
-    const body = JSON.stringify({ ratings });
+    const body = JSON.stringify({ ratings, upstream });
     // An empty answer is cached too, but briefly: a show with no ratings yet
     // should not be asked about on every open, and should not be written off
     // for half a day either.

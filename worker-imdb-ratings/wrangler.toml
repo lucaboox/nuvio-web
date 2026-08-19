@@ -1,0 +1,21 @@
+name = "nuvio-imdb-ratings"
+main = "src/index.ts"
+compatibility_date = "2026-08-01"
+
+# Every host the app is reached from. Only these origins may read an answer.
+#
+# Public hosts only. A private instance goes in EXTRA_APP_HOSTS, set with
+# `wrangler secret put` so it is never committed:
+#
+#   npx wrangler secret put EXTRA_APP_HOSTS
+#
+[vars]
+# localhost is the preview server. An origin can only claim to be localhost by
+# being it, so this widens nothing for anyone else.
+ALLOWED_APP_HOSTS = "lucaboox.github.io,localhost:4180"
+
+# The two upstream addresses are secrets, not vars — they are build secrets in
+# the official clients and this repository is public:
+#
+#   npx wrangler secret put IMDB_RATINGS_BASE_URL
+#   npx wrangler secret put IMDB_RATINGS_FALLBACK_URL

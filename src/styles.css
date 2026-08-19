@@ -3276,6 +3276,31 @@ body,
   border-radius: 99px;
   background: var(--accent);
 }
+/* Air date on the left, score on the right — the shape the official clients
+   use, and off the artwork so it cannot sit over the progress bar, which is
+   where the previous attempt at this put it. */
+/* Scoped to the list, because `.episode-list small` sets `display: block` and
+   is the more specific of the two — unscoped, this rule never applied. */
+.episode-list .episode-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.episode-imdb {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  gap: 5px;
+  color: #f5c518;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.episode-imdb img {
+  width: 26px;
+  height: auto;
+  object-fit: contain;
+}
 .episode-row.is-watched .episode-thumb img {
   opacity: 0.45;
 }

@@ -1,4 +1,9 @@
 import {
+  formatRating,
+  loadEpisodeRatings,
+  type EpisodeRatings,
+} from "../lib/episodeRatings";
+import {
   ArrowLeft,
   Check,
   Copy,
@@ -423,6 +428,12 @@ export function Details({
     ),
   );
   const [busy, setBusy] = useState(true);
+  // Fetched once per series and cached, so paging through seasons asks nobody.
+  // Empty until it answers, and empty forever if it cannot — a score is
+  // decoration and the list has to render without one.
+  const [episodeRatings, setEpisodeRatings] = useState<EpisodeRatings>(
+    () => new Map(),
+  );
   const [sourceOpen, setSourceOpen] = useState(false);
   // The sources panel is drawn inside this overlay, so the back gesture has to
   // stand down while it is up: a swipe there would otherwise carry both away
@@ -497,6 +508,17 @@ export function Details({
     };
   }, [meta.id, swipeRef]);
   useEffect(() => setDescriptionExpanded(false), [meta.id]);
+  useEffect(() => {
+    if (meta.type !== "series") return;
+    let live = true;
+    setEpisodeRatings(new Map());
+    void loadEpisodeRatings(meta.id).then((ratings) => {
+      if (live) setEpisodeRatings(ratings);
+    });
+    return () => {
+      live = false;
+    };
+  }, [meta.id, meta.type]);
 
   useEffect(() => {
     initialSourceConsumed.current = false;
@@ -929,6 +951,7 @@ export function Details({
                 <EpisodeRow
                   key={video.id}
                   video={video}
+                  rating={episodeRatings.get(`${video.season}:${video.episode}`)}
                   watched={watchIndex.watched.has(
                     watchKey(meta.id, video.season, video.episode),
                   )}
@@ -1285,6 +1308,7 @@ export function Details({
  */
 export function EpisodeRow({
   video,
+  rating,
   watched,
   percent,
   remaining,
@@ -1293,6 +1317,8 @@ export function EpisodeRow({
   onMenu,
 }: {
   video: Video;
+  /** IMDb's own score for this episode, where the service knows one. */
+  rating?: number;
   watched: boolean;
   percent: number;
   /** How much is left, for a part-watched episode. */
@@ -1339,9 +1365,20 @@ export function EpisodeRow({
         )}
       </span>
       <span>
-        <small>
-          {episodeReleaseDate(video.released) ||
-            `Season ${video.season} · Episode ${video.episode}`}
+        {/* Beside the air date rather than over the artwork, which is where
+            this used to sit and where it covered the progress bar on a
+            phone. It is also where the official clients put it. */}
+        <small className="episode-meta">
+          <span>
+            {episodeReleaseDate(video.released) ||
+              `Season ${video.season} · Episode ${video.episode}`}
+          </span>
+          {rating != null && (
+            <span className="episode-imdb" title={`IMDb ${formatRating(rating)}`}>
+              <img src={publicAsset("rating_imdb.png")} alt="IMDb" />
+              {formatRating(rating)}
+            </span>
+          )}
         </small>
         <strong>{video.title}</strong>
         <p>{video.overview}</p>

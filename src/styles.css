@@ -3458,6 +3458,14 @@ img {
 .detail-view {
   overscroll-behavior: contain;
 }
+/* While a sheet is open this is frozen with `overflow: hidden`, and a frozen
+   element has no scroll to contain — but Chromium keeps treating it as a
+   scroll-chain boundary, which stopped the wheel and touch reaching the sheet
+   inside it. Details scrolled fine right up until sources opened, because
+   that is the moment the freeze is applied. */
+.detail-view.has-sheet {
+  overscroll-behavior: auto;
+}
 body.is-locked {
   overflow: hidden;
 }

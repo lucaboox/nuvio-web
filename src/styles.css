@@ -4219,6 +4219,11 @@ body.is-locked {
 /* ---- External playback prompt ------------------------------------------ */
 .watch-prompt {
   width: min(520px, 100%);
+  /* The keypad makes this tall enough to outgrow a short phone in landscape,
+     and a question you cannot reach the buttons of is worse than a scroll. */
+  max-height: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   margin: auto;
   padding: 26px 26px max(26px, env(safe-area-inset-bottom));
   border: 1px solid #30363d;
@@ -4251,7 +4256,7 @@ body.is-locked {
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
-.watch-prompt-fields input[aria-invalid="true"] {
+.timecode-field > button[aria-invalid="true"] {
   border-color: #7d3b3f;
 }
 .watch-prompt-hint {
@@ -4267,13 +4272,15 @@ body.is-locked {
   opacity: 0.45;
   cursor: default;
 }
-.watch-prompt-fields label {
+.timecode-field {
   display: grid;
   gap: 7px;
   color: #c4cbd2;
   font-size: 12px;
 }
-.watch-prompt-fields input {
+/* A button, not an input, so focusing it never summons a keyboard. The keypad
+   below is the only way in. */
+.timecode-field > button {
   height: 46px;
   padding: 0 13px;
   border: 1px solid #2e353d;
@@ -4281,11 +4288,47 @@ body.is-locked {
   background: #191d22;
   color: #fff;
   font: inherit;
+  font-size: 17px;
   font-variant-numeric: tabular-nums;
+  text-align: left;
+  cursor: pointer;
 }
-.watch-prompt-fields input:focus {
+.timecode-field > button.is-active {
+  border-color: var(--accent);
+}
+.timecode-keypad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 18px;
+}
+.timecode-keypad button {
+  height: 52px;
+  border: 1px solid #2e353d;
+  border-radius: 12px;
+  background: #191d22;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font: inherit;
+  font-size: 19px;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  /* A held key must not select the digit or raise iOS's callout. */
+  -webkit-touch-callout: none;
+  user-select: none;
+}
+.timecode-keypad button:hover {
   border-color: #4d5761;
-  outline: 0;
+  background: #1f242a;
+}
+.timecode-keypad button:active {
+  background: #262c33;
+}
+.timecode-keypad .timecode-key-text {
+  font-size: 14px;
+  color: #c4cbd2;
 }
 .watch-prompt-actions {
   display: flex;

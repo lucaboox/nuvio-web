@@ -29,22 +29,26 @@ export function isMatroskaSource(url: string, filename?: string): boolean {
   );
 }
 
+/** What the decoding player needs to exist at all. */
+export const hasWebCodecs = () =>
+  typeof VideoDecoder !== "undefined" && typeof AudioDecoder !== "undefined";
+
 /**
- * Prefer remuxing Matroska on every browser that exposes MSE/MMS.
+ * Prefer decoding Matroska ourselves on every browser that can.
  *
  * Chromium can demux many MKVs natively, but it commonly accepts the video
  * while silently rejecting its AC-3/E-AC-3 audio. Waiting for native playback
- * to fail therefore never reaches the compatibility audio track that the
- * remuxer can select.
+ * to fail therefore never reaches the compatibility audio track this can
+ * select.
+ *
+ * Gated on WebCodecs, which is what the player actually uses. It used to be
+ * gated on MediaSource — true of the remuxer this replaced, and meaningless
+ * now: no container is written and MSE is never touched. On an iPhone, where
+ * `window.MediaSource` is absent, that stale check sent every .mkv down the
+ * native path to be refused by a Safari that cannot open the container.
  */
 export function shouldUseRemuxFallback(url: string, filename?: string): boolean {
-  return (
-    isMatroskaSource(url, filename) &&
-    Boolean(
-      (window as unknown as { ManagedMediaSource?: typeof MediaSource })
-        .ManagedMediaSource ?? window.MediaSource,
-    )
-  );
+  return isMatroskaSource(url, filename) && hasWebCodecs();
 }
 
 export function assessPlayback(url: string, filename?: string): PlayabilityVerdict {

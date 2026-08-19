@@ -30,6 +30,14 @@ import {
  * to a <video> element instead.
  */
 
+/**
+ * How long any one startup step may take before it is called a failure.
+ *
+ * Generous enough for a cold debrid link on a slow connection, and far short
+ * of the forever these otherwise wait.
+ */
+const STAGE_TIMEOUT_MS = 30_000;
+
 /** Registered once per page, and only when something actually needs it. */
 let dolbyDecoder: Promise<void> | null = null;
 function ensureDolbyDecoder() {
@@ -256,15 +264,57 @@ export class MediabunnyPlayer {
     return !this.playing;
   }
 
+  /**
+   * Runs one step of startup, named and bounded.
+   *
+   * Named because the status text is the only thing visible when this stalls,
+   * and "Reading the stream…" for the whole of a chain this long says nothing
+   * about where it stopped. Bounded because none of these reject when they go
+   * wrong on a browser that dislikes the file — they simply never settle, and
+   * `.catch()` does nothing for a promise that never resolves. That is the
+   * difference between a player that says what went wrong and one that spins.
+   */
+  private async stage<T>(label: string, work: () => Promise<T>): Promise<T> {
+    this.report("loading", label);
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      return await Promise.race([
+        work(),
+        new Promise<never>((_, reject) => {
+          timer = setTimeout(
+            () =>
+              reject(
+                new Error(
+                  `Gave up ${label.replace(/…$/, "").toLowerCase()}. This browser may not be able to decode this file — try an external player.`,
+                ),
+              ),
+            STAGE_TIMEOUT_MS,
+          );
+        }),
+      ]);
+    } finally {
+      if (timer !== undefined) clearTimeout(timer);
+    }
+  }
+
   async start() {
-    this.report("loading", "Reading the stream…");
+    // Frames are decoded with WebCodecs; without it there is nothing to fall
+    // back to, and saying so beats stalling on a decoder that will never
+    // answer. Safari only gained VideoDecoder in 16.4.
+    if (typeof VideoDecoder === "undefined") {
+      this.report(
+        "error",
+        "This browser has no WebCodecs support, which this player needs to decode the file. Update your browser, or use an external player.",
+      );
+      return;
+    }
     // Before any track is asked whether it can be decoded, because the answer
     // for Dolby depends on this. No browser's own AudioDecoder handles AC-3 or
     // E-AC-3, and most of what needs this player at all carries one of them —
     // without this they would report themselves undecodable and play silent.
     // Loaded on demand: it is around a megabyte, and a file with ordinary
     // audio should never pay for it.
-    await ensureDolbyDecoder();
+    await this.stage("Loading the Dolby decoder…", ensureDolbyDecoder);
     const input = new Input({
       formats: ALL_FORMATS,
       source: new UrlSource(this.url, {
@@ -275,15 +325,15 @@ export class MediabunnyPlayer {
     });
     this.input = input;
 
-    const [video, audioTracks] = await Promise.all([
-      input.getPrimaryVideoTrack(),
-      input.getAudioTracks(),
-    ]);
+    const [video, audioTracks] = await this.stage("Reading the stream…", () =>
+      Promise.all([input.getPrimaryVideoTrack(), input.getAudioTracks()]),
+    );
     this.audioOptions = audioTracks;
     // Asked of every track up front rather than of the chosen one afterwards:
     // it is what decides the choice, not a check on it.
-    this.audioDecodable = await Promise.all(
-      audioTracks.map((track) => track.canDecode().catch(() => false)),
+    this.audioDecodable = await this.stage(
+      "Checking which audio this browser can decode…",
+      () => Promise.all(audioTracks.map((track) => track.canDecode().catch(() => false))),
     );
     this.audioCodecs = await Promise.all(
       audioTracks.map((track) =>
@@ -305,8 +355,10 @@ export class MediabunnyPlayer {
     // Asked before anything is decoded, so an unplayable track is reported as
     // such rather than as a stall.
     const trouble: string[] = [];
-    this.videoTrack =
-      video && (await video.canDecode().catch(() => false)) ? video : null;
+    this.videoTrack = (await this.stage(
+      "Checking whether this browser can decode the video…",
+      async () => (video && (await video.canDecode().catch(() => false)) ? video : null),
+    )) as InputVideoTrack | null;
     if (video && !this.videoTrack) trouble.push("its video");
     this.audioTrack = audio;
     if (audioTracks.length && !audio) trouble.push("its audio");
@@ -321,14 +373,21 @@ export class MediabunnyPlayer {
       return;
     }
 
-    this.duration = await input.computeDuration().catch(() => 0);
+    this.duration = await this.stage("Measuring the stream…", () =>
+      input.computeDuration().catch(() => 0),
+    );
 
-    if (this.audioTrack) await this.openAudio();
+    if (this.audioTrack)
+      await this.stage("Starting audio…", () => this.openAudio());
 
     if (this.videoTrack) {
-      this.canvas.width = await this.videoTrack.getDisplayWidth();
-      this.canvas.height = await this.videoTrack.getDisplayHeight();
-      this.videoSink = new CanvasSink(this.videoTrack, {
+      const track = this.videoTrack;
+      const [width, height] = await this.stage("Starting video…", () =>
+        Promise.all([track.getDisplayWidth(), track.getDisplayHeight()]),
+      );
+      this.canvas.width = width;
+      this.canvas.height = height;
+      this.videoSink = new CanvasSink(track, {
         poolSize: 2,
         fit: "contain",
       });
@@ -342,7 +401,11 @@ export class MediabunnyPlayer {
         `Playing without ${trouble.join(" or ")}, which this browser cannot decode.`,
       );
 
-    await this.seek(this.options.startPositionSeconds ?? 0);
+    // The first decode is where a browser that dislikes the stream tends to go
+    // quiet rather than complain, so it is bounded like the rest.
+    await this.stage("Decoding the first frame…", () =>
+      this.seek(this.options.startPositionSeconds ?? 0, true),
+    );
   }
 
   private async openAudio() {
@@ -371,7 +434,25 @@ export class MediabunnyPlayer {
    */
   async play() {
     if (this.stopped || this.playing) return;
-    if (this.context?.state === "suspended") await this.context.resume();
+    const context = this.context;
+    // Read through a call so it is genuinely re-checked after the await —
+    // Safari's "interrupted" also belongs on the not-running side.
+    const running = () => !context || context.state === "running";
+    if (!running()) {
+      // Safari only resumes inside a real gesture, and off one it leaves the
+      // promise pending rather than rejecting — awaiting it plainly is a hang
+      // with no error and no time ever reported. Raced, then checked: if it
+      // did not start, playback simply does not begin and the centre play
+      // button becomes the gesture that makes it work.
+      await Promise.race([
+        context!.resume().catch(() => undefined),
+        new Promise((resolve) => setTimeout(resolve, 500)),
+      ]);
+      if (!running()) {
+        this.report("ready", "");
+        return;
+      }
+    }
     this.playing = true;
     this.startedFrom = this.pausedAt;
     this.contextStartTime = this.context?.currentTime ?? 0;
@@ -387,14 +468,19 @@ export class MediabunnyPlayer {
     this.silence();
   }
 
-  async seek(seconds: number) {
+  /**
+   * `keepStatus` leaves the caller's message up. The first seek runs inside a
+   * named startup step, and clearing the text here would blank the one thing
+   * that says how far loading got.
+   */
+  async seek(seconds: number, keepStatus = false) {
     const target = Math.max(0, Math.min(seconds, this.duration || seconds));
     const wasPlaying = this.playing;
     this.playing = false;
     this.generation += 1;
     this.silence();
     this.pausedAt = target;
-    this.report("buffering", "");
+    if (!keepStatus) this.report("buffering", "");
     // A still frame at the destination, so scrubbing shows where it landed
     // rather than freezing on where it left.
     if (this.videoSink) {

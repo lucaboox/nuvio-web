@@ -2016,18 +2016,13 @@ a {
     top: 75px;
     margin: 6px 12px;
   }
-  /* Inset to the same 16px every row below it uses, so the page has one
-     margin rather than a full-bleed hero above content that stops short of
-     the edge — which is what read as everything crowding the sides. */
-  .hero-carousel {
-    margin-inline: 16px;
-  }
+  /* Squared off edge to edge, so the scroller must lose its corners too. */
   .hero-track {
-    border-radius: 18px;
+    border-radius: 0;
   }
   .hero {
     min-height: 520px;
-    border-radius: 18px;
+    border-radius: 0;
     padding: 30px 20px;
     background-position: center;
     align-items: flex-end;
@@ -2052,8 +2047,14 @@ a {
   .media-section h2 {
     font-size: 20px;
   }
+  /* Both sides, not just the left. These only ever set `padding-left`, so the
+     last card in a row ran into the right edge with 3px beside it while the
+     first sat 16px in — the rows looked jammed against one side of the
+     screen. A scroller's end padding is what gives the last card the same
+     margin the first one has. */
   .media-row {
     padding-left: 16px;
+    padding-right: 16px;
   }
   .poster-card {
     flex-basis: 132px;
@@ -3155,6 +3156,7 @@ body,
   }
   .continue-row {
     padding-left: 16px;
+    padding-right: 16px;
   }
   .continue-card {
     flex-basis: 285px;

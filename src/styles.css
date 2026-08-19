@@ -4731,24 +4731,15 @@ body.is-locked {
 /* Hub and page share one grid cell while a page is open: the hub stays
    mounted underneath so a swipe reveals it instead of an empty panel, and the
    cell takes the height of the taller, so a long page is never clipped. */
-/* A page covers the panel, not the card.
-   Stacked inside the card it could not win both ways: the cell took the
-   taller of the two, so a long page inflated the card and left a big empty
-   box behind when it slid away, and a short page let the hub show under it.
-   Lifted out, the card keeps the hub's height and the page owns the screen —
-   opaque, scrolling itself, with nothing of the hub visible through it. */
-.mobile-settings-panel-content,
-.settings-desktop-layout {
-  position: relative;
-}
-.integration-page {
-  position: absolute;
-  z-index: 3;
-  inset: 0;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  padding: 22px;
-  background: var(--app-bg);
+/* The hub simply steps aside while a page is open.
+   Everything cleverer failed: stacked in the card the cell took the taller of
+   the two, inflating it and leaving an empty box behind, and a short page let
+   the hub show underneath. Positioned over the panel it sized to the
+   scroller's full height rather than the visible part, so the bottom was cut
+   off with no way to scroll to it. There is nothing behind a page that needs
+   to show, so nothing is kept behind it. */
+.integrations-card.has-page > .integration-hub {
+  display: none;
 }
 /* Closed, it must take no room and catch nothing. The `hidden` attribute says
    so, but the swipe leaves inline styles behind, so the state says it too. */

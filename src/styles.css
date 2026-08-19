@@ -4731,9 +4731,12 @@ body.is-locked {
 /* Hub and page share one grid cell while a page is open: the hub stays
    mounted underneath so a swipe reveals it instead of an empty panel, and the
    cell takes the height of the taller, so a long page is never clipped. */
+/* No `align-items: start` here. That let each size to its own content, so a
+   page shorter than the hub — Connected Services is two paragraphs — left the
+   hub's rows showing underneath it. Stretching both fills the cell, and the
+   cell is still as tall as whichever needs more. */
 .integrations-card.has-page {
   display: grid;
-  align-items: start;
 }
 .integrations-card.has-page > .integration-hub,
 .integrations-card.has-page > .integration-page {

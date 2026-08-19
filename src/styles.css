@@ -4731,15 +4731,28 @@ body.is-locked {
 /* Hub and page share one grid cell while a page is open: the hub stays
    mounted underneath so a swipe reveals it instead of an empty panel, and the
    cell takes the height of the taller, so a long page is never clipped. */
-/* The hub simply steps aside while a page is open.
-   Everything cleverer failed: stacked in the card the cell took the taller of
-   the two, inflating it and leaving an empty box behind, and a short page let
-   the hub show underneath. Positioned over the panel it sized to the
-   scroller's full height rather than the visible part, so the bottom was cut
-   off with no way to scroll to it. There is nothing behind a page that needs
-   to show, so nothing is kept behind it. */
-.integrations-card.has-page > .integration-hub {
-  display: none;
+/* A page is a fixed layer over the panel, so the hub stays put behind it and
+   a swipe uncovers it.
+   Fixed rather than absolute because the panel is the scroller: an absolute
+   layer sized itself to the whole scroll height and its bottom was
+   unreachable. Out of the card's flow, so the card keeps the hub's height and
+   leaves no empty box behind. */
+@media (max-width: 760px) {
+  .integrations-card.has-page > .integration-page {
+    position: fixed;
+    /* Under the panel header, which sits at 2 and carries the one back arrow.
+       Raising the header instead lost to a later rule; going below it is the
+       same result and does not depend on winning a cascade fight. Still above
+       the card, which has no z-index of its own. */
+    z-index: 1;
+    inset: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    /* Clear of the panel header, which stays above this and keeps the one
+       back arrow reachable. Matches its height. */
+    padding: 90px 16px calc(24px + env(safe-area-inset-bottom));
+    background: var(--app-bg);
+  }
 }
 /* Closed, it must take no room and catch nothing. The `hidden` attribute says
    so, but the swipe leaves inline styles behind, so the state says it too. */

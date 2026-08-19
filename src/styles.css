@@ -4751,6 +4751,12 @@ body.is-locked {
   /* Present for the reveal, but not reachable behind the page. */
   pointer-events: none;
 }
+/* Closed, it must take no room at all. The `hidden` attribute says so, but the
+   swipe leaves inline styles on this element and the card kept the page's
+   height after going back — so the state that matters says it here too. */
+.integrations-card:not(.has-page) > .integration-page {
+  display: none;
+}
 /* One row per provider, carrying its own mark — the same shape the official
    clients use, where each of these is a page rather than a section of one. */
 .integration-row {

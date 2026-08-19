@@ -9,6 +9,19 @@ compatibility_date = "2026-08-01"
 #
 #   npx wrangler secret put EXTRA_APP_HOSTS
 #
+# Per-IP, enforced by Cloudflare before the budget is spent.
+#
+# The origin allowlist keeps other people's *pages* out, but it is a header
+# and anything can send one — curl included. Without this, whoever found the
+# address could spend a day's requests in a couple of minutes.
+#
+# Generous for a person: opening a series costs one request, and the answer is
+# then cached in their browser for six hours.
+[[ratelimits]]
+name = "RATE_LIMITER"
+namespace_id = "1001"
+simple = { limit = 60, period = 60 }
+
 [vars]
 # localhost is the preview server. An origin can only claim to be localhost by
 # being it, so this widens nothing for anyone else.

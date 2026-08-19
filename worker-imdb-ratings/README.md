@@ -80,6 +80,12 @@ Only the configured origins may read an answer. That is not a defence against a
 determined caller, which can send any Origin it likes — it keeps other people's
 pages from using this, and keeps the CORS surface narrow.
 
+What does defend the budget is the per-IP rate limit in `wrangler.toml`: 60
+requests a minute, applied before the cache lookup, because a cache hit still
+spends a request from the daily allowance. Opening a series costs one request
+and is then cached in the browser for six hours, so no ordinary use comes near
+it.
+
 ## Deploy
 
 ```bash

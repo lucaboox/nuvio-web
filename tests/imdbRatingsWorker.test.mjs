@@ -79,14 +79,14 @@ test("a non-numeric score is refused rather than coerced", () => {
 // stored value builds a URL that cannot parse. Cheaper to strip than to
 // expect everyone to know which shell they are in.
 test("a base url survives shell quoting", () => {
-  assert.equal(normalizeBaseUrl('"https://seriesgraph.com"'), "https://seriesgraph.com");
-  assert.equal(normalizeBaseUrl("'https://seriesgraph.com'"), "https://seriesgraph.com");
-  assert.equal(normalizeBaseUrl(' "https://seriesgraph.com" '), "https://seriesgraph.com");
+  assert.equal(normalizeBaseUrl('"https://ratings.example"'), "https://ratings.example");
+  assert.equal(normalizeBaseUrl("'https://ratings.example'"), "https://ratings.example");
+  assert.equal(normalizeBaseUrl(' "https://ratings.example" '), "https://ratings.example");
 });
 
 test("trailing slashes and blanks are handled too", () => {
-  assert.equal(normalizeBaseUrl("https://seriesgraph.com/"), "https://seriesgraph.com");
-  assert.equal(normalizeBaseUrl('"https://seriesgraph.com/"'), "https://seriesgraph.com");
+  assert.equal(normalizeBaseUrl("https://ratings.example/"), "https://ratings.example");
+  assert.equal(normalizeBaseUrl('"https://ratings.example/"'), "https://ratings.example");
   assert.equal(normalizeBaseUrl(""), "");
   assert.equal(normalizeBaseUrl(undefined), "");
   assert.equal(normalizeBaseUrl('""'), "");

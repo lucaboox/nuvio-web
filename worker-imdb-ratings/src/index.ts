@@ -27,6 +27,14 @@ export interface Env {
    * Set with `wrangler secret put IMDB_RATINGS_BASE_URL`.
    */
   IMDB_RATINGS_BASE_URL: string;
+  /**
+   * Per-IP limiter, applied before any upstream work.
+   *
+   * The origin allowlist is a header check, and a header proves nothing about
+   * who is calling — it keeps other people's pages out, not other people. This
+   * is what keeps a day's request budget from being spent by one caller.
+   */
+  RATE_LIMITER: { limit(options: { key: string }): Promise<{ success: boolean }> };
   /** Hosts allowed to read an answer, comma separated. */
   ALLOWED_APP_HOSTS: string;
   /** Further hosts, kept out of the repository. */
@@ -170,6 +178,21 @@ export default {
     const url = new URL(request.url);
     if (url.pathname !== "/season-ratings")
       return new Response("Not found", { status: 404, headers: cors });
+
+    // Before the cache lookup and before any upstream call: a cached answer
+    // still costs a request against the day's budget, so limiting only the
+    // expensive path would not protect it.
+    const caller = request.headers.get("CF-Connecting-IP") ?? "unknown";
+    const allowed = await env.RATE_LIMITER.limit({ key: caller }).then(
+      (result) => result.success,
+      // A limiter that errors must not take the Worker down with it.
+      () => true,
+    );
+    if (!allowed)
+      return new Response(JSON.stringify({ error: "Too many requests." }), {
+        status: 429,
+        headers: { ...cors, "Content-Type": "application/json", "Retry-After": "60" },
+      });
 
     // Validated rather than passed through: this becomes a path on another
     // host, and anything that is not plainly an id has no business there.

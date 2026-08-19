@@ -10,6 +10,7 @@ import {
   ChevronRight,
   Eye,
   EyeOff,
+  HardDrive,
   Info,
   Plus,
   RefreshCw,
@@ -197,6 +198,65 @@ type SettingsCategory =
   | "integrations"
   | "addons"
   | "app";
+
+/**
+ * Integrations is a hub, not a page.
+ *
+ * Matching the official clients, where each provider is its own page behind a
+ * row with its mark on it. Run together they were one scroll of key fields and
+ * forty toggles, with nothing to say where TMDB stopped and MDBList began.
+ */
+type IntegrationPageKey = "tmdb" | "mdblist" | "connected";
+
+/** Under the deploy's base path, which is /nuvio-web/ on the public instance. */
+const publicAsset = (fileName: string) =>
+  `${import.meta.env.BASE_URL}${fileName}`;
+
+const INTEGRATION_PAGES: Array<{
+  key: IntegrationPageKey;
+  label: string;
+  description: string;
+  /** A file in `public/`, or none where the provider has no mark to use. */
+  logo?: string;
+}> = [
+  {
+    key: "tmdb",
+    label: "TMDB Enrichment",
+    description: "Metadata enrichment controls",
+    logo: "rating_tmdb.png",
+  },
+  {
+    key: "mdblist",
+    label: "MDBList Ratings",
+    description: "External ratings providers",
+    logo: "mdblist_logo.svg",
+  },
+  {
+    key: "connected",
+    label: "Connected Services",
+    description: "Debrid accounts — not available on the web",
+  },
+];
+
+function IntegrationPageHeader({
+  page,
+  onBack,
+}: {
+  page: (typeof INTEGRATION_PAGES)[number];
+  onBack(): void;
+}) {
+  return (
+    <header className="integration-page-header">
+      <button type="button" className="circle-button" onClick={onBack} aria-label="Back to integrations">
+        <ArrowLeft />
+      </button>
+      <div>
+        <h2>{page.label}</h2>
+        <span>{page.description}</span>
+      </div>
+    </header>
+  );
+}
 
 const SETTINGS_CATEGORIES: Array<{
   key: SettingsCategory;
@@ -3139,6 +3199,13 @@ function SettingsPage({
   onSignOut(): void;
 }) {
   const [category, setCategory] = useState<SettingsCategory>("appearance");
+  // Null is the hub. Leaving Integrations closes whatever page was open, so
+  // coming back lands on the list rather than wherever you last were.
+  const [integrationPage, setIntegrationPage] =
+    useState<IntegrationPageKey | null>(null);
+  useEffect(() => {
+    if (category !== "integrations") setIntegrationPage(null);
+  }, [category]);
   const [mobilePanelOpen, setMobilePanelOpen] = useState(false);
   const closeMobilePanel = useCallback(() => setMobilePanelOpen(false), []);
   const mobilePanelRef = useSwipeBack<HTMLElement>(closeMobilePanel);
@@ -3338,14 +3405,45 @@ function SettingsPage({
         className="setting-card integrations-card settings-category-card"
         hidden={category !== "integrations"}
       >
-        <header>
-          <h2>Integrations</h2>
-          <span>Credentials sync separately and securely</span>
-        </header>
-        <p>
-          These use Nuvio's provider-credential RPC. They are never copied into
-          the profile settings blob.
-        </p>
+        {integrationPage === null ? (
+          <>
+            <header>
+              <h2>Integrations</h2>
+              <span>Credentials sync separately and securely</span>
+            </header>
+            <p>
+              These use Nuvio's provider-credential RPC. They are never copied
+              into the profile settings blob.
+            </p>
+            {INTEGRATION_PAGES.map((page) => (
+              <button
+                key={page.key}
+                type="button"
+                className="integration-row"
+                onClick={() => setIntegrationPage(page.key)}
+              >
+                <span className="integration-row-logo">
+                  {page.logo ? (
+                    <img src={publicAsset(page.logo)} alt="" />
+                  ) : (
+                    <HardDrive />
+                  )}
+                </span>
+                <span className="integration-row-copy">
+                  <strong>{page.label}</strong>
+                  <small>{page.description}</small>
+                </span>
+                <ChevronRight />
+              </button>
+            ))}
+          </>
+        ) : (
+          <IntegrationPageHeader
+            page={INTEGRATION_PAGES.find((item) => item.key === integrationPage)!}
+            onBack={() => setIntegrationPage(null)}
+          />
+        )}
+        <div hidden={integrationPage !== "tmdb"}>
         <IntegrationCredentialField
           label="TMDB API key"
           description="Used for the TMDB enrichment settings shared with Nuvio."
@@ -3414,6 +3512,8 @@ function SettingsPage({
             }
           />
         ))}
+        </div>
+        <div hidden={integrationPage !== "mdblist"}>
         <IntegrationCredentialField
           label="MDBList API key"
           description="Adds MDBList rating providers after metadata enrichment."
@@ -3460,6 +3560,25 @@ function SettingsPage({
             }
           />
         ))}
+        </div>
+        <div hidden={integrationPage !== "connected"}>
+          {/* Stated plainly rather than offered and broken. Torbox sends no
+              cross-origin headers at all, so a browser cannot reach its API —
+              not the account linking, not the library, not link resolving.
+              Nothing here can be enabled by trying harder. */}
+          <div className="integration-unavailable">
+            <p>
+              Debrid accounts cannot be connected from a browser. Torbox does
+              not allow other sites to call its API, and a browser has no way
+              around that — so account linking, cloud library browsing and
+              link resolving are all out of reach here.
+            </p>
+            <p>
+              Use the Nuvio desktop, Android or TV app for these. Your addons
+              already resolve links for playback on the web.
+            </p>
+          </div>
+        </div>
       </div>
       <div
         className="setting-card settings-category-card"

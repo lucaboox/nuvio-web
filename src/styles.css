@@ -4631,6 +4631,88 @@ body.is-locked {
 .integrations-card > p {
   color: #87919b;
 }
+/* ---- Integrations hub -------------------------------------------------- */
+/* One row per provider, carrying its own mark — the same shape the official
+   clients use, where each of these is a page rather than a section of one. */
+.integration-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 14px 4px;
+  border: 0;
+  border-bottom: 1px solid var(--panel-border);
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.integration-row:last-of-type {
+  border-bottom: 0;
+}
+.integration-row:hover {
+  color: #fff;
+}
+.integration-row-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: var(--panel-soft);
+  overflow: hidden;
+}
+.integration-row-logo img {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+}
+.integration-row-logo svg {
+  width: 19px;
+  height: 19px;
+  color: #8d97a2;
+}
+.integration-row-copy {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  flex: 1;
+}
+.integration-row-copy strong {
+  font-size: 14px;
+}
+.integration-row-copy small {
+  color: #87919b;
+  font-size: 12px;
+}
+.integration-row > svg:last-child {
+  flex: none;
+  width: 18px;
+  color: #6c757f;
+}
+.integration-page-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.integration-page-header > div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.integration-page-header span {
+  color: #87919b;
+  font-size: 12px;
+}
+.integration-unavailable p {
+  margin: 0 0 12px;
+  color: #a0a9b3;
+  font-size: 13.5px;
+  line-height: 1.6;
+}
 .credential-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(300px, 44%);

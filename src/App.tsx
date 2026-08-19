@@ -3242,6 +3242,18 @@ function SettingsPage({
     goBack,
     integrationPage === null,
   );
+  /**
+   * The page's own gesture, so both levels swipe.
+   *
+   * The two are mutually exclusive: on a page this one runs and slides the
+   * card away to the hub, off a page the panel's runs and closes the panel.
+   * Sharing one gesture is what made the drag show the settings index while
+   * the release showed integrations.
+   */
+  const integrationSwipeRef = useSwipeBack<HTMLDivElement>(
+    () => setIntegrationPage(null),
+    integrationPage !== null,
+  );
   const activeCategory = SETTINGS_CATEGORIES.find(
     (item) => item.key === category,
   )!;
@@ -3435,6 +3447,7 @@ function SettingsPage({
         </div>
       </div>
       <div
+        ref={integrationSwipeRef}
         className="setting-card integrations-card settings-category-card"
         hidden={category !== "integrations"}
       >

@@ -3446,7 +3446,11 @@ function SettingsPage({
           />
         </div>
       </div>
+      {/* The gesture goes on the card, not the page inside it: it only starts
+          from the left 30px of the screen, and the page begins inside the
+          card's padding — too far in for that zone to reach. */}
       <div
+        ref={integrationSwipeRef}
         className={`setting-card integrations-card settings-category-card${
           integrationPage ? " has-page" : ""
         }`}
@@ -3486,11 +3490,7 @@ function SettingsPage({
               </button>
             ))}
         </div>
-        <div
-          ref={integrationSwipeRef}
-          className="integration-page"
-          hidden={integrationPage === null}
-        >
+        <div className="integration-page" hidden={integrationPage === null}>
         {integrationPage && (
           <IntegrationPageHeader
             page={INTEGRATION_PAGES.find((item) => item.key === integrationPage)!}

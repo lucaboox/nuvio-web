@@ -246,9 +246,17 @@ function IntegrationPageHeader({
   page: (typeof INTEGRATION_PAGES)[number];
   onBack(): void;
 }) {
+  // Kept for desktop, where nothing else offers a way back to the hub. On a
+  // phone the panel header's arrow does that job and CSS hides this one —
+  // two arrows in the same corner said nothing about which went where.
   return (
     <header className="integration-page-header">
-      <button type="button" className="circle-button" onClick={onBack} aria-label="Back to integrations">
+      <button
+        type="button"
+        className="circle-button"
+        onClick={onBack}
+        aria-label="Back to integrations"
+      >
         <ArrowLeft />
       </button>
       <div>
@@ -3208,8 +3216,21 @@ function SettingsPage({
     if (category !== "integrations") setIntegrationPage(null);
   }, [category]);
   const [mobilePanelOpen, setMobilePanelOpen] = useState(false);
-  const closeMobilePanel = useCallback(() => setMobilePanelOpen(false), []);
-  const mobilePanelRef = useSwipeBack<HTMLElement>(closeMobilePanel);
+  /**
+   * One step back, whatever that means from here.
+   *
+   * An integration page is a level deeper than the category holding it, so
+   * back leaves the page first and the panel second. Two back buttons stacked
+   * in one corner is the alternative, and neither of them says which is which.
+   */
+  const goBack = useCallback(() => {
+    setIntegrationPage((page) => {
+      if (page !== null) return null;
+      setMobilePanelOpen(false);
+      return page;
+    });
+  }, []);
+  const mobilePanelRef = useSwipeBack<HTMLElement>(goBack);
   const activeCategory = SETTINGS_CATEGORIES.find(
     (item) => item.key === category,
   )!;
@@ -3218,7 +3239,7 @@ function SettingsPage({
   useEffect(() => {
     if (!mobilePanelOpen) return;
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") closeMobilePanel();
+      if (event.key === "Escape") goBack();
     };
     window.addEventListener("keydown", onKeyDown);
     document.body.classList.add("mobile-settings-open");
@@ -3226,7 +3247,7 @@ function SettingsPage({
       window.removeEventListener("keydown", onKeyDown);
       document.body.classList.remove("mobile-settings-open");
     };
-  }, [closeMobilePanel, mobilePanelOpen]);
+  }, [goBack, mobilePanelOpen]);
 
   // Each settings page starts at its own top. Swapping the category only
   // replaces the content — the document on desktop and the panel on mobile
@@ -3347,7 +3368,7 @@ function SettingsPage({
             type="button"
             className="circle-button"
             aria-label="Back to settings"
-            onClick={closeMobilePanel}
+            onClick={goBack}
           >
             <ArrowLeft />
           </button>

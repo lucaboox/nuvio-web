@@ -4794,6 +4794,14 @@ body.is-locked {
   align-items: center;
   gap: 12px;
 }
+/* The panel header above already carries a back arrow on a phone, and it
+   steps out of this page before closing the panel. A second arrow beneath it
+   pointed at the same place without saying so. */
+@media (max-width: 760px) {
+  .integration-page-header > .circle-button {
+    display: none;
+  }
+}
 .integration-page-header > div {
   display: grid;
   gap: 2px;

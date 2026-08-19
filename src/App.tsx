@@ -2788,7 +2788,10 @@ function ScreenReadout() {
   const describe = () => ({
     width: window.innerWidth,
     height: window.innerHeight,
-    ratio: window.devicePixelRatio,
+    // Reported as a float with every bit of its imprecision — a 3.5 screen
+    // says 3.4999999403953552 — and the digits after the first two carry
+    // nothing anyone reading this aloud needs.
+    ratio: Math.round(window.devicePixelRatio * 100) / 100,
     // A tab and an installed app get different heights from one device.
     installed:
       window.matchMedia("(display-mode: standalone)").matches ||

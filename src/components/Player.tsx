@@ -23,7 +23,7 @@ import {
   Music2,
   Pause,
   Play,
-  Rewind,
+  SkipForward,
   Volume2,
   VolumeX,
   X,
@@ -857,6 +857,26 @@ export function Player({
     // An addon lists a whole season including episodes that do not exist yet.
     return candidate && hasEpisodeAired(candidate.released) ? candidate : null;
   }, [episodes, onPlayEpisode, video?.season, video?.episode]);
+  /**
+   * Hands an episode to the app to resolve a source for.
+   *
+   * Stopped, and said to be stopping, before the resolve starts: it takes
+   * seconds, and in silence the episode you just left simply carried on.
+   */
+  const startEpisode = useCallback(
+    (next: Video) => {
+      if (switching || next.id === video?.id) return;
+      engineRef.current?.pause();
+      videoRef.current?.pause();
+      setPlaying(false);
+      setWaiting(true);
+      setStatus("Loading episode…");
+      setSwitching(true);
+      setEpisodesOpen(false);
+      onPlayEpisode?.(next);
+    },
+    [onPlayEpisode, switching, video?.id],
+  );
   const showNextEpisode =
     !!nextEpisode &&
     !nextDismissed &&
@@ -997,9 +1017,6 @@ export function Player({
         </div>
         <div className="player-control-row">
           <div className="player-control-group">
-            <button aria-label="Rewind 10 seconds" onClick={() => seekBy(-10)}>
-              <Rewind />
-            </button>
             <button
               className="player-play"
               aria-label={playing ? "Pause" : "Play"}
@@ -1007,9 +1024,21 @@ export function Player({
             >
               {playing ? <Pause /> : <Play />}
             </button>
-            <button aria-label="Forward 10 seconds" onClick={() => seekBy(10)}>
-              <FastForward />
-            </button>
+            {/* Only where there is one to go to — a film, or the last episode
+                of a season, would leave a button that does nothing. */}
+            {nextEpisode && (
+              <button
+                aria-label={
+                  nextEpisode.season != null && nextEpisode.episode != null
+                    ? `Next episode: S${nextEpisode.season} E${nextEpisode.episode}`
+                    : "Next episode"
+                }
+                disabled={switching}
+                onClick={() => startEpisode(nextEpisode)}
+              >
+                <SkipForward />
+              </button>
+            )}
           </div>
           <div className="player-control-group player-control-right">
             <button
@@ -1149,18 +1178,9 @@ export function Player({
           <button
             className="primary"
             disabled={switching}
-            onClick={() => {
-              if (switching) return;
-              engineRef.current?.pause();
-              videoRef.current?.pause();
-              setPlaying(false);
-              setWaiting(true);
-              setStatus("Loading episode…");
-              setSwitching(true);
-              onPlayEpisode?.(nextEpisode);
-            }}
+            onClick={() => startEpisode(nextEpisode)}
           >
-            <FastForward /> Play
+            <SkipForward /> Play
           </button>
         </div>
       )}
@@ -1223,20 +1243,7 @@ export function Player({
                     percent={watchIndex ? episodePercent(watchIndex, key) : 0}
                     remaining={watchIndex ? remainingShort(watchIndex, key) : ""}
                     blurred={false}
-                    onPlay={() => {
-                      if (item.id === video?.id || switching) return;
-                      // Stopped, and said to be stopping, before the resolve
-                      // starts: it takes seconds, and in silence the old
-                      // episode simply carried on playing.
-                      engineRef.current?.pause();
-                      videoRef.current?.pause();
-                      setPlaying(false);
-                      setWaiting(true);
-                      setStatus("Loading episode…");
-                      setSwitching(true);
-                      setEpisodesOpen(false);
-                      onPlayEpisode?.(item);
-                    }}
+                    onPlay={() => startEpisode(item)}
                     onMenu={() => undefined}
                   />
                 );

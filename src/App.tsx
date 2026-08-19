@@ -2793,6 +2793,19 @@ function ScreenReadout() {
     installed:
       window.matchMedia("(display-mode: standalone)").matches ||
       (navigator as unknown as { standalone?: boolean }).standalone === true,
+    /**
+     * How much width the scrollbar takes from the page.
+     *
+     * Zero on a phone, which overlays it, and about 15px on a desktop, which
+     * does not. `100vw` counts that space either way — the spec says to assume
+     * no scrollbar exists — so anything sized from it is too wide by exactly
+     * this much wherever it is not zero.
+     */
+    scrollbar: window.innerWidth - document.documentElement.clientWidth,
+    /** Set when something is actually wider than the space available. */
+    overflowing:
+      document.documentElement.scrollWidth >
+      document.documentElement.clientWidth,
   });
   const [screen, setScreen] = useState(describe);
   useEffect(() => {
@@ -2807,6 +2820,8 @@ function ScreenReadout() {
         <small>
           {screen.width} × {screen.height} CSS px at {screen.ratio}× ·{" "}
           {screen.installed ? "installed app" : "browser tab"}
+          {screen.scrollbar > 0 ? ` · ${screen.scrollbar}px scrollbar` : ""}
+          {screen.overflowing ? " · overflowing" : ""}
         </small>
       </span>
     </div>

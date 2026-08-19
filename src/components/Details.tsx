@@ -1369,22 +1369,19 @@ export function EpisodeRow({
         {percent > 0 && percent < 90 && (
           <i className="episode-progress" style={{ width: `${percent}%` }} />
         )}
+        {/* Bottom left, held above whatever height the progress bar takes at
+            this size — it sat on the bar the last time it lived here. */}
+        {rating != null && (
+          <i className="episode-imdb" title={`IMDb ${formatRating(rating)}`}>
+            <img src={publicAsset("rating_imdb.png")} alt="IMDb" />
+            {formatRating(rating)}
+          </i>
+        )}
       </span>
       <span>
-        {/* Beside the air date rather than over the artwork, which is where
-            this used to sit and where it covered the progress bar on a
-            phone. It is also where the official clients put it. */}
-        <small className="episode-meta">
-          <span>
-            {episodeReleaseDate(video.released) ||
-              `Season ${video.season} · Episode ${video.episode}`}
-          </span>
-          {rating != null && (
-            <span className="episode-imdb" title={`IMDb ${formatRating(rating)}`}>
-              <img src={publicAsset("rating_imdb.png")} alt="IMDb" />
-              {formatRating(rating)}
-            </span>
-          )}
+        <small>
+          {episodeReleaseDate(video.released) ||
+            `Season ${video.season} · Episode ${video.episode}`}
         </small>
         <strong>{video.title}</strong>
         <p>{video.overview}</p>

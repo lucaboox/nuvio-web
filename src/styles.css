@@ -3276,28 +3276,31 @@ body,
   border-radius: 99px;
   background: var(--accent);
 }
-/* Air date on the left, score on the right — the shape the official clients
-   use, and off the artwork so it cannot sit over the progress bar, which is
-   where the previous attempt at this put it. */
-/* Scoped to the list, because `.episode-list small` sets `display: block` and
-   is the more specific of the two — unscoped, this rule never applied. */
-.episode-list .episode-meta {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-}
+/* Bottom left of the artwork, opposite the watched mark.
+   `bottom` is derived from the bar rather than guessed at: here the bar sits
+   6px up and is 3px tall, so its top edge is at 9px and this clears it by 5.
+   The phone rule further down repeats that sum for its own taller bar. */
 .episode-imdb {
+  position: absolute;
+  z-index: 2;
+  bottom: 14px;
+  left: 6px;
   display: inline-flex;
   align-items: center;
-  flex: none;
-  gap: 5px;
+  gap: 4px;
+  padding: 2px 6px 2px 4px;
+  border-radius: 6px;
+  background: #0b0b0bd9;
+  box-shadow: 0 2px 8px #0009;
   color: #f5c518;
+  font-size: 11px;
+  font-style: normal;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
+  line-height: 1;
 }
 .episode-imdb img {
-  width: 26px;
+  width: 24px;
   height: auto;
   object-fit: contain;
 }
@@ -5393,6 +5396,13 @@ body.is-locked {
     bottom: 8px;
     left: 4px;
     height: 4px;
+  }
+  /* The bar is both taller and further up here — 8px + 4px puts its top edge
+     at 12px — so the badge has to rise with it or sit on it, which is what it
+     did before. */
+  .episode-imdb {
+    bottom: 18px;
+    left: 8px;
   }
 
   /* Theme-aware floating navigation capsule. */

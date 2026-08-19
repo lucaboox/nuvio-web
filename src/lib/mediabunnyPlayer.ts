@@ -1,6 +1,7 @@
 // Extension included so Node's resolver finds it under the test runner, which
 // does not resolve like the bundler does.
-import { probeSource } from "./sourceProbe.ts";
+import { probeSource, statusReason } from "./sourceProbe.ts";
+import { readRetryDelay } from "./requestPolicy.ts";
 import {
   ALL_FORMATS,
   AudioBufferSink,
@@ -283,6 +284,7 @@ export class MediabunnyPlayer {
     label: string,
     work: () => Promise<T>,
     budgetMs = STAGE_TIMEOUT_MS,
+    detail: () => string = () => "",
   ): Promise<T> {
     this.report("loading", label);
     let timer: ReturnType<typeof setTimeout> | undefined;
@@ -294,7 +296,7 @@ export class MediabunnyPlayer {
             () =>
               reject(
                 new Error(
-                  `Gave up ${label.replace(/…$/, "").toLowerCase()} after ${Math.round(budgetMs / 1000)}s. Try another source, or an external player.`,
+                  `Gave up ${label.replace(/…$/, "").toLowerCase()} after ${Math.round(budgetMs / 1000)}s.${detail()} Try another source, or an external player.`,
                 ),
               ),
             budgetMs,
@@ -327,6 +329,17 @@ export class MediabunnyPlayer {
       this.report("error", reachable.reason);
       return;
     }
+    // A host that ignores Range hands back the whole file for every read, so
+    // reaching the tracks means downloading gigabytes first. Worth saying:
+    // otherwise it looks like a stall rather than a host that cannot be
+    // streamed from at all.
+    if (!reachable.ranges) {
+      this.report(
+        "error",
+        "This host does not support range requests, so the file cannot be read a piece at a time — the whole thing would have to download first. Use an external player, or pick another source.",
+      );
+      return;
+    }
 
     // Before any track is asked whether it can be decoded, because the answer
     // for Dolby depends on this. No browser's own AudioDecoder handles AC-3 or
@@ -335,20 +348,56 @@ export class MediabunnyPlayer {
     // Loaded on demand: it is around a megabyte, and a file with ordinary
     // audio should never pay for it.
     await this.stage("Loading the Dolby decoder…", ensureDolbyDecoder);
+    // What the reader's own requests did, so a failure can be described by
+    // what the host said rather than by which step was waiting on it.
+    let lastStatus = 0;
+    let lastNetworkError = "";
     const input = new Input({
       formats: ALL_FORMATS,
       source: new UrlSource(this.url, {
         requestInit: this.options.requestHeaders
           ? { headers: this.options.requestHeaders }
           : undefined,
+        // Its default retries forever unless it suspects CORS, so a host that
+        // fails any other way is waited on rather than reported. This gives up
+        // and lets the error through.
+        getRetryDelay: readRetryDelay,
+        fetchFn: async (resource, init) => {
+          try {
+            const response = await fetch(resource, init);
+            if (!response.ok) lastStatus = response.status;
+            return response;
+          } catch (error) {
+            lastNetworkError =
+              error instanceof Error ? error.message : String(error);
+            throw error;
+          }
+        },
       }),
     });
     this.input = input;
+    /** Whatever the host last said, ready to append to a failure. */
+    const hostSaid = () =>
+      lastStatus
+        ? ` ${statusReason(lastStatus)}`
+        : lastNetworkError
+          ? ` The last request failed with: ${lastNetworkError}.`
+          : "";
 
     const [video, audioTracks] = await this.stage(
       "Reading the stream…",
-      () => Promise.all([input.getPrimaryVideoTrack(), input.getAudioTracks()]),
+      () =>
+        Promise.all([
+          input.getPrimaryVideoTrack(),
+          input.getAudioTracks(),
+        ]).catch((error: unknown) => {
+          const detail = hostSaid();
+          throw detail
+            ? new Error(`Could not read this stream.${detail}`)
+            : error;
+        }),
       READ_TIMEOUT_MS,
+      hostSaid,
     );
     this.audioOptions = audioTracks;
     // Asked of every track up front rather than of the chosen one afterwards:

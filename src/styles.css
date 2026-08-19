@@ -4488,8 +4488,12 @@ body.is-locked {
    ignores the one set here, so the label sits high in the box rather than on
    its middle. Owning the box puts the text where the padding says. */
 .source-player select {
-  height: 34px;
-  padding: 0 30px 0 10px;
+  /* Sized by padding, not by height. iOS lays a select's text against the top
+     of an explicit height rather than its middle, which is the whole reason
+     this looked wrong there — and why the trailer picker, which has always
+     sized itself this way, did not. */
+  min-height: 34px;
+  padding: 7px 30px 7px 10px;
   appearance: none;
   -webkit-appearance: none;
   border-radius: 9px;

@@ -5,6 +5,8 @@ import {
   hostKey,
   isRetryable,
   retryAfterMs,
+  readRetryDelay,
+  MAX_READ_ATTEMPTS,
 } from "../src/lib/requestPolicy.ts";
 
 test("requests are bucketed by host, not by path", () => {
@@ -120,4 +122,21 @@ test("queued requests all eventually run", async () => {
     ),
   );
   assert.equal(done, 9);
+});
+
+test("the stream reader gives up so there is an error to report", () => {
+  // Its own default retries forever unless it suspects CORS, which is a wait
+  // with nothing behind it rather than a failure.
+  assert.equal(readRetryDelay(0), 0.5);
+  assert.equal(readRetryDelay(1), 1);
+  assert.equal(readRetryDelay(2), 2);
+  assert.equal(readRetryDelay(3), null, "stops rather than retrying forever");
+  assert.equal(readRetryDelay(50), null);
+});
+
+test("no retry delay grows without bound", () => {
+  for (let attempt = 0; attempt < MAX_READ_ATTEMPTS; attempt += 1) {
+    const delay = readRetryDelay(attempt);
+    if (delay !== null) assert.ok(delay <= 4, `attempt ${attempt}`);
+  }
 });

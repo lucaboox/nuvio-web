@@ -53,6 +53,22 @@ export function retryAfterMs(
   return Math.min(500 * 2 ** attempt, 8_000);
 }
 
+/** Attempts the stream reader makes at one range before it gives up. */
+export const MAX_READ_ATTEMPTS = 4;
+
+/**
+ * The reader's retry schedule, in seconds, or null to stop.
+ *
+ * Its own default never stops, which turns any persistent failure into a wait
+ * with no error behind it — the request is simply retried for as long as
+ * anyone is watching. Something has to say when to give up so there is an
+ * error to report at all.
+ */
+export function readRetryDelay(previousAttempts: number): number | null {
+  if (previousAttempts >= MAX_READ_ATTEMPTS - 1) return null;
+  return Math.min(0.5 * 2 ** previousAttempts, 4);
+}
+
 export type HostLimiter = <T>(url: string, work: () => Promise<T>) => Promise<T>;
 
 /**

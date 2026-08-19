@@ -3230,7 +3230,18 @@ function SettingsPage({
       return page;
     });
   }, []);
-  const mobilePanelRef = useSwipeBack<HTMLElement>(goBack);
+  /**
+   * Only where the gesture's own animation tells the truth.
+   *
+   * It slides the panel off and reveals the settings index behind it, which
+   * is what closing looks like. Stepping out of an integration page is not
+   * that — the panel stays, showing the hub — so the drag showed one thing
+   * and the release did another. Off a page, the arrow in the header does it.
+   */
+  const mobilePanelRef = useSwipeBack<HTMLElement>(
+    goBack,
+    integrationPage === null,
+  );
   const activeCategory = SETTINGS_CATEGORIES.find(
     (item) => item.key === category,
   )!;

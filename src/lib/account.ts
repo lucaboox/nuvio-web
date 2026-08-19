@@ -262,6 +262,60 @@ function camelProfile(row: Record<string, unknown>): Profile {
   };
 }
 
+/** Six, matching `MAX_PROFILES` in the official clients. */
+export const MAX_PROFILES = 6;
+
+/**
+ * Adds a profile, mirroring `ProfileRepository.createProfile`.
+ *
+ * `sync_push_profiles` replaces the whole set rather than appending, so the
+ * existing ones are sent back alongside the new one — omitting them deletes
+ * them. The new index is the lowest free slot, which is how the other clients
+ * pick it and keeps the two agreeing about who is who.
+ */
+export async function createProfile(
+  existing: Profile[],
+  name: string,
+  avatarColorHex: string,
+): Promise<void> {
+  const taken = new Set(existing.map((item) => item.profileIndex));
+  let nextIndex = 0;
+  for (let index = 1; index <= MAX_PROFILES; index += 1) {
+    if (!taken.has(index)) {
+      nextIndex = index;
+      break;
+    }
+  }
+  if (!nextIndex) throw new Error(`Nuvio allows ${MAX_PROFILES} profiles.`);
+
+  const payload = (item: Profile) => ({
+    profile_index: item.profileIndex,
+    name: item.name,
+    avatar_color_hex: item.avatarColorHex,
+    uses_primary_addons: item.usesPrimaryAddons ?? false,
+    uses_primary_plugins: item.usesPrimaryPlugins ?? false,
+    avatar_id: item.avatarId ?? null,
+    avatar_url: item.avatarUrl ?? null,
+  });
+
+  await rpc("sync_push_profiles", {
+    p_client_max_profiles: MAX_PROFILES,
+    p_profiles: [
+      ...existing.map(payload),
+      {
+        profile_index: nextIndex,
+        name: name.trim(),
+        avatar_color_hex: avatarColorHex,
+        uses_primary_addons: false,
+        uses_primary_plugins: false,
+        avatar_id: null,
+        avatar_url: null,
+      },
+    ],
+    p_origin_client_id: CLIENT_ID,
+  });
+}
+
 export async function loadProfiles(): Promise<Profile[]> {
   const rows = await rpc<Array<Record<string, unknown>>>(
     "sync_pull_profiles",

@@ -4756,6 +4756,69 @@ body.is-locked {
 }
 /* Everything else in settings sits in one of these, and a page had lost it —
    the fixed layer is the backdrop, this is the surface. */
+/* ---- Creating a profile ------------------------------------------------ */
+.profile-gate-add .profile-gate-avatar {
+  border: 1px dashed #46505b;
+  background: transparent;
+  color: #8d97a2;
+}
+.profile-gate-add .profile-gate-avatar svg {
+  width: 28px;
+  height: 28px;
+}
+.profile-create {
+  display: grid;
+  gap: 14px;
+  width: min(360px, 100%);
+  margin: 4px auto 0;
+  padding: 20px;
+  border: 1px solid var(--panel-border);
+  border-radius: 18px;
+  background: var(--panel-bg);
+  text-align: left;
+}
+.profile-create label {
+  display: grid;
+  gap: 7px;
+  color: #c4cbd2;
+  font-size: 12px;
+}
+.profile-create input {
+  min-height: 44px;
+  padding: 7px 13px;
+  border: 1px solid #2e353d;
+  border-radius: 12px;
+  background: #191d22;
+  color: #fff;
+  font: inherit;
+}
+.profile-create-colours {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.profile-create-colours button {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 50%;
+  cursor: pointer;
+}
+.profile-create-colours button.is-chosen {
+  border-color: #fff;
+}
+.profile-create-error {
+  margin: 0;
+  color: #e58b8b;
+  font-size: 12.5px;
+}
+.profile-create-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
 /* A settled empty or failed profile list, in place of a spinner that would
    never stop. */
 .profile-empty {

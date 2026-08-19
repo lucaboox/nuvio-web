@@ -59,6 +59,7 @@ import {
   loadAddons,
   loadAvatarCatalog,
   loadLibrary,
+  createProfile,
   loadProfiles,
   addToLibrary,
   loadCollections,
@@ -668,6 +669,15 @@ export function App() {
     [activateProfile],
   );
 
+  /** Creates a profile, then reloads so the new one appears in the gate. */
+  const addProfile = useCallback(
+    async (name: string, avatarColorHex: string) => {
+      await createProfile(profiles, name, avatarColorHex);
+      await hydrateRef.current?.();
+    },
+    [profiles],
+  );
+  const hydrateRef = useRef<(() => Promise<void>) | null>(null);
   const hydrate = useCallback(async () => {
     const hydrationGeneration = ++accountHydrationGeneration.current;
     setProfilesSettled(false);
@@ -730,6 +740,7 @@ export function App() {
       }
     }
   }, [session, activateProfile, openProfile, bootHandoff]);
+  hydrateRef.current = hydrate;
   useEffect(() => {
     hydrate();
   }, [hydrate]);
@@ -1849,6 +1860,7 @@ export function App() {
         {profiles.length > 0 ? (
           <ProfileGate
             profiles={profiles}
+            onCreate={addProfile}
             remember={rememberProfile}
             onRememberChange={(value) => {
               setRememberProfile(value);
@@ -1875,6 +1887,22 @@ export function App() {
           <div className="splash">
             <i className="mini-spinner" /> Loading profiles…
           </div>
+        ) : !profilesError ? (
+          /* Settled and genuinely empty: a brand new account. The gate with
+             no profiles in it is exactly the create screen, which is what the
+             desktop client shows here too. */
+          <ProfileGate
+            profiles={[]}
+            onCreate={addProfile}
+            remember={rememberProfile}
+            onRememberChange={setRememberProfile}
+            onSelect={() => undefined}
+            onSignOut={async () => {
+              await signOut();
+              activateProfile(null);
+              setSession(null);
+            }}
+          />
         ) : (
           /* Settled with nothing to show. Which of the two it is matters:
              one is worth retrying, the other needs a profile making

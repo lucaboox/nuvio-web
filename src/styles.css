@@ -4731,32 +4731,27 @@ body.is-locked {
 /* Hub and page share one grid cell while a page is open: the hub stays
    mounted underneath so a swipe reveals it instead of an empty panel, and the
    cell takes the height of the taller, so a long page is never clipped. */
-/* No `align-items: start` here. That let each size to its own content, so a
-   page shorter than the hub — Connected Services is two paragraphs — left the
-   hub's rows showing underneath it. Stretching both fills the cell, and the
-   cell is still as tall as whichever needs more. */
-.integrations-card.has-page {
-  display: grid;
-}
-.integrations-card.has-page > .integration-hub,
-.integrations-card.has-page > .integration-page {
-  grid-area: 1 / 1;
+/* A page covers the panel, not the card.
+   Stacked inside the card it could not win both ways: the cell took the
+   taller of the two, so a long page inflated the card and left a big empty
+   box behind when it slid away, and a short page let the hub show under it.
+   Lifted out, the card keeps the hub's height and the page owns the screen —
+   opaque, scrolling itself, with nothing of the hub visible through it. */
+.mobile-settings-panel-content,
+.settings-desktop-layout {
+  position: relative;
 }
 .integration-page {
-  /* Opaque, or the hub reads through it. Stretched over the card's padding so
-     nothing of the hub shows around its edges. */
-  margin: -22px;
+  position: absolute;
+  z-index: 3;
+  inset: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 22px;
-  border-radius: inherit;
-  background: var(--panel-bg);
+  background: var(--app-bg);
 }
-.integrations-card.has-page > .integration-hub {
-  /* Present for the reveal, but not reachable behind the page. */
-  pointer-events: none;
-}
-/* Closed, it must take no room at all. The `hidden` attribute says so, but the
-   swipe leaves inline styles on this element and the card kept the page's
-   height after going back — so the state that matters says it here too. */
+/* Closed, it must take no room and catch nothing. The `hidden` attribute says
+   so, but the swipe leaves inline styles behind, so the state says it too. */
 .integrations-card:not(.has-page) > .integration-page {
   display: none;
 }

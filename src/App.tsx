@@ -425,6 +425,15 @@ export function App() {
   const profileLoadGeneration = useRef(0);
   const activeProfileIndexRef = useRef<number | null>(null);
   const hydratedProfileIndexRef = useRef<number | null>(null);
+  /**
+   * Whether the profile list has finished loading, and why it is empty.
+   *
+   * An empty list is a real answer — a new account has none until something
+   * creates one — and is not the same as still waiting. Told apart, the
+   * screen can say which; conflated, both are a spinner that never stops.
+   */
+  const [profilesSettled, setProfilesSettled] = useState(false);
+  const [profilesError, setProfilesError] = useState("");
   const [collections, setCollections] = useState<Collection[]>([]);
   const [homeLayout, setHomeLayout] = useState<HomeLayout | null>(null);
   const homeLayoutRef = useRef(homeLayout);
@@ -661,6 +670,8 @@ export function App() {
 
   const hydrate = useCallback(async () => {
     const hydrationGeneration = ++accountHydrationGeneration.current;
+    setProfilesSettled(false);
+    setProfilesError("");
     if (!session) {
       setLoading(false);
       return;
@@ -705,11 +716,18 @@ export function App() {
       }
     } catch (error) {
       if (!isCurrent()) return;
-      setMessage(
+      setProfilesError(
         error instanceof Error ? error.message : "Account loading failed",
       );
     } finally {
-      if (isCurrent()) setLoading(false);
+      if (isCurrent()) {
+        setLoading(false);
+        // Whatever happened, the wait is over. Without this an account that
+        // legitimately has no profiles yet — a brand new one, never opened in
+        // any Nuvio client — sat on the spinner for good, because nothing had
+        // failed and there was nothing to show.
+        setProfilesSettled(true);
+      }
     }
   }, [session, activateProfile, openProfile, bootHandoff]);
   useEffect(() => {
@@ -1853,9 +1871,35 @@ export function App() {
               setSession(null);
             }}
           />
-        ) : (
+        ) : !profilesSettled ? (
           <div className="splash">
             <i className="mini-spinner" /> Loading profiles…
+          </div>
+        ) : (
+          /* Settled with nothing to show. Which of the two it is matters:
+             one is worth retrying, the other needs a profile making
+             elsewhere. Neither is a spinner. */
+          <div className="splash profile-empty">
+            <h2>{profilesError ? "Couldn't load profiles" : "No profiles yet"}</h2>
+            <p>
+              {profilesError ||
+                "This account has no profiles. Open Nuvio on desktop, Android or TV to create one — it will appear here."}
+            </p>
+            <div className="profile-empty-actions">
+              <button className="primary" onClick={() => void hydrate()}>
+                {profilesError ? "Try again" : "Check again"}
+              </button>
+              <button
+                className="secondary"
+                onClick={async () => {
+                  await signOut();
+                  activateProfile(null);
+                  setSession(null);
+                }}
+              >
+                Sign out
+              </button>
+            </div>
           </div>
         )}
         {updatePrompt}

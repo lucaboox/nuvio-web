@@ -4756,6 +4756,31 @@ body.is-locked {
 }
 /* Everything else in settings sits in one of these, and a page had lost it —
    the fixed layer is the backdrop, this is the surface. */
+/* A settled empty or failed profile list, in place of a spinner that would
+   never stop. */
+.profile-empty {
+  gap: 14px;
+  padding: 32px 24px;
+  text-align: center;
+}
+.profile-empty h2 {
+  margin: 0;
+  font-size: 21px;
+}
+.profile-empty p {
+  max-width: 420px;
+  margin: 0;
+  color: #8d97a2;
+  font-size: 13.5px;
+  line-height: 1.55;
+}
+.profile-empty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 4px;
+}
 .integration-page-card {
   padding: 22px;
   border: 1px solid var(--panel-border);

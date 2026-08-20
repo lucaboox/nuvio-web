@@ -119,7 +119,7 @@ import {
   RETURN_SHORTCUT_NAME,
   RETURN_SHORTCUT_URL,
 } from "./lib/externalPlayer";
-import { platform } from "./platform";
+import { platform } from "./platform/index.ts";
 import {
   clearRelayToken,
   collectRelayReport,

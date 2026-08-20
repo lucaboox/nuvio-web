@@ -6,7 +6,7 @@ import {
   pullWatchedDelta,
   watchedDeltaCursor,
 } from "./account";
-import { platform } from "../platform";
+import { platform } from "../platform/index.ts";
 import type { ProgressRow, WatchedItem } from "../types";
 
 /**

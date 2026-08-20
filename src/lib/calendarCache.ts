@@ -1,4 +1,4 @@
-import { platform } from "../platform";
+import { platform } from "../platform/index.ts";
 import type { Meta, Video } from "../types";
 
 /**

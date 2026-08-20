@@ -6,6 +6,7 @@ import {
   MAX_RETRIES,
 } from "./requestPolicy.ts";
 import { mediaTypeLabel, type HomeLayout } from "./account";
+import { platform } from "../platform/index.ts";
 import type {
   AddonManifest,
   AddonRow,
@@ -75,43 +76,23 @@ async function fetchJsonOnce<T>(
   timeoutMs: number,
   signal: AbortSignal | undefined,
 ): Promise<T> {
-  const controller = new AbortController();
-  const abort = () => controller.abort();
-  if (signal?.aborted) controller.abort();
-  else signal?.addEventListener("abort", abort, { once: true });
-  const timeout = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    const response = await fetch(url, {
-      signal: controller.signal,
-      credentials: "omit",
-      referrerPolicy: "no-referrer",
-    });
-    if (!response.ok) {
-      const error = new Error(`HTTP ${response.status}`) as Error & {
-        status?: number;
-        retryAfter?: string | null;
-      };
-      error.status = response.status;
-      error.retryAfter = response.headers.get("retry-after");
-      throw error;
-    }
-    const declared = Number(response.headers.get("content-length") ?? 0);
-    if (declared > JSON_LIMIT) throw new Error("Addon response is too large.");
-    const body = await response.text();
-    if (body.length > JSON_LIMIT)
-      throw new Error("Addon response is too large.");
-    return JSON.parse(body) as T;
-  } catch (error) {
-    if (error instanceof TypeError) {
-      throw new Error(
-        "Browser blocked this addon request (usually CORS or network failure).",
-      );
-    }
+  const response = await platform.request(url, {
+    signal,
+    timeoutMs,
+    maxBytes: JSON_LIMIT,
+  });
+  if (!response.ok) {
+    const error = new Error(`HTTP ${response.status}`) as Error & {
+      status?: number;
+      retryAfter?: string | null;
+    };
+    error.status = response.status;
+    // The retry schedule reads this, so a host asking for later still gets
+    // waited for rather than retried on our own timetable.
+    error.retryAfter = response.headers["retry-after"] ?? null;
     throw error;
-  } finally {
-    clearTimeout(timeout);
-    signal?.removeEventListener("abort", abort);
   }
+  return JSON.parse(response.body) as T;
 }
 
 /**

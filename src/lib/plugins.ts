@@ -1,4 +1,4 @@
-import { platform } from "../platform";
+import { platform } from "../platform/index.ts";
 import { normalizePluginManifestUrl } from "./pluginUrl";
 import { safeHttpUrl } from "./security";
 import type {

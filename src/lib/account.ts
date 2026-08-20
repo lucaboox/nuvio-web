@@ -12,7 +12,7 @@ import type {
   Session,
   WatchedItem,
 } from "../types";
-import { platform } from "../platform";
+import { platform } from "../platform/index.ts";
 import {
   blobRawValue,
   blobStringPayload,

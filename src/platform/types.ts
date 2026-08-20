@@ -37,6 +37,49 @@ export type StorageApi = {
   remove(key: string): Promise<void>;
 };
 
+export type RequestOptions = {
+  method?: "GET" | "POST";
+  headers?: Record<string, string>;
+  body?: string;
+  /** Abandon the wait. A shell that cannot cancel in flight still stops here. */
+  signal?: AbortSignal;
+  /** Give up after this long, per attempt. */
+  timeoutMs?: number;
+  /** Refuse a body past this size, measured in bytes. */
+  maxBytes?: number;
+};
+
+export type RequestResponse = {
+  ok: boolean;
+  status: number;
+  /** Header names lower-cased, which is the one form every shell agrees on. */
+  headers: Record<string, string>;
+  body: string;
+};
+
+/**
+ * One HTTP round trip, for the app's own data.
+ *
+ * Text in, text out, and deliberately nothing more. No streaming, no `Response`,
+ * no body that is not a string — because the desktop shell answers this across
+ * an IPC hop, and a live stream does not survive one. Keeping the contract this
+ * narrow is what lets a shell implement it at all.
+ *
+ * Media bytes therefore never come through here. The browser's player reads its
+ * own ranges and the desktop hands a URL to libmpv; neither wants this, and
+ * routing a film through a JSON-shaped call would be absurd.
+ *
+ * Two properties every shell has to keep. Nothing ambient is ever sent — no
+ * cookies, no referrer — because these addresses come from addons the viewer
+ * installed and a provider key is not theirs to leak onward. And a refusal is
+ * an answer: 404 and 500 resolve with `ok: false`, and only a request that
+ * never completed throws. Callers read `status` to tell "no" from "broken".
+ */
+export type RequestApi = (
+  url: string,
+  options?: RequestOptions,
+) => Promise<RequestResponse>;
+
 /** Where a list of players is being offered, which changes what belongs in it. */
 export type ExternalPlayerSurface = "settings" | "player";
 
@@ -215,5 +258,6 @@ export type Platform = {
   downloads?: DownloadsApi;
   debrid?: DebridApi;
   externalPlayer: ExternalPlayerApi;
+  request: RequestApi;
   storage: StorageApi;
 };

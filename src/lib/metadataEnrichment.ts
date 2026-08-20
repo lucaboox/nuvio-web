@@ -1,3 +1,4 @@
+import { platform } from "../platform/index.ts";
 import type { ExternalRating, Meta, MetaTrailer, Person, Video } from "../types";
 
 export type MetadataEnrichmentConfig = {
@@ -36,35 +37,20 @@ const image = (path: unknown, size: string) =>
 const isSeries = (type: string) => /series|show|tv/i.test(type);
 
 const cache = new Map<string, Promise<unknown>>();
-async function fetchJsonWithTimeout(
-  url: string,
-  init: RequestInit | undefined,
-): Promise<unknown> {
-  const controller = new AbortController();
-  const upstream = init?.signal;
-  const abort = () => controller.abort(upstream?.reason);
-  if (upstream?.aborted) abort();
-  else upstream?.addEventListener("abort", abort, { once: true });
-  const timer = window.setTimeout(() => controller.abort(), 8_000);
-  try {
-    const response = await fetch(url, { ...init, signal: controller.signal });
-    if (!response.ok)
-      throw new Error(`Metadata provider returned ${response.status}`);
-    return response.json();
-  } finally {
-    window.clearTimeout(timer);
-    upstream?.removeEventListener("abort", abort);
-  }
+async function fetchJsonWithTimeout(url: string): Promise<unknown> {
+  const response = await platform.request(url, { timeoutMs: 8_000 });
+  if (!response.ok)
+    throw new Error(`Metadata provider returned ${response.status}`);
+  return JSON.parse(response.body);
 }
 
-async function cachedJson(url: string, init?: RequestInit): Promise<unknown> {
-  const cacheKey = `${init?.method || "GET"}:${url}:${init?.body || ""}`;
-  let request = cache.get(cacheKey);
+async function cachedJson(url: string): Promise<unknown> {
+  let request = cache.get(url);
   if (!request) {
-    request = fetchJsonWithTimeout(url, init);
-    cache.set(cacheKey, request);
+    request = fetchJsonWithTimeout(url);
+    cache.set(url, request);
     if (cache.size > 160) cache.delete(cache.keys().next().value as string);
-    request.catch(() => cache.delete(cacheKey));
+    request.catch(() => cache.delete(url));
   }
   return request;
 }

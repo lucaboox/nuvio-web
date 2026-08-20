@@ -15,6 +15,8 @@
  * are the real scores.
  */
 
+import { platform } from "../platform/index.ts";
+
 const WORKER_URL = "https://nuvio-imdb-ratings.lucaboox.workers.dev";
 /** Matches the Worker's own budget, so a reopened page asks nobody. */
 const CACHE_TTL_MS = 30 * 60 * 1000;
@@ -64,11 +66,15 @@ export async function loadEpisodeRatings(
 
   const task = (async () => {
     try {
-      const response = await fetch(
+      // The Worker exists because a page cannot call the ratings host itself.
+      // A shell that can should be pointed straight at it instead — this goes
+      // through the capability so that swap is a change of address, not of
+      // this module.
+      const response = await platform.request(
         `${WORKER_URL}/season-ratings?tmdb=${encodeURIComponent(tmdb)}`,
       );
       if (!response.ok) return new Map<string, number>();
-      const payload = (await response.json()) as {
+      const payload = JSON.parse(response.body) as {
         ratings?: Record<string, number>;
       };
       const ratings: EpisodeRatings = new Map(

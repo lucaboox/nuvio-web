@@ -8,6 +8,8 @@
  * and sends CORS headers, so it needs no key, no proxy and no id resolution.
  */
 
+import { platform } from "../platform/index.ts";
+
 const BASE = "https://api.theintrodb.org/v3/media";
 const CACHE_TTL_MS = 30 * 60 * 1000;
 
@@ -120,13 +122,10 @@ export async function loadSkipSegments(
     }
     let segments: SkipSegment[] = [];
     try {
-      const response = await fetch(`${BASE}?${query.toString()}`, {
-        credentials: "omit",
-        referrerPolicy: "no-referrer",
-      });
+      const response = await platform.request(`${BASE}?${query.toString()}`);
       // Anything it does not know answers with an error status, which is not
       // worth distinguishing from having no timings.
-      if (response.ok) segments = parseSkipSegments(await response.json());
+      if (response.ok) segments = parseSkipSegments(JSON.parse(response.body));
     } catch {
       // Offline, blocked, or the service is down. No button.
     }

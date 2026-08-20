@@ -1,3 +1,4 @@
+import { platform } from "../platform/index.ts";
 import type { CollectionCatalogSource, Meta } from "../types";
 
 /**
@@ -135,17 +136,14 @@ async function get<T>(
   // back, so two sources returning identical results is visible here.
   const shown = new URLSearchParams(params);
   shown.delete("api_key");
-  const response = await fetch(`${API}/${endpoint}?${params}`, {
-    credentials: "omit",
-    referrerPolicy: "no-referrer",
-  });
+  const response = await platform.request(`${API}/${endpoint}?${params}`);
   if (!response.ok) {
     // 401 is the one worth naming: it means the key, not the source.
     if (response.status === 401)
       throw new Error("TMDB rejected the API key. Check it in Settings.");
     throw new Error(`TMDB returned HTTP ${response.status}`);
   }
-  return (await response.json()) as T;
+  return JSON.parse(response.body) as T;
 }
 
 /**

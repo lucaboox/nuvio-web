@@ -1,5 +1,5 @@
 import type Hls from "hls.js";
-import { platform } from "../platform";
+import { platform } from "../platform/index.ts";
 import { safeHttpUrl } from "../lib/security";
 import {
   assessPlayback,

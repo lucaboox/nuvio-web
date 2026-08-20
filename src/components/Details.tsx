@@ -25,7 +25,7 @@ import {
   tmdbIdForMeta,
   type MetadataEnrichmentConfig,
 } from "../lib/metadataEnrichment";
-import { platform } from "../platform";
+import { platform } from "../platform/index.ts";
 import {
   episodePercent,
   remainingShort,

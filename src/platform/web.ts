@@ -17,6 +17,7 @@ import {
   launchExternalPlayer,
 } from "../lib/externalPlayer.ts";
 import { deleteValue, getValue, setValue } from "../lib/idb.ts";
+import { webRequest } from "../lib/webRequest.ts";
 import type { Platform } from "./types.ts";
 
 export const webPlatform: Platform = {
@@ -27,6 +28,7 @@ export const webPlatform: Platform = {
     launch: launchExternalPlayer,
     copyUrl: copyStreamUrl,
   },
+  request: webRequest,
   // IndexedDB rather than localStorage: it stores structured values without a
   // JSON round trip, and it is reachable from a Worker, which is where the
   // session is kept.

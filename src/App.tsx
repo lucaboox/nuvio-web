@@ -47,6 +47,7 @@ import { ContextMenu } from "./components/ContextMenu";
 import { CalendarView } from "./components/Calendar";
 import { Details } from "./components/Details";
 import { Discover } from "./components/Discover";
+import { Downloads } from "./components/Downloads";
 import { ExternalWatchPrompt } from "./components/ExternalWatchPrompt";
 import {
   CollectionFolderView,
@@ -190,6 +191,11 @@ const nav: Array<{ key: NavKey; label: string; icon: typeof Home }> = [
   { key: "discover", label: "Discover", icon: Compass },
   { key: "library", label: "Library", icon: Library },
   { key: "calendar", label: "Calendar", icon: CalendarDays },
+  // Present only where the shell can save files. Absence removes the tab
+  // rather than showing one that explains itself away.
+  ...(platform.downloads
+    ? [{ key: "downloads" as NavKey, label: "Downloads", icon: Download }]
+    : []),
   { key: "settings", label: "Settings", icon: Settings },
 ];
 
@@ -2087,6 +2093,11 @@ export function App() {
             index={watchIndex}
             onOpen={openDetails}
             onMenu={(item, x, y) => setTitleMenu({ item, x, y })}
+          />
+        ) : deferredActive === "downloads" && platform.downloads ? (
+          <Downloads
+            downloads={platform.downloads}
+            onPlay={(stream, meta, video) => setPlayback({ stream, meta, video })}
           />
         ) : deferredActive === "calendar" ? (
           <CalendarView

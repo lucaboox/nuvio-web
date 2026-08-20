@@ -248,6 +248,7 @@ export type NavKey =
   | "home"
   | "discover"
   | "calendar"
+  | "downloads"
   | "library"
   | "addons"
   | "settings";

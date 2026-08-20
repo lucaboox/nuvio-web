@@ -7,6 +7,7 @@ import {
   ArrowLeft,
   Check,
   Copy,
+  Download as DownloadIcon,
   Eye,
   EyeOff,
   ExternalLink,
@@ -442,6 +443,9 @@ export function Details({
   const swipeRef = useSwipeBack<HTMLDivElement>(onClose, !sourceOpen);
   const [streams, setStreams] = useState<Stream[]>([]);
   const [sourceBusy, setSourceBusy] = useState(false);
+  // Cleared by the next attempt rather than a timer: the answer belongs to
+  // the source that was clicked.
+  const [downloadNote, setDownloadNote] = useState("");
   const [sourceVideo, setSourceVideo] = useState<Video | undefined>();
   /** "" is every addon. Reset whenever the panel opens on something new. */
   const [sourceAddon, setSourceAddon] = useState("");
@@ -1227,6 +1231,7 @@ export function Details({
                 <X />
               </button>
             </header>
+            {downloadNote && <div className="sheet-note">{downloadNote}</div>}
             {sourceBusy ? (
               <div className="sheet-loading">Fetching addon sources…</div>
             ) : visibleStreams.length ? (
@@ -1299,6 +1304,43 @@ export function Details({
                         >
                           <Copy size={16} /> Copy
                         </button>
+                        {/* Only where a shell can save files. On the web the
+                            button is not disabled, it is not built. */}
+                        {platform.downloads && (
+                          <button
+                            onClick={() => {
+                              void platform
+                                .downloads!.enqueue({
+                                  contentId: meta.id,
+                                  contentType: meta.type,
+                                  videoId: sourceVideo?.id ?? meta.id,
+                                  title: sourceVideo?.title || meta.name,
+                                  showName:
+                                    meta.type === "series" ? meta.name : undefined,
+                                  season: sourceVideo?.season,
+                                  episode: sourceVideo?.episode,
+                                  posterUrl: meta.poster,
+                                  backdropUrl: meta.background || meta.banner,
+                                  url: stream.url!,
+                                  requestHeaders:
+                                    stream.behaviorHints?.proxyHeaders?.request,
+                                  sourceName:
+                                    stream.name || stream.title || stream.addonName,
+                                  filename: stream.behaviorHints?.filename,
+                                })
+                                .then(() => setDownloadNote("Added to Downloads"))
+                                .catch((reason: unknown) =>
+                                  setDownloadNote(
+                                    reason instanceof Error
+                                      ? reason.message
+                                      : "Could not be queued",
+                                  ),
+                                );
+                            }}
+                          >
+                            <DownloadIcon size={16} /> Save
+                          </button>
+                        )}
                       </div>
                     )}
                   </article>

@@ -7330,3 +7330,14 @@ body.is-locked {
     justify-content: flex-end;
   }
 }
+
+/* The answer to a save, in the sheet that asked for it. */
+.sheet-note {
+  margin: 0 0 12px;
+  padding: 9px 14px;
+  border-radius: 12px;
+  background: var(--panel-soft);
+  border: 1px solid var(--panel-border);
+  color: #c8d1db;
+  font-size: 13px;
+}

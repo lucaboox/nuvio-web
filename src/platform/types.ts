@@ -18,7 +18,11 @@
  */
 
 import type { SkipSegment } from "../lib/skipSegments.ts";
-import type { ExternalPlayerMode } from "../types.ts";
+import type {
+  BackendConfig,
+  ExternalPlayerMode,
+  Session,
+} from "../types.ts";
 
 /**
  * Key-value storage that survives a restart.
@@ -35,6 +39,43 @@ export type StorageApi = {
   get<T>(key: string): Promise<T | null>;
   set<T>(key: string, value: T): Promise<void>;
   remove(key: string): Promise<void>;
+};
+
+/**
+ * Who holds the session, and makes the calls that need it.
+ *
+ * Four calls, because that is what the account layer has always asked for —
+ * this names a boundary that already existed rather than inventing one. The
+ * point of it being a capability is that custody differs and should: a browser
+ * keeps the token in an isolated Worker so the page cannot read it, while a
+ * shell keeps it outside the webview entirely, where there is no page to leak
+ * onto at all.
+ *
+ * What every shell must hold to is that the token itself never crosses this
+ * boundary. Callers receive a `Session` — who is signed in — and ask for
+ * authorized calls to be *made for them*. A shell that handed back a token so
+ * the UI could attach it would satisfy the types and defeat the purpose.
+ */
+export type AuthApi = {
+  signIn(
+    backend: BackendConfig,
+    email: string,
+    password: string,
+  ): Promise<Session>;
+  /** Resumes a stored session, rotating whatever credential persisted it. */
+  restore(): Promise<Session>;
+  signOut(): Promise<void>;
+  /** One authorized call against the account backend, made on our behalf. */
+  request<T>(
+    path: string,
+    init?: { method?: string; body?: string; headers?: Record<string, string> },
+  ): Promise<T>;
+  /**
+   * Announces a session lost outside any call — the holder crashed. Returns an
+   * unsubscribe. Announced rather than thrown because it can happen while
+   * nothing is waiting, and a session believed live is worse than none.
+   */
+  onSessionLost(listener: () => void): () => void;
 };
 
 export type RequestOptions = {
@@ -257,6 +298,7 @@ export type DebridApi = {
 export type Platform = {
   downloads?: DownloadsApi;
   debrid?: DebridApi;
+  auth: AuthApi;
   externalPlayer: ExternalPlayerApi;
   request: RequestApi;
   storage: StorageApi;

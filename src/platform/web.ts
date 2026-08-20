@@ -16,11 +16,13 @@ import {
   isExternalPlayerAvailable,
   launchExternalPlayer,
 } from "../lib/externalPlayer.ts";
+import { authVault } from "../lib/authVault.ts";
 import { deleteValue, getValue, setValue } from "../lib/idb.ts";
 import { webRequest } from "../lib/webRequest.ts";
 import type { Platform } from "./types.ts";
 
 export const webPlatform: Platform = {
+  auth: authVault,
   externalPlayer: {
     options: externalPlayerOptions,
     label: externalPlayerLabel,

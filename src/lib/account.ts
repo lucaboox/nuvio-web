@@ -86,52 +86,12 @@ function loadClientId() {
 export const CLIENT_ID = loadClientId();
 let activeSession: Session | null = null;
 
-type VaultCommand =
-  | { type: "signIn"; backend: BackendConfig; email: string; password: string }
-  | { type: "signOut" }
-  | { type: "restore" }
-  | {
-      type: "request";
-      path: string;
-      init: { method?: string; body?: string; headers?: Record<string, string> };
-    };
-type VaultResponse =
-  | { id: number; ok: true; value: unknown }
-  | { id: number; ok: false; error: string };
-const tokenVault = new Worker(
-  new URL("../workers/authWorker.ts", import.meta.url),
-  { type: "module", name: "nuvio-token-vault" },
-);
-let vaultMessageId = 0;
-const vaultPending = new Map<
-  number,
-  { resolve(value: unknown): void; reject(error: Error): void }
->();
-
-tokenVault.addEventListener("message", (event: MessageEvent<VaultResponse>) => {
-  const pending = vaultPending.get(event.data.id);
-  if (!pending) return;
-  vaultPending.delete(event.data.id);
-  if (event.data.ok) pending.resolve(event.data.value);
-  else pending.reject(new Error(event.data.error));
-});
-tokenVault.addEventListener("error", () => {
-  for (const pending of vaultPending.values())
-    pending.reject(new Error("The secure session worker stopped unexpectedly."));
-  vaultPending.clear();
+// The session lives wherever the shell keeps it — a Worker in the browser, a
+// process outside the webview in the desktop shell. This module only ever
+// learns who is signed in, never the credential proving it.
+platform.auth.onSessionLost(() => {
   activeSession = null;
 });
-
-function vaultCall<T>(command: VaultCommand): Promise<T> {
-  const id = ++vaultMessageId;
-  return new Promise<T>((resolve, reject) => {
-    vaultPending.set(id, {
-      resolve: (value) => resolve(value as T),
-      reject,
-    });
-    tokenVault.postMessage({ id, ...command });
-  });
-}
 
 export function officialBackend(): BackendConfig | null {
   const url = import.meta.env.VITE_NUVIO_SUPABASE_URL?.trim().replace(
@@ -185,12 +145,7 @@ export async function signIn(
   password: string,
 ): Promise<Session> {
   activeSession = null;
-  const session = await vaultCall<Session>({
-    type: "signIn",
-    backend,
-    email,
-    password,
-  });
+  const session = await platform.auth.signIn(backend, email, password);
   await platform.storage.set(CONFIG_KEY, backend);
   activeSession = session;
   return activeSession;
@@ -203,7 +158,7 @@ export async function signIn(
 export async function restoreSession(): Promise<Session | null> {
   activeSession = null;
   try {
-    const session = await vaultCall<Session>({ type: "restore" });
+    const session = await platform.auth.restore();
     activeSession = session;
     return session;
   } catch {
@@ -213,7 +168,7 @@ export async function restoreSession(): Promise<Session | null> {
 
 export async function signOut(): Promise<void> {
   activeSession = null;
-  await vaultCall({ type: "signOut" });
+  await platform.auth.signOut();
 }
 
 async function secureAuthorized<T>(
@@ -225,14 +180,10 @@ async function secureAuthorized<T>(
   new Headers(init.headers).forEach((value, key) => {
     headers[key] = value;
   });
-  return vaultCall<T>({
-    type: "request",
-    path,
-    init: {
-      method: init.method,
-      body: typeof init.body === "string" ? init.body : undefined,
-      headers,
-    },
+  return platform.auth.request<T>(path, {
+    method: init.method,
+    body: typeof init.body === "string" ? init.body : undefined,
+    headers,
   });
 }
 

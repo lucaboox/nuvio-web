@@ -7105,3 +7105,228 @@ body.is-locked {
 .player-error-players button:hover {
   border-color: #46505b;
 }
+
+/*
+ * Downloads.
+ *
+ * Only ever rendered where a shell can save files, so none of this reaches a
+ * browser — but it is written against the same tokens as everything else, so
+ * the page belongs to the app rather than looking like a port of another one.
+ */
+.downloads-page {
+  padding: 24px 0 48px;
+  max-width: 900px;
+}
+.downloads-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+.downloads-head h1 {
+  margin: 0 0 4px;
+  font-size: 30px;
+}
+/* The storage path, which is reference rather than reading. */
+.downloads-head span {
+  color: #8b95a1;
+  font-size: 13px;
+  word-break: break-all;
+}
+.downloads-head button {
+  flex: none;
+  padding: 9px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--panel-border);
+  background: var(--panel-soft);
+  color: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.downloads-head button:hover {
+  border-color: #3b444d;
+}
+.downloads-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+.downloads-tabs button {
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--panel-border);
+  background: transparent;
+  color: #b7c0cb;
+  font-weight: 600;
+  cursor: pointer;
+}
+.downloads-tabs button.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+.downloads-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 64px 20px;
+  border: 1px dashed var(--panel-border);
+  border-radius: 20px;
+  color: #8b95a1;
+  text-align: center;
+}
+.downloads-empty strong {
+  color: #e9eef2;
+  font-size: 17px;
+}
+.downloads-empty svg {
+  width: 34px;
+  height: 34px;
+  opacity: 0.5;
+}
+.download-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.download-row {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  padding: 14px;
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 16px;
+}
+/* Sized to the poster ratio the rest of the app uses, at a third scale. */
+.download-art {
+  flex: none;
+  width: 58px;
+  height: 87px;
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--panel-soft);
+}
+.download-art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.download-copy {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.download-copy small {
+  color: #8b95a1;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.download-copy h2 {
+  margin: 0;
+  font-size: 16px;
+}
+.download-copy strong {
+  font-size: 13px;
+  color: #c8d1db;
+}
+.download-copy > span {
+  color: #8b95a1;
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.download-copy em {
+  color: #ef7a86;
+  font-size: 12px;
+  font-style: normal;
+}
+.download-copy label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #8b95a1;
+  font-size: 12px;
+}
+.download-copy label svg {
+  width: 13px;
+  height: 13px;
+}
+.download-progress {
+  margin-top: 6px;
+}
+.download-progress i {
+  display: block;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--panel-soft);
+  overflow: hidden;
+}
+.download-progress i b {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent);
+  transition: width 0.4s ease;
+}
+.download-progress span {
+  display: block;
+  margin-top: 5px;
+  color: #8b95a1;
+  font-size: 12px;
+}
+.download-actions {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.download-actions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 15px;
+  border-radius: 999px;
+  border: 1px solid var(--panel-border);
+  background: var(--panel-soft);
+  color: inherit;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+}
+.download-actions button svg {
+  width: 15px;
+  height: 15px;
+}
+/* Play is the one thing on a finished row worth reaching for. */
+.download-actions button:first-child:has(svg) {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+.download-actions button[aria-label="Remove download"] {
+  background: transparent;
+  padding: 9px;
+  color: #8b95a1;
+}
+.download-actions button[aria-label="Remove download"]:hover {
+  color: #ef7a86;
+  border-color: #5b2d33;
+}
+
+@media (max-width: 640px) {
+  .download-row {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  .download-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}

@@ -68,6 +68,12 @@ export default defineConfig(({ mode }) => {
     plugins: [
       react(),
       VitePWA({
+        // A shell is not a web page and has no business precaching itself.
+        // Worse, this one waits to be prompted before taking an update, so a
+        // worker registered once went on serving its own copy of the app and
+        // every later change appeared not to apply. The plan says not to port
+        // the service worker; this is where that is enforced.
+        disable: !!platformModule,
         // "prompt", not "autoUpdate": autoUpdate reloads the page as soon as a
         // new worker takes control, which restarted the app mid-boot.
         registerType: "prompt",

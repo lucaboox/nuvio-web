@@ -28,7 +28,6 @@ export function AuthScreen({ onSession }: { onSession(session: Session): void })
   return <main className="auth-screen">
     <section className="auth-card">
       <img className="auth-logo" src={`${import.meta.env.BASE_URL}nuvio-wordmark.png`} alt="Nuvio" />
-      <span className="eyebrow">WEB PREVIEW</span>
       <h1>Your Nuvio, anywhere.</h1>
       <p>Install it from Safari or Chrome and keep your profiles, addons, and library in sync.</p>
       <form onSubmit={submit}>
@@ -40,7 +39,6 @@ export function AuthScreen({ onSession }: { onSession(session: Session): void })
       </form>
       {message && <div className="notice error">{message}</div>}
       <a className="text-button" href="https://nuvio.tv/account/signup?next=%2Faccount" target="_blank" rel="noreferrer">New to Nuvio? Create an account</a>
-      <small className="security-note">Secure session mode: access tokens stay inside an isolated browser Worker. A rotating refresh credential keeps you signed in until you sign out. No media passes through the Nuvio web host.</small>
     </section>
   </main>;
 }

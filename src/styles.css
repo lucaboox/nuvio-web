@@ -2343,6 +2343,21 @@ body,
   margin-top: 4px;
   color: #87919b;
 }
+/*
+ * One eye, not two.
+ *
+ * Edge and the WebView2 control the desktop shell runs on draw their own
+ * reveal button inside a password field, on top of the one this app already
+ * draws. Chrome and Safari draw none, which is why it only shows up in the
+ * shell and in Edge. Theirs cannot be styled or reached from script, so the
+ * app's own button — which has a label, a pressed state and a matching icon —
+ * is the one that stays.
+ */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+  display: none;
+}
+
 .password-field {
   position: relative;
 }

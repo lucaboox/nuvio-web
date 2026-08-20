@@ -145,6 +145,18 @@ export function Downloads({
             episode: item.episode,
           } as Video)
         : undefined;
+    // A shell with its own player opens the file directly: this is a path on
+    // disk, which a <video> element cannot be pointed at, and the reason the
+    // capability is optional rather than assumed.
+    if (platform.player) {
+      void platform.player.open({
+        url: item.playUrl,
+        title: item.title,
+        mediaId: item.contentId,
+        startPositionMs: 0,
+      });
+      return;
+    }
     onPlay(stream, meta, video);
   }
 

@@ -78,6 +78,35 @@ export type AuthApi = {
   onSessionLost(listener: () => void): () => void;
 };
 
+/**
+ * A player that is not the browser's own decoder.
+ *
+ * Optional, and absent in a browser — not as a gap, but because a page already
+ * has a player and cannot be given a better one. A `<video>` element plays what
+ * the browser can decode and no more; a shell with libmpv plays the rest, and
+ * is the only thing that can open a file the shell itself wrote.
+ *
+ * Deliberately small for now. This is the handoff — give it a source and it
+ * takes over — not the transport controls, which stay with whichever player is
+ * actually on screen. Growing it to cover tracks and seeking is what lets the
+ * shared player UI drive a native backend, and that is a larger job than this.
+ */
+export type PlayerSource = {
+  url: string;
+  /** Shown by the player while it loads, where it shows anything. */
+  title?: string;
+  /** Identifies the title, so the shell can attribute progress to it. */
+  mediaId?: string;
+  startPositionMs?: number;
+  /** Headers the source insists on, which a `<video>` element cannot attach. */
+  requestHeaders?: Record<string, string>;
+};
+
+export type PlayerApi = {
+  open(source: PlayerSource): Promise<void>;
+  stop(): Promise<void>;
+};
+
 export type RequestOptions = {
   method?: "GET" | "POST";
   headers?: Record<string, string>;
@@ -299,6 +328,7 @@ export type Platform = {
   downloads?: DownloadsApi;
   debrid?: DebridApi;
   auth: AuthApi;
+  player?: PlayerApi;
   externalPlayer: ExternalPlayerApi;
   request: RequestApi;
   storage: StorageApi;

@@ -27,8 +27,30 @@ export default defineConfig(({ mode }) => {
     .split(",")
     .map((host) => host.trim())
     .filter(Boolean);
+  // The one file that differs per shell, swapped at build time rather than
+  // branched on at runtime.
+  //
+  // A shell embedding this UI — the Rust desktop client — points this at its
+  // own implementation of the capability contract, and nothing else in the
+  // source changes or needs to know. Unset, which is every ordinary web build,
+  // the browser's own `platform/index.ts` is used and this does nothing.
+  //
+  // The pattern has to consume the whole specifier, not just its tail: a
+  // regexp alias is a string replace, so matching only "/platform/index.ts"
+  // leaves the leading "." of "./platform/index.ts" glued to the front of the
+  // replacement. The importers reach it as both "./" and "../", hence the
+  // leading wildcard rather than an exact pair of alternatives.
+  // Read through loadEnv rather than `process.env`: it already merges the
+  // environment with the .env files, and this config is typechecked without
+  // Node's types.
+  const platformModule = env.NUVIO_PLATFORM_MODULE || "";
   return {
     base,
+    resolve: {
+      alias: platformModule
+        ? [{ find: /^.*\/platform\/index\.ts$/, replacement: platformModule }]
+        : [],
+    },
     define: {
       // Changes every build, so Settings can show which one is running — the
       // quickest way to confirm an update actually applied. The commit is in

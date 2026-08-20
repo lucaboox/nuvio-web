@@ -446,6 +446,10 @@ export function Details({
   // Cleared by the next attempt rather than a timer: the answer belongs to
   // the source that was clicked.
   const [downloadNote, setDownloadNote] = useState("");
+  // Which row was just saved, so the answer appears on the control that was
+  // pressed. A queued download shows nothing for seconds otherwise, and a
+  // button that looks inert gets pressed again.
+  const [savedSource, setSavedSource] = useState<number | null>(null);
   const [sourceVideo, setSourceVideo] = useState<Video | undefined>();
   /** "" is every addon. Reset whenever the panel opens on something new. */
   const [sourceAddon, setSourceAddon] = useState("");
@@ -1308,6 +1312,7 @@ export function Details({
                             button is not disabled, it is not built. */}
                         {platform.downloads && (
                           <button
+                            disabled={savedSource === index}
                             onClick={() => {
                               void platform
                                 .downloads!.enqueue({
@@ -1328,7 +1333,17 @@ export function Details({
                                     stream.name || stream.title || stream.addonName,
                                   filename: stream.behaviorHints?.filename,
                                 })
-                                .then(() => setDownloadNote("Added to Downloads"))
+                                .then(() => {
+                                  setSavedSource(index);
+                                  setDownloadNote("Added to Downloads");
+                                  window.setTimeout(
+                                    () =>
+                                      setSavedSource((current) =>
+                                        current === index ? null : current,
+                                      ),
+                                    2500,
+                                  );
+                                })
                                 .catch((reason: unknown) =>
                                   setDownloadNote(
                                     reason instanceof Error
@@ -1338,7 +1353,15 @@ export function Details({
                                 );
                             }}
                           >
-                            <DownloadIcon size={16} /> Save
+                            {savedSource === index ? (
+                              <>
+                                <Check size={16} /> Saved
+                              </>
+                            ) : (
+                              <>
+                                <DownloadIcon size={16} /> Save
+                              </>
+                            )}
                           </button>
                         )}
                       </div>

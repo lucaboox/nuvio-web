@@ -1420,6 +1420,14 @@ a {
   border-radius: 9px;
   padding: 8px 10px;
   text-decoration: none;
+  /* Absent since these were added, so Copy never looked pressable either. */
+  cursor: pointer;
+}
+/* Saved: the row says so for a moment, and cannot be queued twice by someone
+   who saw no answer the first time. */
+.source-tools button:disabled {
+  cursor: default;
+  color: #7fd6a8;
 }
 .player-view {
   position: fixed;

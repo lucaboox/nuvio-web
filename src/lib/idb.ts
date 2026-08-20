@@ -1,3 +1,12 @@
+/**
+ * The browser's answer to `platform.storage`.
+ *
+ * Reached through the capability rather than by name, so that the same UI runs
+ * over a shell that writes files instead. The one exception is the auth
+ * Worker, which holds the session and calls in here directly: it is web-only
+ * for as long as the two clients keep their own auth, and a Worker has no
+ * business importing a capability layer built around a shell it cannot see.
+ */
 const DB_NAME = "nuvio-web";
 const STORE = "key-value";
 let databasePromise: Promise<IDBDatabase> | null = null;

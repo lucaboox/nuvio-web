@@ -106,19 +106,20 @@ import {
   subscribeUpdate,
   updateReady,
 } from "./lib/appUpdate";
+// The handoff itself is a capability; what is imported by name here is the
+// browser-only remainder — device sniffing for a card that only the web build
+// shows, and the way back into an installed iOS web app, which a shell that
+// never left does not need.
 import {
   canReturnToApp,
-  externalPlayerLabel,
-  externalPlayerOptions,
   isAndroid,
   isAppleMobile,
-  isExternalPlayerAvailable,
   isInstalledAppleWebApp,
   isMacOS,
-  launchExternalPlayer,
   RETURN_SHORTCUT_NAME,
   RETURN_SHORTCUT_URL,
 } from "./lib/externalPlayer";
+import { platform } from "./platform";
 import {
   clearRelayToken,
   collectRelayReport,
@@ -451,7 +452,9 @@ export function App() {
     const stored = localStorage.getItem(
       "nuvio-web-external-player",
     ) as ExternalPlayerMode | null;
-    return stored && isExternalPlayerAvailable(stored) ? stored : "internal";
+    return stored && platform.externalPlayer.isAvailable(stored)
+      ? stored
+      : "internal";
   });
   const [active, setActive] = useState<NavKey>("home");
   // The nav highlight follows `active` immediately; the page body renders from
@@ -1527,7 +1530,7 @@ export function App() {
     // The relay is the only route that carries a position into an installed
     // iOS web app. Anywhere else the app's own address already reaches it.
     const relay = canReturnToApp() ? "" : newRelayToken();
-    launchExternalPlayer(mode, url, video?.title || meta.name, {
+    platform.externalPlayer.launch(mode, url, video?.title || meta.name, {
       positionSeconds: resumeMs / 1000,
       returnUrlFor: relay
         ? (query) =>
@@ -1545,7 +1548,7 @@ export function App() {
         ? "Stream URL copied. Paste it into VLC or your media player to watch."
         : mode === "m3u"
           ? "Playlist downloaded. Open it with your preferred player."
-          : `Opening ${externalPlayerLabel(mode)}…`,
+          : `Opening ${platform.externalPlayer.label(mode)}…`,
     );
     setExternalWatch({ meta, video });
   }
@@ -4080,7 +4083,7 @@ function SettingsPage({
             }
           >
             <option value="internal">Nuvio web player</option>
-            {externalPlayerOptions("settings").map((option) => (
+            {platform.externalPlayer.options("settings").map((option) => (
               <option key={option.mode} value={option.mode}>
                 {/* Which players can say what happened is the difference
                     between progress being recorded and being asked for. */}

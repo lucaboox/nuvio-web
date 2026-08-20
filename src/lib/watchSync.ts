@@ -6,7 +6,7 @@ import {
   pullWatchedDelta,
   watchedDeltaCursor,
 } from "./account";
-import { getValue, setValue } from "./idb";
+import { platform } from "../platform";
 import type { ProgressRow, WatchedItem } from "../types";
 
 /**
@@ -37,12 +37,16 @@ async function sync<T>(
   ) => Promise<{ cursor: number; rows: T[] }>,
 ): Promise<T[]> {
   const storeKey = key(name, profileIndex);
-  const cached = await getValue<Cached<T>>(storeKey).catch(() => null);
+  const cached = await platform.storage
+    .get<Cached<T>>(storeKey)
+    .catch(() => null);
 
   if (cached && cached.profileIndex === profileIndex) {
     try {
       const next = await drain(profileIndex, cached.cursor, cached.rows);
-      await setValue(storeKey, { ...next, profileIndex }).catch(() => undefined);
+      await platform.storage
+        .set(storeKey, { ...next, profileIndex })
+        .catch(() => undefined);
       return next.rows;
     } catch {
       // Fall through to a snapshot rather than serving a stale cache.
@@ -54,9 +58,9 @@ async function sync<T>(
   const cursor = await cursorOf(profileIndex).catch(() => null);
   const rows = await snapshot();
   if (cursor != null)
-    await setValue(storeKey, { cursor, rows, profileIndex }).catch(
-      () => undefined,
-    );
+    await platform.storage
+      .set(storeKey, { cursor, rows, profileIndex })
+      .catch(() => undefined);
   return rows;
 }
 
@@ -88,7 +92,7 @@ export const syncWatched = (profileIndex: number): Promise<WatchedItem[]> =>
 export async function clearWatchSyncCache(profileIndex: number) {
   await Promise.all(
     ["progress", "watched"].map((name) =>
-      setValue(key(name, profileIndex), null).catch(() => undefined),
+      platform.storage.set(key(name, profileIndex), null).catch(() => undefined),
     ),
   );
 }

@@ -25,7 +25,7 @@ import {
   tmdbIdForMeta,
   type MetadataEnrichmentConfig,
 } from "../lib/metadataEnrichment";
-import { externalPlayerOptions } from "../lib/externalPlayer";
+import { platform } from "../platform";
 import {
   episodePercent,
   remainingShort,
@@ -1188,7 +1188,7 @@ export function Details({
                     }
                   >
                     <option value="internal">Nuvio web player</option>
-                    {externalPlayerOptions("player").map((option) => (
+                    {platform.externalPlayer.options("player").map((option) => (
                       <option key={option.mode} value={option.mode}>
                         {option.label}
                         {option.reportsBack ? " ✓" : ""}

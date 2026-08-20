@@ -12,7 +12,7 @@ import type {
   Session,
   WatchedItem,
 } from "../types";
-import { setValue } from "./idb";
+import { platform } from "../platform";
 import {
   blobRawValue,
   blobStringPayload,
@@ -191,7 +191,7 @@ export async function signIn(
     email,
     password,
   });
-  await setValue(CONFIG_KEY, backend);
+  await platform.storage.set(CONFIG_KEY, backend);
   activeSession = session;
   return activeSession;
 }

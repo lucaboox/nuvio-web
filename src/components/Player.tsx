@@ -1,5 +1,5 @@
 import type Hls from "hls.js";
-import { copyStreamUrl, externalPlayerOptions } from "../lib/externalPlayer";
+import { platform } from "../platform";
 import { safeHttpUrl } from "../lib/security";
 import {
   assessPlayback,
@@ -964,7 +964,7 @@ export function Player({
           {externalUrl && (
             <button
               className="warning-action"
-              onClick={() => copyStreamUrl(externalUrl)}
+              onClick={() => platform.externalPlayer.copyUrl(externalUrl)}
             >
               <Copy size={15} /> Copy stream URL
             </button>
@@ -1120,7 +1120,7 @@ export function Player({
                 {externalPlayerOpen && (
                   <div className="external-player-menu">
                     <strong>Open with</strong>
-                    {externalPlayerOptions("player").map((option) => (
+                    {platform.externalPlayer.options("player").map((option) => (
                       <button
                         key={option.mode}
                         onClick={() => openExternalPlayer(option.mode)}
@@ -1284,11 +1284,11 @@ export function Player({
           {/* What can play it, offered where it failed. Being told the
               browser cannot decode something is only half an answer; the other
               half is the list of things that can. */}
-          {externalUrl && !!externalPlayerOptions("player").length && (
+          {externalUrl && !!platform.externalPlayer.options("player").length && (
             <div className="player-error-players">
               <small>Play it in</small>
               <div>
-                {externalPlayerOptions("player").map((option) => (
+                {platform.externalPlayer.options("player").map((option) => (
                   <button
                     key={option.mode}
                     onClick={() => openExternalPlayer(option.mode)}

@@ -1,4 +1,4 @@
-import { getValue, setValue } from "./idb";
+import { platform } from "../platform";
 import { normalizePluginManifestUrl } from "./pluginUrl";
 import { safeHttpUrl } from "./security";
 import type {
@@ -46,7 +46,7 @@ export { normalizePluginManifestUrl } from "./pluginUrl";
 export async function readLocalPluginState(
   profileIndex: number,
 ): Promise<PluginState> {
-  const saved = await getValue<PluginState>(stateKey(profileIndex));
+  const saved = await platform.storage.get<PluginState>(stateKey(profileIndex));
   return saved
     ? {
         pluginsEnabled: WEB_PLUGINS_SUPPORTED && saved.pluginsEnabled !== false,
@@ -61,7 +61,7 @@ export async function persistPluginState(
   profileIndex: number,
   state: PluginState,
 ): Promise<void> {
-  await setValue(stateKey(profileIndex), state);
+  await platform.storage.set(stateKey(profileIndex), state);
 }
 
 function browserPlatformTags(): Set<string> {
@@ -239,12 +239,16 @@ export async function hydratePluginState(
 export async function readPluginSettings(
   scraperId: string,
 ): Promise<Record<string, unknown>> {
-  const saved = await getValue<Record<string, unknown>>(settingsKey(scraperId));
+  const saved = await platform.storage.get<Record<string, unknown>>(
+    settingsKey(scraperId),
+  );
   if (saved) return saved;
   // Keep the first prototype's values if somebody already configured a
   // provider before the storage key was aligned with Nuvio.
-  const legacy = await getValue<Record<string, unknown>>(legacySettingsKey(scraperId));
-  if (legacy) await setValue(settingsKey(scraperId), legacy);
+  const legacy = await platform.storage.get<Record<string, unknown>>(
+    legacySettingsKey(scraperId),
+  );
+  if (legacy) await platform.storage.set(settingsKey(scraperId), legacy);
   return legacy ?? {};
 }
 
@@ -252,7 +256,7 @@ export async function savePluginSettings(
   scraperId: string,
   settings: Record<string, unknown>,
 ): Promise<void> {
-  await setValue(settingsKey(scraperId), settings);
+  await platform.storage.set(settingsKey(scraperId), settings);
 }
 
 function sandboxSource(

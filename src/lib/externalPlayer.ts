@@ -1,3 +1,7 @@
+import type {
+  ExternalPlayerLaunchOptions,
+  ExternalPlayerSurface,
+} from "../platform/types.ts";
 import type { ExternalPlayerMode } from "../types";
 import { safeHttpUrl } from "./security.ts";
 
@@ -90,7 +94,6 @@ export function shortcutReturnUrl(
   return `shortcuts://run-shortcut?${params.toString().replaceAll("+", "%20")}`;
 }
 
-export type ExternalPlayerSurface = "settings" | "player";
 type PlayerPlatform = "android" | "apple-mobile" | "macos" | "desktop";
 
 type ExternalPlayerDefinition = {
@@ -322,20 +325,6 @@ export function outplayerPlaybackUrl(
       query.set(key, value);
   return `outplayer://x-callback-url/play?${query.toString()}`;
 }
-
-export type ExternalPlayerLaunchOptions = {
-  /** Resume point. Only Outplayer can currently be told about it. */
-  positionSeconds?: number;
-  /** An external subtitle file, if the stream came with one. */
-  subtitleUrl?: string;
-  /**
-   * Builds the address a player should return to, given the query it should
-   * carry. A function rather than a string because the Shortcut route has to
-   * fold that query inside the text it passes on, not onto its own end.
-   * Absent where no address can reach us.
-   */
-  returnUrlFor?: (query: string) => string;
-};
 
 /** Hands a stream to a registered player outside the browser. */
 export function launchExternalPlayer(

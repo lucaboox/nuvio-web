@@ -34,6 +34,24 @@ addon request.
   browser-compatible playback.
 - Responsive UI, PWA installation, caching, and device-local preferences.
 
+## The capability layer
+
+`src/platform/` is what the UI asks for abilities through, so that the same
+components can run over the Rust desktop shell without either build testing
+which one it is inside. `types.ts` holds the contracts; `web.ts` answers them
+with the modules that already did the work; `index.ts` names the shell and is
+the only file another shell replaces.
+
+`downloads` and `debrid` are optional and absent here. A browser cannot write a
+resumable file it can later play back, and Torbox sends no cross-origin
+headers, so neither is a matter of trying harder. The UI treats their absence
+as "do not build this", not as a feature to disable — see
+`../rust-webview-poc/SHARED-UI-PLAN.md`.
+
+Web-only workarounds — the return relay, the Shortcut route, address-bar
+compensation, the ratings Worker — stay outside the layer and are imported by
+name, because a desktop shell would have no use for them.
+
 ## What remains server-side
 
 - The existing Nuvio account backend and its row-level authorization rules.

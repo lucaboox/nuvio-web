@@ -1,4 +1,4 @@
-import { getValue, setValue } from "./idb";
+import { platform } from "../platform";
 import type { Meta, Video } from "../types";
 
 /**
@@ -108,7 +108,7 @@ export async function readCalendarMetas(
   scope: string,
 ): Promise<CachedCalendar | null> {
   try {
-    const stored = await getValue<StoredCalendar>(KEY);
+    const stored = await platform.storage.get<StoredCalendar>(KEY);
     if (!stored || stored.version !== VERSION || stored.scope !== scope)
       return null;
     if (!Array.isArray(stored.metas) || !stored.metas.length) return null;
@@ -127,7 +127,7 @@ export async function writeCalendarMetas(
   metas: Meta[],
 ): Promise<void> {
   try {
-    await setValue<StoredCalendar>(KEY, {
+    await platform.storage.set<StoredCalendar>(KEY, {
       version: VERSION,
       savedAt: Date.now(),
       scope,

@@ -1500,35 +1500,6 @@ export function App() {
   }
 
   /** Where a title resumes from, shared by the web player and the hand-off. */
-  /**
-   * Hands a stream to the shell's own player, where there is one.
-   *
-   * The browser's player is a `<video>` element and plays what the browser can
-   * decode — which is neither MKV nor most HEVC, and is the reason a desktop
-   * client bothers having libmpv at all. Where the shell offers a player it
-   * takes every stream, not just the downloaded ones.
-   *
-   * Returns whether it took it, so each caller falls back to the web player by
-   * doing what it already did.
-   */
-  function playedInShell(
-    stream: Stream,
-    meta: Meta,
-    video?: Video,
-    startAtBeginning?: boolean,
-  ) {
-    const url = stream.url || stream.externalUrl;
-    if (!platform.player || !url) return false;
-    void platform.player.open({
-      url,
-      title: video?.title || meta.name,
-      mediaId: meta.id,
-      startPositionMs: startAtBeginning ? 0 : resumePositionMs(meta, video),
-      requestHeaders: stream.behaviorHints?.proxyHeaders?.request,
-    });
-    return true;
-  }
-
   function resumePositionMs(meta: Meta, video?: Video) {
     const row = watchIndex.progress.get(
       watchKey(meta.id, video?.season, video?.episode),
@@ -1824,15 +1795,6 @@ export function App() {
             openTitle();
             return;
           }
-          if (
-            playedInShell(
-              chosen,
-              { ...meta, selectedVideoId: target.id },
-              target,
-              startAtBeginning,
-            )
-          )
-            return;
           setPlayback({
             stream: chosen,
             meta: { ...meta, selectedVideoId: target.id },
@@ -2135,10 +2097,7 @@ export function App() {
         ) : deferredActive === "downloads" && platform.downloads ? (
           <Downloads
             downloads={platform.downloads}
-            onPlay={(stream, meta, video) => {
-              if (playedInShell(stream, meta, video)) return;
-              setPlayback({ stream, meta, video });
-            }}
+            onPlay={(stream, meta, video) => setPlayback({ stream, meta, video })}
           />
         ) : deferredActive === "calendar" ? (
           <CalendarView
@@ -2291,7 +2250,6 @@ export function App() {
                   current.meta.id,
                   chosen.behaviorHints?.bingeGroup,
                 );
-                if (playedInShell(chosen, current.meta, next, true)) return;
                 setPlayback({
                   stream: chosen,
                   meta: current.meta,
@@ -2407,8 +2365,6 @@ export function App() {
               return;
             }
             rememberBingeGroup(meta.id, stream.behaviorHints?.bingeGroup);
-            if (playedInShell(stream, meta, video, detailLaunch?.startAtBeginning))
-              return;
             setPlayback({
               stream,
               meta,

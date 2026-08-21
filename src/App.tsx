@@ -497,6 +497,20 @@ export function App() {
   useEffect(() => {
     window.scrollTo({ top: 0 });
   }, [deferredCatalog, deferredFolder, deferredActive]);
+  // Playing in the shell's own player, which draws behind this page.
+  const [shellPlayback, setShellPlayback] = useState<{ title: string } | null>(
+    null,
+  );
+  useEffect(() => {
+    const root = document.documentElement;
+    const shown = shellPlayback != null;
+    root.classList.toggle("player-active", shown);
+    document.body.classList.toggle("player-active", shown);
+    return () => {
+      root.classList.remove("player-active");
+      document.body.classList.remove("player-active");
+    };
+  }, [shellPlayback]);
   const [playback, setPlayback] = useState<{
     stream: Stream;
     meta: Meta;
@@ -1500,6 +1514,52 @@ export function App() {
   }
 
   /** Where a title resumes from, shared by the web player and the hand-off. */
+  /**
+   * Plays through the shell's own player, in this window.
+   *
+   * mpv is already drawing behind the webview; what makes it visible is the
+   * page getting out of the way, which is what `player-active` does. So this
+   * is not a hand-off to somewhere else — the video appears here, under the
+   * app, and the app stays in charge of leaving.
+   *
+   * Returns whether it took the stream, so callers fall back to the browser's
+   * player by doing what they already did.
+   */
+  function playedInShell(
+    stream: Stream,
+    meta: Meta,
+    video?: Video,
+    startAtBeginning?: boolean,
+  ) {
+    const url = stream.url || stream.externalUrl;
+    if (!platform.player || !url) return false;
+    setShellPlayback({ title: video?.title || meta.name });
+    platform.player
+      .open({
+        url,
+        title: video?.title || meta.name,
+        mediaId: meta.id,
+        startPositionMs: startAtBeginning ? 0 : resumePositionMs(meta, video),
+        requestHeaders: stream.behaviorHints?.proxyHeaders?.request,
+        progress: {
+          contentId: meta.id,
+          contentType: meta.type,
+          videoId: video?.id ?? meta.id,
+          season: video?.season,
+          episode: video?.episode,
+        },
+      })
+      // Never voided: a call that can reject has to say so, or a failure is
+      // indistinguishable from a click that did nothing.
+      .catch((reason: unknown) => {
+        setShellPlayback(null);
+        setMessage(
+          reason instanceof Error ? reason.message : "That source could not be played.",
+        );
+      });
+    return true;
+  }
+
   function resumePositionMs(meta: Meta, video?: Video) {
     const row = watchIndex.progress.get(
       watchKey(meta.id, video?.season, video?.episode),
@@ -1795,6 +1855,15 @@ export function App() {
             openTitle();
             return;
           }
+          if (
+            playedInShell(
+              chosen,
+              { ...meta, selectedVideoId: target.id },
+              target,
+              startAtBeginning,
+            )
+          )
+            return;
           setPlayback({
             stream: chosen,
             meta: { ...meta, selectedVideoId: target.id },
@@ -2097,7 +2166,10 @@ export function App() {
         ) : deferredActive === "downloads" && platform.downloads ? (
           <Downloads
             downloads={platform.downloads}
-            onPlay={(stream, meta, video) => setPlayback({ stream, meta, video })}
+            onPlay={(stream, meta, video) => {
+              if (playedInShell(stream, meta, video)) return;
+              setPlayback({ stream, meta, video });
+            }}
           />
         ) : deferredActive === "calendar" ? (
           <CalendarView
@@ -2211,6 +2283,25 @@ export function App() {
           }}
         />
       )}
+      {shellPlayback && (
+        /* The page is transparent while this is up, so what shows through is
+           mpv. Only this bar takes clicks — everything else would be taking
+           them off the video. */
+        <div className="shell-player">
+          <div className="shell-player-bar">
+            <strong>{shellPlayback.title}</strong>
+            <button
+              type="button"
+              onClick={() => {
+                void platform.player?.stop();
+                setShellPlayback(null);
+              }}
+            >
+              <X /> Stop
+            </button>
+          </div>
+        </div>
+      )}
       {playback && (
         /* An overlay rather than an early return: unmounting the shell to show
            the player threw away the resolved detail page, so closing it
@@ -2250,6 +2341,7 @@ export function App() {
                   current.meta.id,
                   chosen.behaviorHints?.bingeGroup,
                 );
+                if (playedInShell(chosen, current.meta, next, true)) return;
                 setPlayback({
                   stream: chosen,
                   meta: current.meta,
@@ -2365,6 +2457,8 @@ export function App() {
               return;
             }
             rememberBingeGroup(meta.id, stream.behaviorHints?.bingeGroup);
+            if (playedInShell(stream, meta, video, detailLaunch?.startAtBeginning))
+              return;
             setPlayback({
               stream,
               meta,

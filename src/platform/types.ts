@@ -100,17 +100,6 @@ export type PlayerSource = {
   startPositionMs?: number;
   /** Headers the source insists on, which a `<video>` element cannot attach. */
   requestHeaders?: Record<string, string>;
-  /**
-   * What is being watched, so a shell that tracks progress can attribute it.
-   * Omitting it plays the file and quietly records nothing.
-   */
-  progress?: {
-    contentId: string;
-    contentType: string;
-    videoId: string;
-    season?: number;
-    episode?: number;
-  };
 };
 
 export type PlayerApi = {

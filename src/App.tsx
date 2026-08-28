@@ -2753,20 +2753,25 @@ function LibraryRoulette({
       frame.clientWidth / 2 - (target.offsetLeft + target.offsetWidth / 2);
     const first = strip.children.item(0) as HTMLElement | null;
     const second = strip.children.item(1) as HTMLElement | null;
-    const pitch =
-      first && second ? second.offsetLeft - first.offsetLeft : target.offsetWidth;
+    const measured =
+      first && second ? second.offsetLeft - first.offsetLeft : 0;
+    // Falling back to the card's own width keeps the ticks coming if the strip
+    // is measured before layout settles; a pitch of zero would silence them.
+    const pitch = measured > 0 ? measured : target.offsetWidth || 124;
 
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      strip.style.transform = `translate3d(${destination}px, 0, 0)`;
-      setSpinning(false);
-      return;
-    }
+    // Reduced motion shortens the roll rather than removing it. This is
+    // motion the viewer asked for by pressing Roll, not something moving at
+    // them unbidden — skipping to the answer turned a deliberate act into a
+    // dialog that appeared to do nothing at all.
+    const duration = window.matchMedia("(prefers-reduced-motion: reduce)").matches
+      ? 900
+      : ROLL_MS;
 
     let frameId = 0;
     let lastCard = -1;
     const started = performance.now();
     const step = (now: number) => {
-      const t = Math.min((now - started) / ROLL_MS, 1);
+      const t = Math.min((now - started) / duration, 1);
       const offset = destination * easeOut(t);
       strip.style.transform = `translate3d(${offset}px, 0, 0)`;
       const card = Math.round((frame.clientWidth / 2 - offset) / pitch);

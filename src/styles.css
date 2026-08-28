@@ -7707,6 +7707,10 @@ body.is-locked {
   box-shadow: 0 0 0 2px var(--accent), 0 16px 40px #000000a6;
 }
 .library-roulette-track figure {
+  /* figure carries a browser default margin of 1em 40px, which would space the
+     reel out and throw off the measured card pitch. */
+  margin: 0;
+  flex: none;
   transition: transform 0.35s ease, box-shadow 0.35s ease;
 }
 /* Motion blur while it is moving fast is overkill; a slight dim on the edges

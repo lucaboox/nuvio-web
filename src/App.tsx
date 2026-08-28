@@ -2984,20 +2984,6 @@ function LibraryRoulette({
                     <i />
                   </span>
                 </label>
-                <label>
-                  <span>
-                    Roll length
-                    <small>{(rollMs / 1000).toFixed(2)}s</small>
-                  </span>
-                  <input
-                    type="range"
-                    min={ROLL_MS_MIN}
-                    max={ROLL_MS_MAX}
-                    step={250}
-                    value={rollMs}
-                    onChange={(event) => setRollMs(Number(event.target.value))}
-                  />
-                </label>
                 <label className="library-roulette-toggle">
                   <span>
                     Tick sound
@@ -3012,6 +2998,20 @@ function LibraryRoulette({
                     <i />
                       </span>
                     </label>
+                <label>
+                  <span>
+                    Roll length
+                    <small>{(rollMs / 1000).toFixed(2)}s</small>
+                  </span>
+                  <input
+                    type="range"
+                    min={ROLL_MS_MIN}
+                    max={ROLL_MS_MAX}
+                    step={250}
+                    value={rollMs}
+                    onChange={(event) => setRollMs(Number(event.target.value))}
+                  />
+                </label>
               </div>
             )}
           </div>

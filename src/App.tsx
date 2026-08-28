@@ -2914,7 +2914,9 @@ function LibraryRoulette({
       }}
     >
       <section
-        className={`library-roulette${spinning ? " spinning" : ""}`}
+        className={`library-roulette${spinning ? " spinning" : ""}${
+          roll && !spinning ? " finished" : ""
+        }`}
         role="dialog"
         aria-modal="true"
         aria-labelledby="library-roulette-title"
@@ -3034,6 +3036,15 @@ function LibraryRoulette({
                     <div className="library-roulette-placeholder">
                       {item.name.slice(0, 1)}
                     </div>
+                  )}
+                  {/* Only the winner carries one, and it is positioned out of
+                      flow so it cannot change the card pitch the ticks are
+                      measured against. */}
+                  {position === WINNER_AT && (
+                    <figcaption>
+                      <strong>{item.name}</strong>
+                      {item.description && <span>{item.description}</span>}
+                    </figcaption>
                   )}
                 </figure>
               ))}

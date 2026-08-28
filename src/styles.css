@@ -7706,14 +7706,71 @@ body.is-locked {
 /* The winner grows into the glow already behind the reel rather than wearing a
    ring. An outline draws a border; this makes the card the thing being looked
    at, which is what winning should look like. */
+.library-roulette-track figure {
+  position: relative;
+}
 .library-roulette-track figure.won {
-  transform: scale(1.14);
-  z-index: 1;
+  transform: scale(1.3);
+  z-index: 2;
 }
 .library-roulette-track figure.won img,
 .library-roulette-track figure.won .library-roulette-placeholder {
   border-color: transparent;
   box-shadow: 0 18px 46px rgba(0, 0, 0, 0.65);
+}
+/* Everything else recedes, so the eye has one place to go. */
+.library-roulette.finished .library-roulette-track figure:not(.won) {
+  filter: blur(3px) brightness(0.45);
+  transform: scale(0.92);
+}
+/* The marker did its job while the strip was moving; leaving it up draws a
+   line down the middle of the card it was pointing at. */
+.library-roulette.finished .library-roulette-marker {
+  opacity: 0;
+}
+.library-roulette-marker {
+  transition: opacity 0.3s ease;
+}
+/* Laid over the foot of the poster rather than under it: the frame clips, and
+   the enlarged card leaves no room beneath. On the card it also scales with
+   it, so the winner's title grows along with the winner. */
+.library-roulette-track figcaption {
+  position: absolute;
+  inset: auto 0 0;
+  padding: 22px 8px 8px;
+  border-radius: 0 0 12px 12px;
+  background: linear-gradient(transparent, rgba(4, 6, 8, 0.92) 45%);
+  text-align: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease 0.15s;
+}
+.library-roulette.finished .library-roulette-track figcaption {
+  opacity: 1;
+}
+.library-roulette-track figcaption strong {
+  display: block;
+  font-size: 11px;
+  line-height: 1.3;
+  color: #f2f6f9;
+  text-shadow: 0 2px 6px #000;
+}
+.library-roulette-track figcaption span {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-top: 3px;
+  font-size: 8.5px;
+  line-height: 1.4;
+  color: #97a2ae;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .library-roulette-marker,
+  .library-roulette-track figcaption {
+    transition: none;
+  }
 }
 .library-roulette-track figure {
   /* figure carries a browser default margin of 1em 40px, which would space the

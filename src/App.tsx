@@ -2744,7 +2744,14 @@ function LibraryRoulette({
   // Opened from a tab, so it starts on that tab's scope — the roll you meant
   // is almost always the one for the shelf you were looking at.
   const [scope, setScope] = useState<RandomScope>(initialScope);
-  const [includeWatched, setIncludeWatched] = useState(true);
+  // Remembered like the rest: someone who rolls for something new wants that
+  // every time, not once per visit.
+  const [includeWatched, setIncludeWatched] = useState(
+    () => localStorage.getItem("nuvio-web-roulette-watched") !== "false",
+  );
+  useEffect(() => {
+    localStorage.setItem("nuvio-web-roulette-watched", String(includeWatched));
+  }, [includeWatched]);
   const [muted, setMuted] = useState(
     () => localStorage.getItem("nuvio-web-roulette-muted") === "true",
   );
@@ -2946,18 +2953,6 @@ function LibraryRoulette({
               </button>
             ))}
           </div>
-          <label className="library-roulette-toggle">
-            <span>Include watched</span>
-            <span className="switch">
-              <input
-                type="checkbox"
-                checked={includeWatched}
-                disabled={spinning}
-                onChange={(event) => setIncludeWatched(event.target.checked)}
-              />
-              <i />
-            </span>
-          </label>
           {/* Anchored to the gear rather than laid out in the row: these are
               set once and left, and a panel that pushes the reel down every
               time it opens makes the dialog jump for no reason. */}
@@ -2974,6 +2969,21 @@ function LibraryRoulette({
             </button>
             {settingsOpen && (
               <div className="library-roulette-settings" role="menu">
+                <label className="library-roulette-toggle">
+                  <span>
+                    Include watched
+                    <Eye />
+                  </span>
+                  <span className="switch">
+                    <input
+                      type="checkbox"
+                      checked={includeWatched}
+                      disabled={spinning}
+                      onChange={(event) => setIncludeWatched(event.target.checked)}
+                    />
+                    <i />
+                  </span>
+                </label>
                 <label>
                   <span>
                     Roll length

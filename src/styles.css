@@ -7712,6 +7712,18 @@ body.is-locked {
   transform-origin: center;
   transition: filter 0.45s ease;
 }
+/* The frame grows to make room for the result, on the same curve as the blur,
+   so the two read as one movement rather than two. */
+.library-roulette-frame {
+  transition: height 0.45s cubic-bezier(0.16, 0.84, 0.24, 1);
+}
+.library-roulette.revealed .library-roulette-frame {
+  height: 330px;
+}
+.library-roulette-backdrop.full-page .library-roulette.revealed
+  .library-roulette-frame {
+  height: min(58vh, 430px);
+}
 /* The marker did its job while the strip was moving; leaving it up draws a
    line down the middle of the card it was pointing at. */
 .library-roulette.finished .library-roulette-marker {
@@ -7815,6 +7827,19 @@ body.is-locked {
   width: 152px;
   height: 228px;
 }
+.library-roulette-backdrop.full-page .library-roulette-reveal img,
+.library-roulette-backdrop.full-page
+  .library-roulette-reveal
+  .library-roulette-placeholder {
+  width: 232px;
+  height: 348px;
+}
+.library-roulette-backdrop.full-page .library-roulette-reveal strong {
+  font-size: 32px;
+}
+.library-roulette-backdrop.full-page .library-roulette-reveal p {
+  font-size: 15px;
+}
 
 /* --- Roll settings, behind the gear ---------------------------------------
  * A drop-down rather than a row of controls: length and sound are set once and
@@ -7915,15 +7940,15 @@ body.is-locked {
 }
 .library-roulette-reveal img,
 .library-roulette-reveal .library-roulette-placeholder {
-  width: 132px;
-  height: 198px;
+  width: 186px;
+  height: 279px;
   border: 0;
   border-radius: 12px;
   object-fit: cover;
   box-shadow: 0 22px 60px rgba(0, 0, 0, 0.75);
 }
 .library-roulette-reveal > div {
-  max-width: 420px;
+  max-width: 460px;
   animation: reveal-copy 0.5s ease-out 0.16s both;
 }
 .library-roulette-reveal small {
@@ -7937,20 +7962,20 @@ body.is-locked {
 }
 .library-roulette-reveal strong {
   display: block;
-  font-size: 22px;
+  font-size: 26px;
   line-height: 1.2;
   color: #f4f7fa;
   text-shadow: 0 2px 12px #000;
 }
 .library-roulette-reveal p {
   display: -webkit-box;
-  -webkit-line-clamp: 4;
+  -webkit-line-clamp: 5;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  margin: 8px 0 0;
-  color: #aeb8c4;
-  font-size: 12.5px;
-  line-height: 1.5;
+  margin: 10px 0 0;
+  color: #b4bec9;
+  font-size: 13.5px;
+  line-height: 1.55;
 }
 
 @keyframes reveal-card {
@@ -7986,9 +8011,8 @@ body.is-locked {
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .library-roulette-reveal figure,
-  .library-roulette-reveal > div {
-    animation-duration: 0.01ms;
-  }
-}
+/* Deliberately not neutered under reduced motion. The blur behind it is a
+   transition and keeps its half second either way, so cutting the card's
+   arrival to nothing left the poster snapping into place against a background
+   still settling — which read as broken rather than considered. This motion
+   was asked for twice over: once by rolling, once by setting how long. */

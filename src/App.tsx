@@ -2662,16 +2662,15 @@ function LibraryView({
   );
 }
 
-/** How long a roll takes. Long enough to build, short enough to sit through. */
-const ROLL_MS = 4600;
 /**
- * The same roll for someone who has asked for less motion.
+ * How long a roll takes, and the range the slider offers.
  *
- * Shortened rather than skipped, and not shortened to nothing: this is the
- * feature itself, not a transition decorating something else, so it keeps the
- * build-up and the slowing — there is simply less of it.
+ * A setting rather than a constant because the right length is a matter of
+ * taste: long enough to build tension for one person is dead air for another.
  */
-const REDUCED_ROLL_MS = 2600;
+const ROLL_MS_DEFAULT = 5000;
+const ROLL_MS_MIN = 2000;
+const ROLL_MS_MAX = 15000;
 /** Cards on the strip. The winner sits far enough in to earn the deceleration. */
 const REEL_LENGTH = 44;
 const WINNER_AT = 36;
@@ -2749,6 +2748,20 @@ function LibraryRoulette({
   const [muted, setMuted] = useState(
     () => localStorage.getItem("nuvio-web-roulette-muted") === "true",
   );
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [rollMs, setRollMs] = useState(() => {
+    const saved = Number(localStorage.getItem("nuvio-web-roulette-ms"));
+    return Number.isFinite(saved) && saved >= ROLL_MS_MIN && saved <= ROLL_MS_MAX
+      ? saved
+      : ROLL_MS_DEFAULT;
+  });
+  useEffect(() => {
+    localStorage.setItem("nuvio-web-roulette-ms", String(rollMs));
+  }, [rollMs]);
+  // Read through a ref for the same reason as the sound: as a dependency it
+  // would restart the roll the moment the slider moved.
+  const rollMsRef = useRef(rollMs);
+  rollMsRef.current = rollMs;
   const [roll, setRoll] = useState<{
     id: number;
     reel: LibraryItem[];
@@ -2826,13 +2839,10 @@ function LibraryRoulette({
     // is measured before layout settles; a pitch of zero would silence them.
     const pitch = measured > 0 ? measured : target.offsetWidth || 124;
 
-    // Reduced motion shortens the roll rather than removing it. This is
-    // motion the viewer asked for by pressing Roll, not something moving at
-    // them unbidden — skipping to the answer turned a deliberate act into a
-    // dialog that appeared to do nothing at all.
-    const duration = window.matchMedia("(prefers-reduced-motion: reduce)").matches
-      ? REDUCED_ROLL_MS
-      : ROLL_MS;
+    // The slider governs, including under reduced motion. This is motion asked
+    // for by pressing Roll and asked for again by setting a length; second-
+    // guessing an explicit choice is what made it look broken before.
+    const duration = rollMsRef.current;
 
     let frameId = 0;
     let lastCard = -1;
@@ -2935,14 +2945,46 @@ function LibraryRoulette({
           <button
             type="button"
             className="library-roulette-mute"
-            aria-pressed={muted}
-            aria-label={muted ? "Unmute ticks" : "Mute ticks"}
-            title={muted ? "Unmute ticks" : "Mute ticks"}
-            onClick={() => setMuted((value) => !value)}
+            aria-expanded={settingsOpen}
+            aria-label="Roll settings"
+            title="Roll settings"
+            onClick={() => setSettingsOpen((value) => !value)}
           >
-            {muted ? <VolumeX /> : <Volume2 />}
+            <Settings />
           </button>
         </div>
+        {settingsOpen && (
+          <div className="library-roulette-settings">
+            <label>
+              <span>
+                Roll length
+                <small>{(rollMs / 1000).toFixed(2)}s</small>
+              </span>
+              <input
+                type="range"
+                min={ROLL_MS_MIN}
+                max={ROLL_MS_MAX}
+                step={250}
+                value={rollMs}
+                onChange={(event) => setRollMs(Number(event.target.value))}
+              />
+            </label>
+            <label className="library-roulette-toggle">
+              <span>
+                Tick sound
+                {muted ? <VolumeX /> : <Volume2 />}
+              </span>
+              <span className="switch">
+                <input
+                  type="checkbox"
+                  checked={!muted}
+                  onChange={(event) => setMuted(!event.target.checked)}
+                />
+                <i />
+              </span>
+            </label>
+          </div>
+        )}
 
         <div className="library-roulette-frame" ref={viewport}>
           <i className="library-roulette-marker" aria-hidden="true" />

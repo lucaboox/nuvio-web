@@ -3039,12 +3039,7 @@ function LibraryRoulette({
           {roll ? (
             <div className="library-roulette-track" ref={track} key={roll.id}>
               {roll.reel.map((item, position) => (
-                <figure
-                  key={`${item.id}:${position}`}
-                  className={
-                    !spinning && position === WINNER_AT ? "won" : undefined
-                  }
-                >
+                <figure key={`${item.id}:${position}`}>
                   {item.poster ? (
                     <img src={item.poster} alt="" loading="eager" />
                   ) : (

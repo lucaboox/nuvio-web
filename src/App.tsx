@@ -32,6 +32,8 @@ import {
   Trash2,
   TriangleAlert,
   UserRound,
+  Volume2,
+  VolumeX,
 } from "lucide-react";
 import {
   type CSSProperties,
@@ -2521,12 +2523,9 @@ function LibraryView({
   onMenu(item: Meta, x: number, y: number): void;
 }) {
   const [tab, setTab] = useState<"all" | "movie" | "series">("all");
-  const [randomRoll, setRandomRoll] = useState<{
-    id: number;
-    items: LibraryItem[];
-    winner: LibraryItem;
-    target: number;
-  } | null>(null);
+  // Opening the picker and rolling are separate now: the modal appears first
+  // so the scope can be chosen, and rolls happen inside it.
+  const [randomOpen, setRandomOpen] = useState(false);
   const counts = useMemo(() => {
     let movie = 0;
     let series = 0;
@@ -2547,18 +2546,6 @@ function LibraryView({
     { key: "series", label: "Series", count: counts.series },
   ] as const;
 
-  const rollRandomTitle = useCallback(() => {
-    if (!filtered.length) return;
-    const pick = () => filtered[Math.floor(Math.random() * filtered.length)];
-    const winner = pick();
-    // A long reel gives the deceleration room to feel like a case opening.
-    // The winner is inserted near its end, with enough cards after it that the
-    // strip never exposes an empty edge when it stops in the centre.
-    const target = 30;
-    const reel = Array.from({ length: 36 }, pick);
-    reel[target] = winner;
-    setRandomRoll({ id: Date.now(), items: reel, winner, target });
-  }, [filtered]);
 
   return (
     <section className="grid-page">
@@ -2582,8 +2569,8 @@ function LibraryView({
         <button
           type="button"
           className="library-random-button"
-          disabled={!filtered.length}
-          onClick={rollRandomTitle}
+          disabled={!items.length}
+          onClick={() => setRandomOpen(true)}
         >
           <Dices aria-hidden="true" />
           Random pick
@@ -2611,15 +2598,14 @@ function LibraryView({
           ))}
         </div>
       )}
-      {randomRoll && (
+      {randomOpen && (
         <LibraryRoulette
-          key={randomRoll.id}
-          roll={randomRoll}
-          filterLabel={tabs.find((item) => item.key === tab)?.label ?? "All"}
-          onAgain={rollRandomTitle}
-          onClose={() => setRandomRoll(null)}
+          items={items}
+          index={index}
+          initialScope={tab}
+          onClose={() => setRandomOpen(false)}
           onOpen={(item) => {
-            setRandomRoll(null);
+            setRandomOpen(false);
             onOpen(item);
           }}
         />
@@ -2628,54 +2614,171 @@ function LibraryView({
   );
 }
 
+/** How long a roll takes. Long enough to build, short enough to sit through. */
+const ROLL_MS = 4600;
+/** Cards on the strip. The winner sits far enough in to earn the deceleration. */
+const REEL_LENGTH = 44;
+const WINNER_AT = 36;
+
+/**
+ * Quartic ease-out: fast off the line, and a long crawl into the result.
+ *
+ * The tick sound is driven off the same curve rather than a timer, so the
+ * slowing is the animation's own — the clicks cannot drift out of step with
+ * the cards because they are caused by them.
+ */
+const easeOut = (t: number) => 1 - (1 - t) ** 4;
+
+/** A short click, synthesised so nothing has to be shipped or fetched. */
+function tick(context: AudioContext) {
+  const now = context.currentTime;
+  const oscillator = context.createOscillator();
+  const gain = context.createGain();
+  oscillator.type = "square";
+  oscillator.frequency.setValueAtTime(1180, now);
+  // Exponential ramps because gain is heard logarithmically; a linear one
+  // sounds like a thud rather than a click.
+  gain.gain.setValueAtTime(0.0001, now);
+  gain.gain.exponentialRampToValueAtTime(0.06, now + 0.004);
+  gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.045);
+  oscillator.connect(gain).connect(context.destination);
+  oscillator.start(now);
+  oscillator.stop(now + 0.05);
+}
+
+type RandomScope = "all" | "movie" | "series";
+
+/**
+ * Whether a title has been seen, as far as the index can cheaply answer.
+ *
+ * A movie is watched when it is marked so or its resume point ran to the end.
+ * A series only counts on the title-level mark: episode-by-episode completeness
+ * is a different question, and a show being half-watched is exactly the sort of
+ * thing someone rolling for something to watch still wants offered.
+ */
+function isSeen(item: LibraryItem, index: WatchIndex) {
+  const key = watchKey(item.id);
+  if (index.watched.has(key)) return true;
+  const row = index.byContent.get(item.id);
+  return !!row && row.durationMs > 0 && row.positionMs / row.durationMs >= 0.9;
+}
+
+/**
+ * Picks something to watch, the way a case opens.
+ *
+ * The scope and the watched toggle live in here rather than outside because a
+ * roll you did not like is usually a roll with the wrong scope — reaching the
+ * controls should not mean closing what you are looking at.
+ */
 function LibraryRoulette({
-  roll,
-  filterLabel,
-  onAgain,
+  items,
+  index,
+  initialScope,
   onClose,
   onOpen,
 }: {
-  roll: {
-    items: LibraryItem[];
-    winner: LibraryItem;
-    target: number;
-  };
-  filterLabel: string;
-  onAgain(): void;
+  items: LibraryItem[];
+  index: WatchIndex;
+  initialScope: RandomScope;
   onClose(): void;
   onOpen(item: LibraryItem): void;
 }) {
+  // Opened from a tab, so it starts on that tab's scope — the roll you meant
+  // is almost always the one for the shelf you were looking at.
+  const [scope, setScope] = useState<RandomScope>(initialScope);
+  const [includeWatched, setIncludeWatched] = useState(true);
+  const [muted, setMuted] = useState(
+    () => localStorage.getItem("nuvio-web-roulette-muted") === "true",
+  );
+  const [roll, setRoll] = useState<{
+    id: number;
+    reel: LibraryItem[];
+    winner: LibraryItem;
+  } | null>(null);
+  const [spinning, setSpinning] = useState(false);
+
   const viewport = useRef<HTMLDivElement | null>(null);
   const track = useRef<HTMLDivElement | null>(null);
-  const [finished, setFinished] = useState(false);
+  const audio = useRef<AudioContext | null>(null);
+  // Read by the animation loop through a ref: as a dependency it would restart
+  // the roll from the beginning every time the sound was toggled.
+  const mutedRef = useRef(muted);
+  mutedRef.current = muted;
+
+  const pool = useMemo(
+    () =>
+      items.filter(
+        (item) =>
+          (scope === "all" || item.type === scope) &&
+          (includeWatched || !isSeen(item, index)),
+      ),
+    [items, index, scope, includeWatched],
+  );
+
+  const startRoll = useCallback(() => {
+    if (!pool.length) return;
+    const pick = () => pool[Math.floor(Math.random() * pool.length)];
+    const winner = pick();
+    const reel = Array.from({ length: REEL_LENGTH }, pick);
+    reel[WINNER_AT] = winner;
+    // Created on the click, because a browser will not let a page make noise
+    // before someone has asked it to.
+    if (!muted && !audio.current) {
+      const Ctor =
+        window.AudioContext ??
+        (window as unknown as { webkitAudioContext?: typeof AudioContext })
+          .webkitAudioContext;
+      if (Ctor) audio.current = new Ctor();
+    }
+    void audio.current?.resume?.();
+    setRoll({ id: Date.now(), reel, winner });
+    setSpinning(true);
+  }, [pool, muted]);
 
   useEffect(() => {
+    localStorage.setItem("nuvio-web-roulette-muted", String(muted));
+  }, [muted]);
+
+  // Drives the strip frame by frame rather than handing it to a CSS
+  // transition, because the ticks have to know which card is under the marker
+  // and a transition will not say.
+  useEffect(() => {
+    if (!roll) return;
     const strip = track.current;
     const frame = viewport.current;
-    const target = strip?.children.item(roll.target) as HTMLElement | null;
+    const target = strip?.children.item(WINNER_AT) as HTMLElement | null;
     if (!strip || !frame || !target) return;
 
-    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    strip.style.transition = "none";
-    strip.style.transform = "translate3d(0, 0, 0)";
-    // Force the starting position to paint before the transition is attached.
-    void strip.offsetWidth;
     const destination =
       frame.clientWidth / 2 - (target.offsetLeft + target.offsetWidth / 2);
-    const start = window.requestAnimationFrame(() => {
-      window.requestAnimationFrame(() => {
-        strip.style.transition = reduceMotion
-          ? "none"
-          : "transform 4.8s cubic-bezier(.08,.72,.08,1)";
-        strip.style.transform = `translate3d(${destination}px, 0, 0)`;
-        if (reduceMotion) setFinished(true);
-      });
-    });
-    const fallback = window.setTimeout(() => setFinished(true), reduceMotion ? 50 : 5000);
-    return () => {
-      window.cancelAnimationFrame(start);
-      window.clearTimeout(fallback);
+    const first = strip.children.item(0) as HTMLElement | null;
+    const second = strip.children.item(1) as HTMLElement | null;
+    const pitch =
+      first && second ? second.offsetLeft - first.offsetLeft : target.offsetWidth;
+
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      strip.style.transform = `translate3d(${destination}px, 0, 0)`;
+      setSpinning(false);
+      return;
+    }
+
+    let frameId = 0;
+    let lastCard = -1;
+    const started = performance.now();
+    const step = (now: number) => {
+      const t = Math.min((now - started) / ROLL_MS, 1);
+      const offset = destination * easeOut(t);
+      strip.style.transform = `translate3d(${offset}px, 0, 0)`;
+      const card = Math.round((frame.clientWidth / 2 - offset) / pitch);
+      if (card !== lastCard) {
+        lastCard = card;
+        if (audio.current && !mutedRef.current) tick(audio.current);
+      }
+      if (t < 1) frameId = window.requestAnimationFrame(step);
+      else setSpinning(false);
     };
+    frameId = window.requestAnimationFrame(step);
+    return () => window.cancelAnimationFrame(frameId);
   }, [roll]);
 
   useEffect(() => {
@@ -2686,6 +2789,15 @@ function LibraryRoulette({
     return () => window.removeEventListener("keydown", close);
   }, [onClose]);
 
+  useEffect(() => () => void audio.current?.close(), []);
+
+  const scopes = [
+    { key: "all", label: "All" },
+    { key: "movie", label: "Movies" },
+    { key: "series", label: "Series" },
+  ] as const;
+  const winner = spinning ? null : roll?.winner;
+
   return (
     <div
       className="library-roulette-backdrop"
@@ -2695,66 +2807,139 @@ function LibraryRoulette({
       }}
     >
       <section
-        className={`library-roulette${finished ? " finished" : " spinning"}`}
+        className={`library-roulette${spinning ? " spinning" : ""}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby="library-roulette-title"
       >
         <header>
           <div>
-            <span>{filterLabel} roulette</span>
-            <h2 id="library-roulette-title">
-              {finished ? "Tonight's pick" : "Picking something to watch…"}
-            </h2>
+            <small>RANDOM PICK</small>
+            <h2 id="library-roulette-title">What should I watch?</h2>
           </div>
-          <button className="circle-button" type="button" aria-label="Close" onClick={onClose}>
+          <button
+            className="circle-button"
+            type="button"
+            aria-label="Close"
+            onClick={onClose}
+          >
             <X />
           </button>
         </header>
-        <div className="library-roulette-frame" ref={viewport}>
-          <i className="library-roulette-marker" aria-hidden="true" />
-          <div
-            className="library-roulette-track"
-            ref={track}
-            onTransitionEnd={(event) => {
-              if (event.propertyName === "transform") setFinished(true);
-            }}
-          >
-            {roll.items.map((item, index) => (
-              <article
-                key={`${index}:${item.type}:${item.id}`}
-                className={index === roll.target ? "winner" : undefined}
-                aria-hidden={index !== roll.target}
+
+        {/* Left reachable mid-roll on purpose: changing scope is what you want
+            after a pick you did not like, and it should not cost a round trip
+            through closing the dialog. */}
+        <div className="library-roulette-setup">
+          <div className="segmented">
+            {scopes.map((option) => (
+              <button
+                key={option.key}
+                type="button"
+                disabled={spinning}
+                className={scope === option.key ? "active" : undefined}
+                aria-pressed={scope === option.key}
+                onClick={() => setScope(option.key)}
               >
-                {item.poster ? (
-                  <img src={item.poster} alt="" draggable={false} />
-                ) : (
-                  <div className="library-roulette-placeholder">{item.name.slice(0, 1)}</div>
-                )}
-                <strong>{item.name}</strong>
-                <small>{item.type === "series" ? "Series" : "Movie"}</small>
-              </article>
+                {option.label}
+              </button>
             ))}
           </div>
+          <label className="library-roulette-toggle">
+            <input
+              type="checkbox"
+              checked={includeWatched}
+              disabled={spinning}
+              onChange={(event) => setIncludeWatched(event.target.checked)}
+            />
+            Include watched
+          </label>
+          <button
+            type="button"
+            className="library-roulette-mute"
+            aria-pressed={muted}
+            aria-label={muted ? "Unmute ticks" : "Mute ticks"}
+            title={muted ? "Unmute ticks" : "Mute ticks"}
+            onClick={() => setMuted((value) => !value)}
+          >
+            {muted ? <VolumeX /> : <Volume2 />}
+          </button>
         </div>
+
+        <div className="library-roulette-frame" ref={viewport}>
+          <i className="library-roulette-marker" aria-hidden="true" />
+          {roll ? (
+            <div className="library-roulette-track" ref={track} key={roll.id}>
+              {roll.reel.map((item, position) => (
+                <figure
+                  key={`${item.id}:${position}`}
+                  className={
+                    !spinning && position === WINNER_AT ? "won" : undefined
+                  }
+                >
+                  {item.poster ? (
+                    <img src={item.poster} alt="" loading="eager" />
+                  ) : (
+                    <div className="library-roulette-placeholder">
+                      {item.name.slice(0, 1)}
+                    </div>
+                  )}
+                </figure>
+              ))}
+            </div>
+          ) : (
+            <div className="library-roulette-idle">
+              {pool.length
+                ? `${pool.length} title${pool.length === 1 ? "" : "s"} in the running`
+                : "Nothing matches those filters"}
+            </div>
+          )}
+        </div>
+
         <div className="library-roulette-result" aria-live="polite">
-          {finished ? (
+          {winner ? (
             <>
               <div>
-                <small>{roll.winner.type === "series" ? "Series" : "Movie"}</small>
-                <strong>{roll.winner.name}</strong>
+                <small>{winner.type === "series" ? "Series" : "Movie"}</small>
+                <strong>{winner.name}</strong>
               </div>
               <div className="library-roulette-actions">
-                <button type="button" className="secondary-button" onClick={onAgain}>
-                  <Dices /> Pick again
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={startRoll}
+                >
+                  <Dices /> Roll
                 </button>
-                <button type="button" className="primary-button" onClick={() => onOpen(roll.winner)}>
+                <button
+                  type="button"
+                  className="primary-button"
+                  onClick={() => onOpen(winner)}
+                >
                   View details <ChevronRight />
                 </button>
               </div>
             </>
           ) : (
-            <span>Finding a title from your {filterLabel.toLowerCase()} library…</span>
+            <>
+              <span>
+                {spinning
+                  ? "Rolling…"
+                  : pool.length
+                    ? "Pick a scope, then roll."
+                    : "Try including watched titles, or a wider scope."}
+              </span>
+              <div className="library-roulette-actions">
+                <button
+                  type="button"
+                  className="primary-button"
+                  disabled={spinning || !pool.length}
+                  onClick={startRoll}
+                >
+                  <Dices /> Roll
+                </button>
+              </div>
+            </>
           )}
         </div>
       </section>

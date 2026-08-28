@@ -7635,3 +7635,103 @@ body.is-locked {
   color: #c8d1db;
   font-size: 13px;
 }
+
+/* --- Random pick: scope controls, reel and result --------------------------
+ * The reel is driven frame by frame from JS, so nothing here animates the
+ * strip; these rules only describe what it looks like while it moves.
+ */
+.library-roulette-setup {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 0 22px 16px;
+}
+.library-roulette-setup .segmented {
+  flex: none;
+}
+.library-roulette-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  color: #b7c0cb;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+}
+.library-roulette-toggle input {
+  width: 17px;
+  height: 17px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+.library-roulette-toggle:has(input:disabled) {
+  opacity: 0.5;
+  cursor: default;
+}
+/* Pushed to the far end: it is a preference, not part of the choice. */
+.library-roulette-mute {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px solid var(--panel-border);
+  background: transparent;
+  color: #8b95a1;
+  cursor: pointer;
+}
+.library-roulette-mute:hover {
+  color: #e9eef2;
+  border-color: #3b444d;
+}
+.library-roulette-mute svg {
+  width: 16px;
+  height: 16px;
+}
+.library-roulette-idle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #8b95a1;
+  font-size: 13px;
+}
+/* The winner lifts once the strip stops, so the result is felt as well as
+   read. Only applied after the roll, never during. */
+.library-roulette-track figure.won {
+  transform: scale(1.06);
+  box-shadow: 0 0 0 2px var(--accent), 0 16px 40px #000000a6;
+}
+.library-roulette-track figure {
+  transition: transform 0.35s ease, box-shadow 0.35s ease;
+}
+/* Motion blur while it is moving fast is overkill; a slight dim on the edges
+   does the same job of pulling the eye to the centre. */
+.library-roulette-frame::before,
+.library-roulette-frame::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 88px;
+  z-index: 2;
+  pointer-events: none;
+}
+.library-roulette-frame::before {
+  left: 0;
+  background: linear-gradient(90deg, var(--panel-bg), transparent);
+}
+.library-roulette-frame::after {
+  right: 0;
+  background: linear-gradient(270deg, var(--panel-bg), transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .library-roulette-track figure {
+    transition: none;
+  }
+}

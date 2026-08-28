@@ -187,6 +187,14 @@ import type {
   WatchedItem,
 } from "./types";
 
+/** The path below the deploy's base, with no slashes on either end. */
+function currentRoute() {
+  const base = import.meta.env.BASE_URL;
+  const path = window.location.pathname;
+  const rest = path.startsWith(base) ? path.slice(base.length) : path;
+  return rest.replace(/^\/+|\/+$/g, "");
+}
+
 // Addons is deliberately absent: it is configuration, not a place you browse,
 // so it lives behind Settings rather than taking a slot in the tab bar.
 const nav: Array<{ key: NavKey; label: string; icon: typeof Home }> = [
@@ -465,6 +473,25 @@ export function App() {
       ? stored
       : "internal";
   });
+  /**
+   * The one thing this app reads from its own address.
+   *
+   * Not a router: there is a single deep link, /random, so that the picker can
+   * be reached without going through the app first. Everything else is state,
+   * as before — adding a router to serve one path would be a lot of machinery
+   * for one path.
+   */
+  const [route, setRoute] = useState(currentRoute);
+  useEffect(() => {
+    const onPop = () => setRoute(currentRoute());
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+  const go = useCallback((next: string) => {
+    const base = import.meta.env.BASE_URL;
+    window.history.pushState(null, "", `${base}${next}`);
+    setRoute(next);
+  }, []);
   const [active, setActive] = useState<NavKey>("home");
   // The nav highlight follows `active` immediately; the page body renders from
   // the deferred copy, so a tap paints the new tab first and the heavy list
@@ -1991,6 +2018,27 @@ export function App() {
       </>
     );
 
+  // Reached by address rather than by navigation, so it renders instead of the
+  // shell rather than on top of it. Signing in still comes first: it is your
+  // library being drawn from, so there is nothing to pick without one.
+  if (route === "random")
+    return (
+      <>
+        <LibraryRoulette
+          fullPage
+          items={library}
+          index={watchIndex}
+          initialScope="all"
+          onClose={() => go("")}
+          onOpen={(item) => {
+            go("");
+            openDetails(item);
+          }}
+        />
+        {updatePrompt}
+      </>
+    );
+
   return (
     <div className={`app-shell${playback ? " player-active" : ""}`}>
       <aside className="rail">
@@ -2682,12 +2730,15 @@ function LibraryRoulette({
   items,
   index,
   initialScope,
+  fullPage,
   onClose,
   onOpen,
 }: {
   items: LibraryItem[];
   index: WatchIndex;
   initialScope: RandomScope;
+  /** Standing on its own at /random rather than sitting over the library. */
+  fullPage?: boolean;
   onClose(): void;
   onOpen(item: LibraryItem): void;
 }) {
@@ -2821,10 +2872,12 @@ function LibraryRoulette({
 
   return (
     <div
-      className="library-roulette-backdrop"
+      className={`library-roulette-backdrop${fullPage ? " full-page" : ""}`}
       role="presentation"
       onMouseDown={(event) => {
-        if (event.currentTarget === event.target) onClose();
+        // A backdrop click dismisses an overlay; on its own page there is
+        // nothing behind it to return to, so it does not.
+        if (!fullPage && event.currentTarget === event.target) onClose();
       }}
     >
       <section
@@ -2841,10 +2894,11 @@ function LibraryRoulette({
           <button
             className="circle-button"
             type="button"
-            aria-label="Close"
+            aria-label={fullPage ? "Go to library" : "Close"}
+            title={fullPage ? "Go to library" : "Close"}
             onClick={onClose}
           >
-            <X />
+            {fullPage ? <Library /> : <X />}
           </button>
         </header>
 

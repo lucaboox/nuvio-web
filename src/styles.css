@@ -7741,3 +7741,22 @@ body.is-locked {
     transition: none;
   }
 }
+
+/* --- /random, standing on its own ------------------------------------------
+ * The same picker, without the library behind it. It is a page rather than an
+ * overlay here, so it does not dim anything, does not trap a click, and is
+ * centred in the viewport instead of over content.
+ */
+.library-roulette-backdrop.full-page {
+  position: static;
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: var(--app-bg);
+  backdrop-filter: none;
+}
+.library-roulette-backdrop.full-page .library-roulette {
+  width: min(880px, 100%);
+}

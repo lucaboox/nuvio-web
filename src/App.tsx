@@ -2028,6 +2028,7 @@ export function App() {
           fullPage
           items={library}
           index={watchIndex}
+          addons={addons}
           initialScope="all"
           onClose={() => go("")}
           onOpen={(item) => {
@@ -2187,6 +2188,7 @@ export function App() {
           <LibraryView
             items={library}
             index={watchIndex}
+            addons={addons}
             onOpen={openDetails}
             onMenu={(item, x, y) => setTitleMenu({ item, x, y })}
           />
@@ -2562,11 +2564,13 @@ function HomeView({
 function LibraryView({
   items,
   index,
+  addons,
   onOpen,
   onMenu,
 }: {
   items: LibraryItem[];
   index: WatchIndex;
+  addons: InstalledAddon[];
   onOpen(item: Meta): void;
   onMenu(item: Meta, x: number, y: number): void;
 }) {
@@ -2650,6 +2654,7 @@ function LibraryView({
         <LibraryRoulette
           items={items}
           index={index}
+          addons={addons}
           initialScope={tab}
           onClose={() => setRandomOpen(false)}
           onOpen={(item) => {
@@ -2728,6 +2733,7 @@ function isSeen(item: LibraryItem, index: WatchIndex) {
 function LibraryRoulette({
   items,
   index,
+  addons,
   initialScope,
   fullPage,
   onClose,
@@ -2735,6 +2741,8 @@ function LibraryRoulette({
 }: {
   items: LibraryItem[];
   index: WatchIndex;
+  /** Used to fetch a description the library row was stored without. */
+  addons: InstalledAddon[];
   initialScope: RandomScope;
   /** Standing on its own at /random rather than sitting over the library. */
   fullPage?: boolean;
@@ -2778,8 +2786,10 @@ function LibraryRoulette({
   /**
    * The reveal, a beat after the strip stops.
    *
-   * Not immediate on purpose: landing and being shown what you landed on are
-   * two moments, and running them together robs the first of its ending.
+   * The order matters and was wrong: the card arrived first and the reel blurred
+   * underneath it afterwards, which is the scene changing around something
+   * already standing in it. The blur and the frame open the moment the strip
+   * stops — that is the `finished` class — and the card walks in after.
    */
   const [revealed, setRevealed] = useState(false);
   useEffect(() => {
@@ -2787,7 +2797,7 @@ function LibraryRoulette({
       setRevealed(false);
       return;
     }
-    const timer = window.setTimeout(() => setRevealed(true), 260);
+    const timer = window.setTimeout(() => setRevealed(true), 320);
     return () => window.clearTimeout(timer);
   }, [roll, spinning]);
 
@@ -2841,6 +2851,30 @@ function LibraryRoulette({
   useEffect(() => {
     localStorage.setItem("nuvio-web-roulette-muted", String(muted));
   }, [muted]);
+
+  /**
+   * A description for the winner, where the library row has none.
+   *
+   * Library rows carry whatever was stored when the title was added, and older
+   * ones were stored without one. Asking the addons is the same resolve the
+   * details page does, so the answer matches what you would see there — and it
+   * is fetched only for the one title that won, once it has won.
+   */
+  const [resolved, setResolved] = useState<Record<string, string>>({});
+  useEffect(() => {
+    const winner = roll?.winner;
+    if (!winner || spinning || winner.description || resolved[winner.id]) return;
+    let live = true;
+    resolveMeta(winner, addons)
+      .then((meta) => {
+        if (live && meta.description)
+          setResolved((current) => ({ ...current, [winner.id]: meta.description! }));
+      })
+      .catch(() => undefined);
+    return () => {
+      live = false;
+    };
+  }, [roll, spinning, addons, resolved]);
 
   // Drives the strip frame by frame rather than handing it to a CSS
   // transition, because the ticks have to know which card is under the marker
@@ -2931,7 +2965,7 @@ function LibraryRoulette({
       <section
         className={`library-roulette${spinning ? " spinning" : ""}${
           roll && !spinning ? " finished" : ""
-        }${revealed ? " revealed" : ""}`}
+        }`}
         role="dialog"
         aria-modal="true"
         aria-labelledby="library-roulette-title"
@@ -3060,7 +3094,7 @@ function LibraryRoulette({
           {/* Laid over the reel rather than replacing it: the strip stays
               behind, blurred, so the result is clearly the thing that was
               just landed on and not a different screen. */}
-          {roll && !spinning && (
+          {revealed && roll && (
             <div className="library-roulette-reveal">
               <figure>
                 {roll.winner.poster ? (
@@ -3077,7 +3111,9 @@ function LibraryRoulette({
                   {roll.winner.releaseInfo ? ` · ${roll.winner.releaseInfo}` : ""}
                 </small>
                 <strong>{roll.winner.name}</strong>
-                {roll.winner.description && <p>{roll.winner.description}</p>}
+                {(roll.winner.description || resolved[roll.winner.id]) && (
+                  <p>{roll.winner.description || resolved[roll.winner.id]}</p>
+                )}
               </div>
             </div>
           )}

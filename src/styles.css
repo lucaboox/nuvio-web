@@ -7707,7 +7707,7 @@ body.is-locked {
    what presents the result, and a card growing underneath was the same thing
    said twice, worse. It just stops. */
 /* Once the reveal is up, the whole strip is scenery behind it. */
-.library-roulette.revealed .library-roulette-track {
+.library-roulette.finished .library-roulette-track {
   filter: blur(14px) brightness(0.3);
   transform-origin: center;
   transition: filter 0.45s ease;
@@ -7717,10 +7717,10 @@ body.is-locked {
 .library-roulette-frame {
   transition: height 0.45s cubic-bezier(0.16, 0.84, 0.24, 1);
 }
-.library-roulette.revealed .library-roulette-frame {
+.library-roulette.finished .library-roulette-frame {
   height: 330px;
 }
-.library-roulette-backdrop.full-page .library-roulette.revealed
+.library-roulette-backdrop.full-page .library-roulette.finished
   .library-roulette-frame {
   height: min(58vh, 430px);
 }

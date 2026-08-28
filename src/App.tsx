@@ -5,6 +5,7 @@ import {
   ArrowDown,
   ArrowLeft,
   Download,
+  Dices,
   ArrowUp,
   CalendarDays,
   ChevronRight,
@@ -1466,6 +1467,51 @@ export function App() {
   }
 
   /**
+   * Reflects a checkpoint the desktop shell has already accepted for sync.
+   * This performs no RPC: libmpv's Rust reporter remains the only persistent
+   * writer, while React stops showing a stale resume point after Back. The
+   * browser/PWA player never calls this path.
+   */
+  function reflectNativePlaybackProgress(
+    current: { meta: Meta; video?: Video },
+    positionMs: number,
+    durationMs: number,
+    ended: boolean,
+  ) {
+    if (!profile) return;
+    const position = Math.max(0, Math.round(positionMs));
+    const duration = Math.max(0, Math.round(durationMs));
+    const complete = isComplete(position, duration, ended);
+    if (!complete && position < 1_000) return;
+    const identity = {
+      contentId: current.meta.id,
+      contentType: current.meta.type,
+      videoId: current.video?.id || current.meta.id,
+      season: current.video?.season,
+      episode: current.video?.episode,
+    };
+    const key = watchKey(identity.contentId, identity.season, identity.episode);
+    setProgress((currentRows) => [
+      ...currentRows.filter(
+        (row) => watchKey(row.contentId, row.season, row.episode) !== key,
+      ),
+      {
+        contentId: identity.contentId,
+        contentType: identity.contentType,
+        videoId: identity.videoId,
+        season: identity.season,
+        episode: identity.episode,
+        positionMs: complete && duration > 0 ? duration : position,
+        durationMs: duration,
+        lastWatched: Date.now(),
+        progressKey: currentRows.find(
+          (row) => watchKey(row.contentId, row.season, row.episode) === key,
+        )?.progressKey,
+      },
+    ]);
+  }
+
+  /**
    * Records what a player said about the title it was handed.
    *
    * Called whenever a report turns up — at boot when the return was a fresh
@@ -2281,6 +2327,14 @@ export function App() {
           onProgress={(positionMs, durationMs, ended) =>
             savePlaybackProgress(playback, positionMs, durationMs, ended)
           }
+          onNativeProgressSnapshot={(positionMs, durationMs, ended) =>
+            reflectNativePlaybackProgress(
+              playback,
+              positionMs,
+              durationMs,
+              ended,
+            )
+          }
         />
       )}
       {titleMenu && (() => {
@@ -2467,6 +2521,12 @@ function LibraryView({
   onMenu(item: Meta, x: number, y: number): void;
 }) {
   const [tab, setTab] = useState<"all" | "movie" | "series">("all");
+  const [randomRoll, setRandomRoll] = useState<{
+    id: number;
+    items: LibraryItem[];
+    winner: LibraryItem;
+    target: number;
+  } | null>(null);
   const counts = useMemo(() => {
     let movie = 0;
     let series = 0;
@@ -2487,23 +2547,47 @@ function LibraryView({
     { key: "series", label: "Series", count: counts.series },
   ] as const;
 
+  const rollRandomTitle = useCallback(() => {
+    if (!filtered.length) return;
+    const pick = () => filtered[Math.floor(Math.random() * filtered.length)];
+    const winner = pick();
+    // A long reel gives the deceleration room to feel like a case opening.
+    // The winner is inserted near its end, with enough cards after it that the
+    // strip never exposes an empty edge when it stops in the centre.
+    const target = 30;
+    const reel = Array.from({ length: 36 }, pick);
+    reel[target] = winner;
+    setRandomRoll({ id: Date.now(), items: reel, winner, target });
+  }, [filtered]);
+
   return (
     <section className="grid-page">
       <span className="eyebrow">NUVIO WEB</span>
       <h1>Your library</h1>
       <p>{counts.all} synced titles</p>
-      <div className="segmented">
-        {tabs.map((item) => (
-          <button
-            key={item.key}
-            className={tab === item.key ? "active" : undefined}
-            aria-pressed={tab === item.key}
-            onClick={() => setTab(item.key)}
-          >
-            {item.label}
-            <i>{item.count}</i>
-          </button>
-        ))}
+      <div className="library-toolbar">
+        <div className="segmented">
+          {tabs.map((item) => (
+            <button
+              key={item.key}
+              className={tab === item.key ? "active" : undefined}
+              aria-pressed={tab === item.key}
+              onClick={() => setTab(item.key)}
+            >
+              {item.label}
+              <i>{item.count}</i>
+            </button>
+          ))}
+        </div>
+        <button
+          type="button"
+          className="library-random-button"
+          disabled={!filtered.length}
+          onClick={rollRandomTitle}
+        >
+          <Dices aria-hidden="true" />
+          Random pick
+        </button>
       </div>
       {filtered.length === 0 ? (
         <div className="empty-state">
@@ -2527,7 +2611,154 @@ function LibraryView({
           ))}
         </div>
       )}
+      {randomRoll && (
+        <LibraryRoulette
+          key={randomRoll.id}
+          roll={randomRoll}
+          filterLabel={tabs.find((item) => item.key === tab)?.label ?? "All"}
+          onAgain={rollRandomTitle}
+          onClose={() => setRandomRoll(null)}
+          onOpen={(item) => {
+            setRandomRoll(null);
+            onOpen(item);
+          }}
+        />
+      )}
     </section>
+  );
+}
+
+function LibraryRoulette({
+  roll,
+  filterLabel,
+  onAgain,
+  onClose,
+  onOpen,
+}: {
+  roll: {
+    items: LibraryItem[];
+    winner: LibraryItem;
+    target: number;
+  };
+  filterLabel: string;
+  onAgain(): void;
+  onClose(): void;
+  onOpen(item: LibraryItem): void;
+}) {
+  const viewport = useRef<HTMLDivElement | null>(null);
+  const track = useRef<HTMLDivElement | null>(null);
+  const [finished, setFinished] = useState(false);
+
+  useEffect(() => {
+    const strip = track.current;
+    const frame = viewport.current;
+    const target = strip?.children.item(roll.target) as HTMLElement | null;
+    if (!strip || !frame || !target) return;
+
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    strip.style.transition = "none";
+    strip.style.transform = "translate3d(0, 0, 0)";
+    // Force the starting position to paint before the transition is attached.
+    void strip.offsetWidth;
+    const destination =
+      frame.clientWidth / 2 - (target.offsetLeft + target.offsetWidth / 2);
+    const start = window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        strip.style.transition = reduceMotion
+          ? "none"
+          : "transform 4.8s cubic-bezier(.08,.72,.08,1)";
+        strip.style.transform = `translate3d(${destination}px, 0, 0)`;
+        if (reduceMotion) setFinished(true);
+      });
+    });
+    const fallback = window.setTimeout(() => setFinished(true), reduceMotion ? 50 : 5000);
+    return () => {
+      window.cancelAnimationFrame(start);
+      window.clearTimeout(fallback);
+    };
+  }, [roll]);
+
+  useEffect(() => {
+    const close = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", close);
+    return () => window.removeEventListener("keydown", close);
+  }, [onClose]);
+
+  return (
+    <div
+      className="library-roulette-backdrop"
+      role="presentation"
+      onMouseDown={(event) => {
+        if (event.currentTarget === event.target) onClose();
+      }}
+    >
+      <section
+        className={`library-roulette${finished ? " finished" : " spinning"}`}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="library-roulette-title"
+      >
+        <header>
+          <div>
+            <span>{filterLabel} roulette</span>
+            <h2 id="library-roulette-title">
+              {finished ? "Tonight's pick" : "Picking something to watch…"}
+            </h2>
+          </div>
+          <button className="circle-button" type="button" aria-label="Close" onClick={onClose}>
+            <X />
+          </button>
+        </header>
+        <div className="library-roulette-frame" ref={viewport}>
+          <i className="library-roulette-marker" aria-hidden="true" />
+          <div
+            className="library-roulette-track"
+            ref={track}
+            onTransitionEnd={(event) => {
+              if (event.propertyName === "transform") setFinished(true);
+            }}
+          >
+            {roll.items.map((item, index) => (
+              <article
+                key={`${index}:${item.type}:${item.id}`}
+                className={index === roll.target ? "winner" : undefined}
+                aria-hidden={index !== roll.target}
+              >
+                {item.poster ? (
+                  <img src={item.poster} alt="" draggable={false} />
+                ) : (
+                  <div className="library-roulette-placeholder">{item.name.slice(0, 1)}</div>
+                )}
+                <strong>{item.name}</strong>
+                <small>{item.type === "series" ? "Series" : "Movie"}</small>
+              </article>
+            ))}
+          </div>
+        </div>
+        <div className="library-roulette-result" aria-live="polite">
+          {finished ? (
+            <>
+              <div>
+                <small>{roll.winner.type === "series" ? "Series" : "Movie"}</small>
+                <strong>{roll.winner.name}</strong>
+              </div>
+              <div className="library-roulette-actions">
+                <button type="button" className="secondary-button" onClick={onAgain}>
+                  <Dices /> Pick again
+                </button>
+                <button type="button" className="primary-button" onClick={() => onOpen(roll.winner)}>
+                  View details <ChevronRight />
+                </button>
+              </div>
+            </>
+          ) : (
+            <span>Finding a title from your {filterLabel.toLowerCase()} library…</span>
+          )}
+        </div>
+      </section>
+    </div>
   );
 }
 
@@ -4066,7 +4297,7 @@ function SettingsPage({
           ))}
         </div>
       </div>
-      <div
+      {!platform.player && <div
         className="setting-card web-only-card settings-category-card"
         hidden={category !== "playback"}
       >
@@ -4144,7 +4375,7 @@ function SettingsPage({
           The web remux fallback only re-boxes compatible tracks. DTS and
           TrueHD still require an external player; Nuvio Web does not transcode.
         </p>
-      </div>
+      </div>}
       <div
         className="setting-card settings-category-card"
         hidden={category !== "playback"}

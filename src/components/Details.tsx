@@ -1187,7 +1187,7 @@ export function Details({
                 {/* Picking the player here rather than in Settings: which one
                     suits a source is a property of the source, and it is the
                     moment you are looking at them. */}
-                <label className="source-player">
+                {!platform.player && <label className="source-player">
                   <span>Play in</span>
                   <select
                     value={sheetPlayer}
@@ -1203,7 +1203,7 @@ export function Details({
                       </option>
                     ))}
                   </select>
-                </label>
+                </label>}
                 {sourceAddons.length > 1 && (
                   <label className="source-player">
                     <span>Addon</span>

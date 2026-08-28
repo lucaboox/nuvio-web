@@ -2408,6 +2408,27 @@ input[type="password"]::-ms-clear {
   background: #000;
   isolation: isolate;
 }
+/* libmpv renders into the Tauri window below WebView2.  Only the native
+   player route makes the web surface transparent; the browser/PWA route keeps
+   its solid black video canvas.  The controls and shades remain ordinary DOM
+   above the picture, so both clients still share the same player chrome. */
+html.native-player-active,
+html.native-player-active body,
+html.native-player-active #root,
+html.native-player-active .app-shell,
+html.native-player-active .player-view.native-player {
+  background: transparent !important;
+}
+/* The native child window is not guaranteed to have painted while libmpv is
+   opening a URL.  Cover it with a real opaque WebView layer until
+   MPV_EVENT_PLAYBACK_RESTART says the first frame is ready. */
+html.native-player-active .player-view.native-player.native-player-loading {
+  background: #000 !important;
+}
+.player-view.native-player video,
+.player-view.native-player .player-canvas {
+  display: none !important;
+}
 /*
  * Keep the resolved page mounted so Back is instant, but do not leave its
  * backdrop, cast gallery, and trailer thumbnails composited underneath video.
@@ -3682,6 +3703,12 @@ body.is-locked {
 }
 
 /* ---- Library tabs ------------------------------------------------------ */
+.library-toolbar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 14px;
+}
 .segmented {
   display: inline-flex;
   gap: 3px;
@@ -3716,6 +3743,225 @@ body.is-locked {
   font-size: 11px;
   font-style: normal;
   font-variant-numeric: tabular-nums;
+}
+.library-random-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 46px;
+  margin-top: 20px;
+  padding: 0 18px;
+  border: 1px solid color-mix(in srgb, var(--accent, #ef3d50) 45%, #29313a);
+  border-radius: 14px;
+  color: #f7f8fa;
+  background: color-mix(in srgb, var(--accent, #ef3d50) 19%, #101419);
+  font-weight: 750;
+  cursor: pointer;
+  transition: border-color 0.18s, background 0.18s, transform 0.18s;
+}
+.library-random-button:hover:not(:disabled) {
+  border-color: var(--accent, #ef3d50);
+  background: color-mix(in srgb, var(--accent, #ef3d50) 29%, #101419);
+  transform: translateY(-1px);
+}
+.library-random-button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.library-random-button svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* CS-style title roulette, shared by the browser and native webview. */
+.library-roulette-backdrop {
+  position: fixed;
+  z-index: 1000;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(0, 0, 0, 0.78);
+  backdrop-filter: blur(14px);
+  animation: roulette-backdrop-in 0.2s ease-out;
+}
+.library-roulette {
+  width: min(980px, 94vw);
+  overflow: hidden;
+  border: 1px solid #293039;
+  border-radius: 24px;
+  background: #090b0e;
+  box-shadow: 0 28px 90px rgba(0, 0, 0, 0.65);
+}
+.library-roulette > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 22px 24px 18px;
+}
+.library-roulette > header span {
+  color: var(--accent, #ef3d50);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.library-roulette > header h2 {
+  margin: 4px 0 0;
+  font-size: 25px;
+}
+.library-roulette-frame {
+  position: relative;
+  height: 240px;
+  overflow: hidden;
+  border-block: 1px solid #242a31;
+  background:
+    radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--accent, #ef3d50) 16%, transparent), transparent 34%),
+    #0d1014;
+}
+.library-roulette-frame::before,
+.library-roulette-frame::after {
+  content: "";
+  position: absolute;
+  z-index: 3;
+  top: 0;
+  bottom: 0;
+  width: 18%;
+  pointer-events: none;
+}
+.library-roulette-frame::before {
+  left: 0;
+  background: linear-gradient(90deg, #090b0e, transparent);
+}
+.library-roulette-frame::after {
+  right: 0;
+  background: linear-gradient(-90deg, #090b0e, transparent);
+}
+.library-roulette-marker {
+  position: absolute;
+  z-index: 5;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 2px;
+  transform: translateX(-1px);
+  background: var(--accent, #ef3d50);
+  box-shadow: 0 0 18px color-mix(in srgb, var(--accent, #ef3d50) 80%, transparent);
+}
+.library-roulette-marker::before,
+.library-roulette-marker::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  width: 0;
+  height: 0;
+  transform: translateX(-50%);
+  border-inline: 8px solid transparent;
+}
+.library-roulette-marker::before {
+  top: 0;
+  border-top: 10px solid var(--accent, #ef3d50);
+}
+.library-roulette-marker::after {
+  bottom: 0;
+  border-bottom: 10px solid var(--accent, #ef3d50);
+}
+.library-roulette-track {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: max-content;
+  height: 100%;
+  padding: 13px 0;
+  will-change: transform;
+}
+.library-roulette-track article {
+  display: grid;
+  grid-template-rows: 168px auto auto;
+  flex: 0 0 112px;
+  width: 112px;
+  min-width: 0;
+  gap: 3px;
+  opacity: 0.55;
+  transform: scale(0.94);
+  transition: opacity 0.35s, transform 0.35s;
+}
+.library-roulette.finished .library-roulette-track article.winner {
+  opacity: 1;
+  transform: scale(1.04);
+}
+.library-roulette-track img,
+.library-roulette-placeholder {
+  width: 112px;
+  height: 168px;
+  border: 1px solid #343c45;
+  border-radius: 12px;
+  object-fit: cover;
+  background: #171c22;
+}
+.library-roulette-placeholder {
+  display: grid;
+  place-items: center;
+  color: #9da7b1;
+  font-size: 36px;
+  font-weight: 800;
+}
+.library-roulette-track strong,
+.library-roulette-track small {
+  overflow: hidden;
+  padding-inline: 2px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.library-roulette-track strong {
+  font-size: 12px;
+}
+.library-roulette-track small {
+  color: #7f8a95;
+  font-size: 10px;
+}
+.library-roulette-result {
+  min-height: 98px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 18px 24px 22px;
+}
+.library-roulette-result > div:first-child {
+  display: grid;
+  gap: 3px;
+}
+.library-roulette-result small,
+.library-roulette-result > span {
+  color: #89939e;
+  font-size: 12px;
+}
+.library-roulette-result strong {
+  font-size: 21px;
+}
+.library-roulette-actions {
+  display: flex;
+  gap: 10px;
+}
+.library-roulette-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: 13px;
+  font-weight: 750;
+  cursor: pointer;
+}
+.library-roulette-actions svg {
+  width: 18px;
+}
+@keyframes roulette-backdrop-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 /* ---- Discover filters -------------------------------------------------- */
@@ -3771,6 +4017,11 @@ body.is-locked {
 }
 
 @media (max-width: 760px) {
+  .library-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 10px;
+  }
   .segmented {
     display: flex;
     width: 100%;
@@ -3779,6 +4030,41 @@ body.is-locked {
     flex: 1;
     justify-content: center;
     padding: 10px 8px;
+  }
+  .library-random-button {
+    align-self: stretch;
+    justify-content: center;
+    margin-top: 0;
+  }
+  .library-roulette-backdrop {
+    align-items: end;
+    padding: 0;
+  }
+  .library-roulette {
+    width: 100%;
+    border-width: 1px 0 0;
+    border-radius: 24px 24px 0 0;
+    padding-bottom: max(10px, env(safe-area-inset-bottom));
+  }
+  .library-roulette-frame {
+    height: 210px;
+  }
+  .library-roulette-track article {
+    grid-template-rows: 140px auto auto;
+    flex-basis: 93px;
+    width: 93px;
+  }
+  .library-roulette-track img,
+  .library-roulette-placeholder {
+    width: 93px;
+    height: 140px;
+  }
+  .library-roulette-result {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .library-roulette-actions button {
+    flex: 1;
   }
   /* Three across rather than stacked. They are narrow, but a dropdown shows
      its full option text when open, so the closed width only has to hint. */

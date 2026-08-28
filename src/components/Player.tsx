@@ -57,6 +57,11 @@ import {
 } from "../lib/skipSegments";
 import type { ExternalPlayerMode, Meta, Stream, Video } from "../types";
 
+// Present only in the desktop shell. Keeping this capability check here makes
+// the player chrome shared while the bytes still take the right route: a web
+// page decodes in <video>/canvas, and Tauri hands the same source to libmpv.
+const nativePlayer = platform.player;
+
 type AudioChoice = { id: number; label: string };
 type NativeAudioTrackList = {
   length: number;
@@ -98,6 +103,7 @@ export function Player({
   onClose,
   onExternalPlay,
   onProgress,
+  onNativeProgressSnapshot,
   settings,
   startPositionMs = 0,
   episodes,
@@ -130,6 +136,15 @@ export function Player({
   onPlayEpisode?(next: Video): void;
   /** Reports a resume point. Fired periodically, on pause, and on exit. */
   onProgress(positionMs: number, durationMs: number, ended: boolean): void;
+  /**
+   * Mirrors a checkpoint that the native shell is already persisting.
+   * Browser playback never calls this; doing so would create a second writer.
+   */
+  onNativeProgressSnapshot?(
+    positionMs: number,
+    durationMs: number,
+    ended: boolean,
+  ): void;
   settings: WebPlayerSettings;
 }) {
   const playerRef = useRef<HTMLDivElement>(null);
@@ -147,6 +162,8 @@ export function Player({
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
   const [playing, setPlaying] = useState(false);
+  const playingRef = useRef(false);
+  playingRef.current = playing;
   const [waiting, setWaiting] = useState(true);
   const [remuxActive, setRemuxActive] = useState(false);
   /** True while the decoding player owns playback, and the canvas is shown. */
@@ -161,6 +178,18 @@ export function Player({
   const [duration, setDuration] = useState(0);
   const [seekPreview, setSeekPreview] = useState<number | null>(null);
   const seekPreviewRef = useRef<number | null>(null);
+  // libmpv accepts a seek on its command channel before its sampled position
+  // catches up.  Keep the requested position authoritative during that short
+  // window so polling cannot make the timeline jump target -> old -> target.
+  const pendingNativeSeekRef = useRef<{
+    targetSeconds: number;
+    submittedAt: number;
+  } | null>(null);
+  const nativeProgressSnapshotRef = useRef({
+    positionMs: 0,
+    durationMs: 0,
+    ended: false,
+  });
   // Kept in a ref so the reporting effect can run once for the whole session
   // rather than resubscribing on every timeupdate.
   const reportRef = useRef(onProgress);
@@ -220,6 +249,11 @@ export function Player({
   );
   const [audioTracks, setAudioTracks] = useState<AudioChoice[]>([]);
   const [selectedAudio, setSelectedAudio] = useState(-1);
+  const [nativeFullscreen, setNativeFullscreen] = useState(false);
+  // WebView2 must stay opaque until libmpv reports playback-restart.  Before
+  // that event its child video window can still be transparent, which would
+  // otherwise expose whatever desktop window happens to sit behind Nuvio.
+  const [nativeSurfaceReady, setNativeSurfaceReady] = useState(!nativePlayer);
   const url = stream.url;
   const externalUrl = stream.externalUrl || url;
   const navigableExternalUrl = useMemo(
@@ -254,9 +288,11 @@ export function Player({
   const showControls = useCallback(() => {
     setControlsVisible(true);
     window.clearTimeout(hideTimer.current);
-    const running = engineRef.current
-      ? !engineRef.current.paused
-      : videoRef.current && !videoRef.current.paused;
+    const running = nativePlayer
+      ? playingRef.current
+      : engineRef.current
+        ? !engineRef.current.paused
+        : videoRef.current && !videoRef.current.paused;
     if (running)
       hideTimer.current = window.setTimeout(() => {
         setAudioOpen(false);
@@ -266,6 +302,17 @@ export function Player({
   }, []);
   const togglePlayback = useCallback(async () => {
     showControls();
+    if (nativePlayer) {
+      const next = !playingRef.current;
+      setPlaying(next);
+      try {
+        await nativePlayer.togglePause();
+      } catch (reason) {
+        setPlaying(!next);
+        setError(reason instanceof Error ? reason.message : "Could not control playback.");
+      }
+      return;
+    }
     const engine = engineRef.current;
     if (engine) {
       // Reached from a real tap, which is what lets Safari start the audio
@@ -288,6 +335,29 @@ export function Player({
   }, [showControls]);
   const seekTo = useCallback(
     async (requested: number) => {
+      if (nativePlayer) {
+        const maximum = duration > 0
+          ? Math.max(0, duration - 0.05)
+          : Math.max(0, requested);
+        const target = clamp(requested, 0, maximum);
+        seekPreviewRef.current = null;
+        setSeekPreview(null);
+        pendingNativeSeekRef.current = {
+          targetSeconds: target,
+          submittedAt: performance.now(),
+        };
+        setCurrentTime(target);
+        setWaiting(true);
+        showControls();
+        try {
+          await nativePlayer.seek(Math.round(target * 1000));
+        } catch (reason) {
+          pendingNativeSeekRef.current = null;
+          setWaiting(false);
+          setError(reason instanceof Error ? reason.message : "Could not seek.");
+        }
+        return;
+      }
       const engine = engineRef.current;
       const element = videoRef.current;
       const total = engine ? engine.duration : element?.duration ?? 0;
@@ -313,15 +383,17 @@ export function Player({
       element.currentTime = target;
       setCurrentTime(target);
     },
-    [showControls, remuxActive],
+    [duration, showControls, remuxActive],
   );
   const seekBy = useCallback(
     (amount: number) => {
-      const from = engineRef.current?.currentTime ?? videoRef.current?.currentTime;
+      const from = nativePlayer
+        ? currentTime
+        : engineRef.current?.currentTime ?? videoRef.current?.currentTime;
       if (from === undefined) return;
       void seekTo(from + amount);
     },
-    [seekTo],
+    [currentTime, seekTo],
   );
   /**
    * Mute, wherever playback actually is.
@@ -332,6 +404,13 @@ export function Player({
    * setPlayerVolume.
    */
   const toggleMuted = useCallback(() => {
+    if (nativePlayer) {
+      setMuted((value) => !value);
+      void nativePlayer.toggleMute().catch((reason: unknown) =>
+        setError(reason instanceof Error ? reason.message : "Could not change mute."),
+      );
+      return;
+    }
     const engine = engineRef.current;
     if (engine) {
       const next = !muted;
@@ -343,6 +422,16 @@ export function Player({
     if (element) element.muted = !element.muted;
   }, [muted]);
   const toggleFullscreen = useCallback(async () => {
+    if (nativePlayer?.setFullscreen) {
+      const next = !nativeFullscreen;
+      try {
+        await nativePlayer.setFullscreen(next);
+        setNativeFullscreen(next);
+      } catch (reason) {
+        setError(reason instanceof Error ? reason.message : "Could not change fullscreen mode.");
+      }
+      return;
+    }
     const container = playerRef.current;
     const element = videoRef.current as
       (HTMLVideoElement & { webkitEnterFullscreen?: () => void }) | null;
@@ -350,9 +439,144 @@ export function Player({
     if (document.fullscreenElement) await document.exitFullscreen();
     else if (container.requestFullscreen) await container.requestFullscreen();
     else element.webkitEnterFullscreen?.();
-  }, []);
+  }, [nativeFullscreen]);
 
   useEffect(() => {
+    if (!nativePlayer) return;
+    const sourceUrl = url || externalUrl;
+    if (!sourceUrl) {
+      setWaiting(false);
+      setError("This source does not provide a playable URL.");
+      return;
+    }
+
+    let live = true;
+    let polling = false;
+    const transparentRoots = [document.documentElement, document.body];
+    transparentRoots.forEach((node) => node.classList.add("native-player-active"));
+    setSwitching(false);
+    setNextDismissed(false);
+    setStatus("");
+    setError("");
+    setWarning("");
+    setWaiting(true);
+    setPlaying(false);
+    setNativeSurfaceReady(false);
+    pendingNativeSeekRef.current = null;
+    nativeProgressSnapshotRef.current = {
+      positionMs: 0,
+      durationMs: 0,
+      ended: false,
+    };
+
+    const refresh = async () => {
+      if (polling) return;
+      polling = true;
+      try {
+        const next = await nativePlayer.state();
+        if (!live) return;
+        nativeProgressSnapshotRef.current = {
+          positionMs: Math.max(0, next.positionMs),
+          durationMs: Math.max(0, next.durationMs),
+          ended: next.ended,
+        };
+        setWaiting(next.loading);
+        setPlaying(next.active && !next.paused && !next.ended);
+        if (next.active && !next.loading && !next.error) {
+          setNativeSurfaceReady(true);
+        }
+        const sampledSeconds = Math.max(0, next.positionMs) / 1000;
+        const pendingSeek = pendingNativeSeekRef.current;
+        if (pendingSeek) {
+          const confirmed =
+            Math.abs(sampledSeconds - pendingSeek.targetSeconds) < 2.5;
+          const expired = performance.now() - pendingSeek.submittedAt > 5_000;
+          if (confirmed || expired) {
+            pendingNativeSeekRef.current = null;
+            setCurrentTime(sampledSeconds);
+          } else {
+            setCurrentTime(pendingSeek.targetSeconds);
+          }
+        } else {
+          setCurrentTime(sampledSeconds);
+        }
+        setDuration(Math.max(0, next.durationMs) / 1000);
+        setVolume(clamp(next.volume / 100, 0, 1));
+        setMuted(next.muted);
+        setError(next.error ?? "");
+        if (next.warning) setWarning(next.warning);
+        const tracks = next.tracks
+          .filter((track) => track.kind === "audio")
+          .map((track) => ({
+            id: track.id,
+            label: track.title || track.lang || `Audio ${track.id}`,
+          }));
+        setAudioTracks(tracks);
+        setSelectedAudio(next.audioTrack);
+      } catch (reason) {
+        if (live)
+          setError(reason instanceof Error ? reason.message : "Could not read native player state.");
+      } finally {
+        polling = false;
+      }
+    };
+
+    const rememberedVolume = clamp(
+      Number(localStorage.getItem("nuvio-web-volume") ?? 1),
+      0,
+      1,
+    );
+    const rememberedMuted =
+      localStorage.getItem("nuvio-web-muted") === "true";
+    void nativePlayer
+      .open({
+        url: sourceUrl,
+        externalUrl,
+        title: video?.title || meta.name,
+        mediaId: video?.title || meta.name,
+        startPositionMs,
+        requestHeaders: stream.behaviorHints?.proxyHeaders?.request,
+        progress: {
+          contentId: meta.id,
+          contentType: meta.type,
+          videoId: video?.id ?? meta.id,
+          season: video?.season,
+          episode: video?.episode,
+        },
+      })
+      .then(async () => {
+        await nativePlayer.setVolume(Math.round(rememberedVolume * 100));
+        if (rememberedMuted) await nativePlayer.toggleMute();
+        await refresh();
+      })
+      .catch((reason: unknown) => {
+        if (!live) return;
+        setWaiting(false);
+        setError(reason instanceof Error ? reason.message : "libmpv could not open this source.");
+      });
+    const timer = window.setInterval(refresh, 350);
+
+    return () => {
+      live = false;
+      window.clearInterval(timer);
+      transparentRoots.forEach((node) => node.classList.remove("native-player-active"));
+    };
+  }, [
+    externalUrl,
+    meta.id,
+    meta.name,
+    meta.type,
+    startPositionMs,
+    stream.behaviorHints?.proxyHeaders?.request,
+    url,
+    video?.episode,
+    video?.id,
+    video?.season,
+    video?.title,
+  ]);
+
+  useEffect(() => {
+    if (nativePlayer) return;
     const element = videoRef.current;
     if (!element || !url) {
       setWaiting(false);
@@ -749,6 +973,7 @@ export function Player({
   }, [seekBy, toggleFullscreen, togglePlayback, toggleMuted]);
 
   useEffect(() => {
+    if (nativePlayer) return;
     const element = videoRef.current;
     if (!element) return;
     // Read from whichever is playing. The decoding player never touches the
@@ -790,6 +1015,14 @@ export function Player({
   }, []);
 
   const selectAudio = (id: number) => {
+    if (nativePlayer) {
+      setSelectedAudio(id);
+      setAudioOpen(false);
+      void nativePlayer.setAudioTrack(id).catch((reason: unknown) =>
+        setError(reason instanceof Error ? reason.message : "Could not select audio."),
+      );
+      return;
+    }
     if (engineRef.current) {
       void engineRef.current.selectAudioTrack(id);
       setSelectedAudio(id);
@@ -816,11 +1049,25 @@ export function Player({
     // down mid-play can leave the remuxer fetching for a moment after.
     const element = videoRef.current;
     element?.pause();
+    if (nativePlayer) void nativePlayer.stop();
     // Where it got to here, so the other player picks up mid-scene rather than
     // at the last saved checkpoint.
-    onExternalPlay(mode, externalUrl, Math.max(0, (element?.currentTime ?? 0) * 1000));
+    onExternalPlay(
+      mode,
+      externalUrl,
+      Math.max(0, (nativePlayer ? currentTime : element?.currentTime ?? 0) * 1000),
+    );
   };
   const setPlayerVolume = (next: number) => {
+    if (nativePlayer) {
+      const normalized = clamp(next, 0, 1);
+      setVolume(normalized);
+      setMuted(normalized === 0);
+      void nativePlayer.setVolume(Math.round(normalized * 100)).catch((reason: unknown) =>
+        setError(reason instanceof Error ? reason.message : "Could not change volume."),
+      );
+      return;
+    }
     if (engineRef.current) {
       engineRef.current.setVolume(next);
       engineRef.current.setMuted(next === 0);
@@ -866,6 +1113,7 @@ export function Player({
   const startEpisode = useCallback(
     (next: Video) => {
       if (switching || next.id === video?.id) return;
+      if (nativePlayer) void nativePlayer.stop();
       engineRef.current?.pause();
       videoRef.current?.pause();
       setPlaying(false);
@@ -877,6 +1125,21 @@ export function Player({
     },
     [onPlayEpisode, switching, video?.id],
   );
+
+  const closePlayer = useCallback(() => {
+    if (nativePlayer) {
+      const snapshot = nativeProgressSnapshotRef.current;
+      if (snapshot.positionMs > 0 || snapshot.ended) {
+        onNativeProgressSnapshot?.(
+          snapshot.positionMs,
+          snapshot.durationMs,
+          snapshot.ended,
+        );
+      }
+      void nativePlayer.stop();
+    }
+    onClose();
+  }, [onClose, onNativeProgressSnapshot]);
   const showNextEpisode =
     !!nextEpisode &&
     !nextDismissed &&
@@ -900,7 +1163,7 @@ export function Player({
   return (
     <div
       ref={playerRef}
-      className={`player-view ${controlsVisible || error ? "controls-visible" : "controls-hidden"}`}
+      className={`player-view${nativePlayer ? " native-player" : ""}${nativePlayer && !nativeSurfaceReady ? " native-player-loading" : ""} ${controlsVisible || error ? "controls-visible" : "controls-hidden"}`}
       onPointerMove={showControls}
       onPointerDown={showControls}
     >
@@ -911,7 +1174,10 @@ export function Player({
         autoPlay
         preload="auto"
         poster={video?.thumbnail || meta.background}
-        style={{ objectFit: videoFit, display: decoding ? "none" : undefined }}
+        style={{
+          objectFit: videoFit,
+          display: nativePlayer || decoding ? "none" : undefined,
+        }}
         onDoubleClick={toggleFullscreen}
       />
       {/* Where the decoder draws. Object-fit matches the video element so the
@@ -919,13 +1185,16 @@ export function Player({
       <canvas
         ref={canvasRef}
         className="player-canvas"
-        style={{ objectFit: videoFit, display: decoding ? undefined : "none" }}
+        style={{
+          objectFit: videoFit,
+          display: !nativePlayer && decoding ? undefined : "none",
+        }}
         onDoubleClick={toggleFullscreen}
       />
       <div className="player-shade player-shade-top" />
       <div className="player-shade player-shade-bottom" />
       <div className="player-top">
-        <button className="circle-button" aria-label="Back" onClick={onClose}>
+        <button className="circle-button" aria-label="Back" onClick={closePlayer}>
           <ArrowLeft />
         </button>
         <div>
@@ -1096,7 +1365,7 @@ export function Player({
                       stays silent.
                     </small>
                   )}
-                  {navigableExternalUrl && (
+                  {!nativePlayer && navigableExternalUrl && (
                     <a href={navigableExternalUrl} target="_blank" rel="noopener noreferrer">
                       <ExternalLink /> Open externally
                     </a>
@@ -1104,7 +1373,7 @@ export function Player({
                 </div>
               )}
             </div>
-            {externalUrl && (
+            {!nativePlayer && externalUrl && !!platform.externalPlayer.options("player").length && (
               <div className="external-player-picker">
                 <button
                   className={externalPlayerOpen ? "active" : ""}
@@ -1284,7 +1553,7 @@ export function Player({
           {/* What can play it, offered where it failed. Being told the
               browser cannot decode something is only half an answer; the other
               half is the list of things that can. */}
-          {externalUrl && !!platform.externalPlayer.options("player").length && (
+          {!nativePlayer && externalUrl && !!platform.externalPlayer.options("player").length && (
             <div className="player-error-players">
               <small>Play it in</small>
               <div>
@@ -1300,7 +1569,7 @@ export function Player({
             </div>
           )}
           <div>
-            {externalUrl && (
+            {!nativePlayer && externalUrl && (
               <>
                 {navigableExternalUrl && (
                   <a href={navigableExternalUrl} target="_blank" rel="noopener noreferrer">

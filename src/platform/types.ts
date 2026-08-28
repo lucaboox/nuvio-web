@@ -86,24 +86,69 @@ export type AuthApi = {
  * the browser can decode and no more; a shell with libmpv plays the rest, and
  * is the only thing that can open a file the shell itself wrote.
  *
- * Deliberately small for now. This is the handoff — give it a source and it
- * takes over — not the transport controls, which stay with whichever player is
- * actually on screen. Growing it to cover tracks and seeking is what lets the
- * shared player UI drive a native backend, and that is a larger job than this.
+ * The UI owns the controls and the shell owns decoding.  State is deliberately
+ * a polled snapshot: it crosses IPC cleanly and lets the same React player
+ * drive libmpv without exposing a native handle or event emitter to the page.
  */
 export type PlayerSource = {
   url: string;
+  /** A resolver-provided fallback when the primary stream has no direct URL. */
+  externalUrl?: string;
   /** Shown by the player while it loads, where it shows anything. */
   title?: string;
   /** Identifies the title, so the shell can attribute progress to it. */
-  mediaId?: string;
+  mediaId: string;
   startPositionMs?: number;
   /** Headers the source insists on, which a `<video>` element cannot attach. */
   requestHeaders?: Record<string, string>;
+  /** The exact server identity used by Nuvio's watch-progress RPCs. */
+  progress: {
+    contentId: string;
+    contentType: string;
+    videoId: string;
+    season?: number;
+    episode?: number;
+  };
+};
+
+export type PlayerTrack = {
+  id: number;
+  kind: "audio" | "sub";
+  title: string;
+  lang: string;
+  selected: boolean;
+};
+
+export type PlayerState = {
+  active: boolean;
+  loading: boolean;
+  ended: boolean;
+  paused: boolean;
+  positionMs: number;
+  durationMs: number;
+  volume: number;
+  muted: boolean;
+  audioTrack: number;
+  subtitleTrack: number;
+  title: string;
+  error?: string;
+  warning?: string;
+  tracks: PlayerTrack[];
 };
 
 export type PlayerApi = {
   open(source: PlayerSource): Promise<void>;
+  state(): Promise<PlayerState>;
+  togglePause(): Promise<void>;
+  seek(positionMs: number): Promise<void>;
+  seekRelative(offsetMs: number): Promise<void>;
+  setVolume(volume: number): Promise<void>;
+  toggleMute(): Promise<void>;
+  setSpeed(speed: number): Promise<void>;
+  setAudioTrack(id: number): Promise<void>;
+  setSubtitleTrack(id: number): Promise<void>;
+  /** Expands the native window, rather than a transparent webview element. */
+  setFullscreen?(fullscreen: boolean): Promise<void>;
   stop(): Promise<void>;
 };
 

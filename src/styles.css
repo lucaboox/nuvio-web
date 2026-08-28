@@ -8022,13 +8022,16 @@ body.is-locked {
   margin-left: auto;
   align-self: flex-end;
 }
-/* Below them once the row wraps, where "far right" stops meaning anything and
-   a full-width target is easier to hit. flex-basis rather than width: as a
-   flex item it was still being sized by its content and sat half a row wide. */
-@media (max-width: 720px) {
+/* Below them once the row stops being a row.
+ *
+ * Under 760px the filters are not a flex row at all — they become a grid of
+ * three equal columns — so neither width nor flex-basis meant anything and the
+ * button quietly took one cell of three. Spanning every column is what makes
+ * it full width, and the breakpoint has to be the grid's own. */
+@media (max-width: 760px) {
   .discover-random-button {
+    grid-column: 1 / -1;
     margin-left: 0;
-    flex: 1 0 100%;
     justify-content: center;
   }
 }

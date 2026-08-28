@@ -7723,6 +7723,12 @@ body.is-locked {
   filter: blur(3px) brightness(0.45);
   transform: scale(0.92);
 }
+/* Once the reveal is up, the whole strip is scenery behind it. */
+.library-roulette.revealed .library-roulette-track {
+  filter: blur(14px) brightness(0.3);
+  transform-origin: center;
+  transition: filter 0.45s ease;
+}
 /* The marker did its job while the strip was moving; leaving it up draws a
    line down the middle of the card it was pointing at. */
 .library-roulette.finished .library-roulette-marker {
@@ -7907,4 +7913,106 @@ body.is-locked {
   flex-direction: row;
   align-items: center;
   justify-content: space-between;
+}
+
+/* --- The reveal ------------------------------------------------------------
+ * What you got, shown the way a case shows it: the item settles to one side
+ * and what it is arrives beside it. Laid over the reel rather than replacing
+ * it, so it reads as the end of the roll and not a second screen.
+ */
+.library-roulette-reveal {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 26px;
+  padding: 18px 34px;
+  pointer-events: none;
+}
+.library-roulette-reveal figure {
+  flex: none;
+  margin: 0;
+  /* Arrives from where the strip left it, and settles left. */
+  animation: reveal-card 0.62s cubic-bezier(0.16, 0.84, 0.24, 1) both;
+}
+.library-roulette-reveal img,
+.library-roulette-reveal .library-roulette-placeholder {
+  width: 132px;
+  height: 198px;
+  border: 0;
+  border-radius: 12px;
+  object-fit: cover;
+  box-shadow: 0 22px 60px rgba(0, 0, 0, 0.75);
+}
+.library-roulette-reveal > div {
+  max-width: 420px;
+  animation: reveal-copy 0.5s ease-out 0.16s both;
+}
+.library-roulette-reveal small {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.library-roulette-reveal strong {
+  display: block;
+  font-size: 22px;
+  line-height: 1.2;
+  color: #f4f7fa;
+  text-shadow: 0 2px 12px #000;
+}
+.library-roulette-reveal p {
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin: 8px 0 0;
+  color: #aeb8c4;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+@keyframes reveal-card {
+  from {
+    opacity: 0;
+    transform: translateX(90px) scale(0.72);
+  }
+}
+@keyframes reveal-copy {
+  from {
+    opacity: 0;
+    transform: translateX(26px);
+  }
+}
+
+/* Stacked on a narrow screen, where a row would squeeze both halves. */
+@media (max-width: 640px) {
+  .library-roulette-reveal {
+    gap: 16px;
+    padding: 14px 18px;
+  }
+  .library-roulette-reveal img,
+  .library-roulette-reveal .library-roulette-placeholder {
+    width: 92px;
+    height: 138px;
+  }
+  .library-roulette-reveal strong {
+    font-size: 17px;
+  }
+  .library-roulette-reveal p {
+    -webkit-line-clamp: 3;
+    font-size: 11.5px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .library-roulette-reveal figure,
+  .library-roulette-reveal > div {
+    animation-duration: 0.01ms;
+  }
 }

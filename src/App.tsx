@@ -2775,6 +2775,21 @@ function LibraryRoulette({
     winner: LibraryItem;
   } | null>(null);
   const [spinning, setSpinning] = useState(false);
+  /**
+   * The reveal, a beat after the strip stops.
+   *
+   * Not immediate on purpose: landing and being shown what you landed on are
+   * two moments, and running them together robs the first of its ending.
+   */
+  const [revealed, setRevealed] = useState(false);
+  useEffect(() => {
+    if (!roll || spinning) {
+      setRevealed(false);
+      return;
+    }
+    const timer = window.setTimeout(() => setRevealed(true), 260);
+    return () => window.clearTimeout(timer);
+  }, [roll, spinning]);
 
   const viewport = useRef<HTMLDivElement | null>(null);
   const track = useRef<HTMLDivElement | null>(null);
@@ -2916,7 +2931,7 @@ function LibraryRoulette({
       <section
         className={`library-roulette${spinning ? " spinning" : ""}${
           roll && !spinning ? " finished" : ""
-        }`}
+        }${revealed ? " revealed" : ""}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby="library-roulette-title"
@@ -3037,15 +3052,6 @@ function LibraryRoulette({
                       {item.name.slice(0, 1)}
                     </div>
                   )}
-                  {/* Only the winner carries one, and it is positioned out of
-                      flow so it cannot change the card pitch the ticks are
-                      measured against. */}
-                  {position === WINNER_AT && (
-                    <figcaption>
-                      <strong>{item.name}</strong>
-                      {item.description && <span>{item.description}</span>}
-                    </figcaption>
-                  )}
                 </figure>
               ))}
             </div>
@@ -3054,6 +3060,30 @@ function LibraryRoulette({
               {pool.length
                 ? `${pool.length} title${pool.length === 1 ? "" : "s"} in the running`
                 : "Nothing matches those filters"}
+            </div>
+          )}
+          {/* Laid over the reel rather than replacing it: the strip stays
+              behind, blurred, so the result is clearly the thing that was
+              just landed on and not a different screen. */}
+          {roll && !spinning && (
+            <div className="library-roulette-reveal">
+              <figure>
+                {roll.winner.poster ? (
+                  <img src={roll.winner.poster} alt="" />
+                ) : (
+                  <div className="library-roulette-placeholder">
+                    {roll.winner.name.slice(0, 1)}
+                  </div>
+                )}
+              </figure>
+              <div>
+                <small>
+                  {roll.winner.type === "series" ? "Series" : "Movie"}
+                  {roll.winner.releaseInfo ? ` · ${roll.winner.releaseInfo}` : ""}
+                </small>
+                <strong>{roll.winner.name}</strong>
+                {roll.winner.description && <p>{roll.winner.description}</p>}
+              </div>
             </div>
           )}
         </div>

@@ -8023,25 +8023,33 @@ body.is-locked {
   align-self: flex-end;
 }
 /* Below them once the row wraps, where "far right" stops meaning anything and
-   a full-width target is easier to hit. */
+   a full-width target is easier to hit. flex-basis rather than width: as a
+   flex item it was still being sized by its content and sat half a row wide. */
 @media (max-width: 720px) {
   .discover-random-button {
     margin-left: 0;
-    width: 100%;
+    flex: 1 0 100%;
     justify-content: center;
   }
 }
 /* In the picker the filters are the scope, so they take the row and the gear
-   keeps its place at the end. */
+   keeps its place at the end.
+ *
+ * They share the row evenly rather than each claiming a minimum width. The
+ * dialog is narrower than the page they also live on, so a fixed 132px fitted
+ * three across out there and pushed the third onto its own line in here. */
 .library-roulette-setup label {
   display: flex;
+  flex: 1 1 0;
+  min-width: 0;
   flex-direction: column;
   gap: 5px;
   font-size: 11px;
   color: #8b95a1;
 }
 .library-roulette-setup select {
-  min-width: 132px;
+  width: 100%;
+  min-width: 0;
   padding: 7px 10px;
   border-radius: 10px;
   border: 1px solid var(--panel-border);
@@ -8049,4 +8057,10 @@ body.is-locked {
   color: #e9eef2;
   font: inherit;
   font-size: 13px;
+  /* Long catalog names would otherwise stretch the control past its share. */
+  text-overflow: ellipsis;
+}
+.library-roulette-setup .library-roulette-settings-anchor {
+  flex: none;
+  align-self: flex-end;
 }

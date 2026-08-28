@@ -2616,6 +2616,14 @@ function LibraryView({
 
 /** How long a roll takes. Long enough to build, short enough to sit through. */
 const ROLL_MS = 4600;
+/**
+ * The same roll for someone who has asked for less motion.
+ *
+ * Shortened rather than skipped, and not shortened to nothing: this is the
+ * feature itself, not a transition decorating something else, so it keeps the
+ * build-up and the slowing — there is simply less of it.
+ */
+const REDUCED_ROLL_MS = 2600;
 /** Cards on the strip. The winner sits far enough in to earn the deceleration. */
 const REEL_LENGTH = 44;
 const WINNER_AT = 36;
@@ -2764,7 +2772,7 @@ function LibraryRoulette({
     // them unbidden — skipping to the answer turned a deliberate act into a
     // dialog that appeared to do nothing at all.
     const duration = window.matchMedia("(prefers-reduced-motion: reduce)").matches
-      ? 900
+      ? REDUCED_ROLL_MS
       : ROLL_MS;
 
     let frameId = 0;

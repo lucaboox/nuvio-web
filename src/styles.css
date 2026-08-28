@@ -7660,11 +7660,13 @@ body.is-locked {
   cursor: pointer;
   user-select: none;
 }
-.library-roulette-toggle input {
-  width: 17px;
-  height: 17px;
-  accent-color: var(--accent);
-  cursor: pointer;
+/* The app's own switch, not a checkbox: a 17px box is a poor target on a
+   phone, and this matches what Settings already uses. */
+.library-roulette-toggle .switch {
+  display: inline-flex;
+}
+.library-roulette-toggle:has(input:disabled) .switch i {
+  opacity: 0.5;
 }
 .library-roulette-toggle:has(input:disabled) {
   opacity: 0.5;

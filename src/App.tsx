@@ -2713,6 +2713,14 @@ function LibraryRoulette({
   const mutedRef = useRef(muted);
   mutedRef.current = muted;
 
+  // A finished reel shows the last pick, which stops being an answer to the
+  // question the moment the scope changes. Dropping back to the idle state
+  // shows the new pool size instead of a stale winner.
+  useEffect(() => {
+    setRoll(null);
+    setSpinning(false);
+  }, [scope, includeWatched]);
+
   const pool = useMemo(
     () =>
       items.filter(
@@ -2859,13 +2867,16 @@ function LibraryRoulette({
             ))}
           </div>
           <label className="library-roulette-toggle">
-            <input
-              type="checkbox"
-              checked={includeWatched}
-              disabled={spinning}
-              onChange={(event) => setIncludeWatched(event.target.checked)}
-            />
-            Include watched
+            <span>Include watched</span>
+            <span className="switch">
+              <input
+                type="checkbox"
+                checked={includeWatched}
+                disabled={spinning}
+                onChange={(event) => setIncludeWatched(event.target.checked)}
+              />
+              <i />
+            </span>
           </label>
           <button
             type="button"

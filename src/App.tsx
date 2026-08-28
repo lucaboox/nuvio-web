@@ -2024,7 +2024,7 @@ export function App() {
   if (route === "random")
     return (
       <>
-        <LibraryRoulette
+        <TitleRoulette
           fullPage
           items={library}
           index={watchIndex}
@@ -2651,7 +2651,7 @@ function LibraryView({
         </div>
       )}
       {randomOpen && (
-        <LibraryRoulette
+        <TitleRoulette
           items={items}
           index={index}
           addons={addons}
@@ -2716,7 +2716,7 @@ type RandomScope = "all" | "movie" | "series";
  * is a different question, and a show being half-watched is exactly the sort of
  * thing someone rolling for something to watch still wants offered.
  */
-function isSeen(item: LibraryItem, index: WatchIndex) {
+function isSeen(item: Meta, index: WatchIndex) {
   const key = watchKey(item.id);
   if (index.watched.has(key)) return true;
   const row = index.byContent.get(item.id);
@@ -2730,28 +2730,39 @@ function isSeen(item: LibraryItem, index: WatchIndex) {
  * roll you did not like is usually a roll with the wrong scope — reaching the
  * controls should not mean closing what you are looking at.
  */
-function LibraryRoulette({
+export function TitleRoulette({
   items,
   index,
   addons,
   initialScope,
+  showScope = true,
+  heading,
   fullPage,
   onClose,
   onOpen,
 }: {
-  items: LibraryItem[];
+  items: Meta[];
   index: WatchIndex;
-  /** Used to fetch a description the library row was stored without. */
+  /** Used to fetch a description the row was stored without. */
   addons: InstalledAddon[];
-  initialScope: RandomScope;
-  /** Standing on its own at /random rather than sitting over the library. */
+  initialScope?: RandomScope;
+  /**
+   * Whether the All/Movies/Series control belongs here. In the library it does;
+   * on Discover the catalog and genre have already decided what the pool is,
+   * and offering a second filter over the top would be asking the same question
+   * twice in two different places.
+   */
+  showScope?: boolean;
+  /** What is being rolled, where it is not the whole library. */
+  heading?: string;
+  /** Standing on its own at /random rather than sitting over a page. */
   fullPage?: boolean;
   onClose(): void;
-  onOpen(item: LibraryItem): void;
+  onOpen(item: Meta): void;
 }) {
   // Opened from a tab, so it starts on that tab's scope — the roll you meant
   // is almost always the one for the shelf you were looking at.
-  const [scope, setScope] = useState<RandomScope>(initialScope);
+  const [scope, setScope] = useState<RandomScope>(initialScope ?? "all");
   // Remembered like the rest: someone who rolls for something new wants that
   // every time, not once per visit.
   const [includeWatched, setIncludeWatched] = useState(
@@ -2822,10 +2833,10 @@ function LibraryRoulette({
     () =>
       items.filter(
         (item) =>
-          (scope === "all" || item.type === scope) &&
+          (!showScope || scope === "all" || item.type === scope) &&
           (includeWatched || !isSeen(item, index)),
       ),
-    [items, index, scope, includeWatched],
+    [items, index, scope, includeWatched, showScope],
   );
 
   const startRoll = useCallback(() => {
@@ -2973,7 +2984,7 @@ function LibraryRoulette({
         <header>
           <div>
             <small>RANDOM PICK</small>
-            <h2 id="library-roulette-title">What should I watch?</h2>
+            <h2 id="library-roulette-title">{heading ?? "What should I watch?"}</h2>
           </div>
           <button
             className="circle-button"
@@ -2990,6 +3001,7 @@ function LibraryRoulette({
             after a pick you did not like, and it should not cost a round trip
             through closing the dialog. */}
         <div className="library-roulette-setup">
+          {showScope && (
           <div className="segmented">
             {scopes.map((option) => (
               <button
@@ -3004,6 +3016,7 @@ function LibraryRoulette({
               </button>
             ))}
           </div>
+          )}
           {/* Anchored to the gear rather than laid out in the row: these are
               set once and left, and a panel that pushes the reel down every
               time it opens makes the dialog jump for no reason. */}

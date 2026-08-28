@@ -8016,3 +8016,8 @@ body.is-locked {
    arrival to nothing left the poster snapping into place against a background
    still settling — which read as broken rather than considered. This motion
    was asked for twice over: once by rolling, once by setting how long. */
+
+/* Sits under the Discover filters, since it rolls whatever they have chosen. */
+.discover-random-button {
+  margin: 4px 0 18px;
+}

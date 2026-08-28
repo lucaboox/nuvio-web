@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Dices } from "lucide-react";
+import { TitleRoulette } from "../App";
 import {
   discoverCatalogs,
   loadDiscoverCatalog,
@@ -57,6 +59,7 @@ export function Discover({
   const [loadingMore, setLoadingMore] = useState(false);
   const [exhausted, setExhausted] = useState(false);
   const [error, setError] = useState("");
+  const [rolling, setRolling] = useState(false);
   const sentinel = useRef<HTMLDivElement | null>(null);
 
   const types = useMemo(
@@ -164,6 +167,39 @@ export function Discover({
             : `${results.length} titles across ${resultGroups.length} searchable ${resultGroups.length === 1 ? "catalog" : "catalogs"}`
           : `${catalog?.addonName ?? "No addon"} · browse installed catalogs`}
       </p>
+
+      {/* Rolls whatever the catalog and genre above have narrowed things to,
+          so the filters are the scope and the picker does not ask again. A
+          handful of titles makes the reel visibly repeat itself, which is
+          worse than not offering it. */}
+      {!searching && items.length >= 8 && (
+        <button
+          type="button"
+          className="library-random-button discover-random-button"
+          onClick={() => setRolling(true)}
+        >
+          <Dices aria-hidden="true" />
+          Random pick
+        </button>
+      )}
+      {rolling && (
+        <TitleRoulette
+          items={items}
+          index={index}
+          addons={addons}
+          showScope={false}
+          heading={
+            effectiveGenre
+              ? `Something from ${effectiveGenre}`
+              : `Something from ${catalog?.catalogName ?? "this catalog"}`
+          }
+          onClose={() => setRolling(false)}
+          onOpen={(item) => {
+            setRolling(false);
+            onOpen(item);
+          }}
+        />
+      )}
 
       {!searching && (
         <div className="discover-filters">

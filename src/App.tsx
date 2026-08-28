@@ -2772,6 +2772,7 @@ function LibraryRoulette({
   const viewport = useRef<HTMLDivElement | null>(null);
   const track = useRef<HTMLDivElement | null>(null);
   const audio = useRef<AudioContext | null>(null);
+  const settingsAnchor = useRef<HTMLDivElement | null>(null);
   // Read by the animation loop through a ref: as a dependency it would restart
   // the roll from the beginning every time the sound was toggled.
   const mutedRef = useRef(muted);
@@ -2863,13 +2864,28 @@ function LibraryRoulette({
     return () => window.cancelAnimationFrame(frameId);
   }, [roll]);
 
+  // A menu closes when you click away from it; without this the only way out
+  // is the gear itself, which is not where anyone reaches next.
+  useEffect(() => {
+    if (!settingsOpen) return;
+    const away = (event: MouseEvent) => {
+      if (!settingsAnchor.current?.contains(event.target as Node))
+        setSettingsOpen(false);
+    };
+    window.addEventListener("mousedown", away);
+    return () => window.removeEventListener("mousedown", away);
+  }, [settingsOpen]);
+
   useEffect(() => {
     const close = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
+      // Escape dismisses the menu before the dialog under it.
+      if (event.key !== "Escape") return;
+      if (settingsOpen) setSettingsOpen(false);
+      else onClose();
     };
     window.addEventListener("keydown", close);
     return () => window.removeEventListener("keydown", close);
-  }, [onClose]);
+  }, [onClose, settingsOpen]);
 
   useEffect(() => () => void audio.current?.close(), []);
 
@@ -2942,49 +2958,54 @@ function LibraryRoulette({
               <i />
             </span>
           </label>
-          <button
-            type="button"
-            className="library-roulette-mute"
-            aria-expanded={settingsOpen}
-            aria-label="Roll settings"
-            title="Roll settings"
-            onClick={() => setSettingsOpen((value) => !value)}
-          >
-            <Settings />
-          </button>
-        </div>
-        {settingsOpen && (
-          <div className="library-roulette-settings">
-            <label>
-              <span>
-                Roll length
-                <small>{(rollMs / 1000).toFixed(2)}s</small>
-              </span>
-              <input
-                type="range"
-                min={ROLL_MS_MIN}
-                max={ROLL_MS_MAX}
-                step={250}
-                value={rollMs}
-                onChange={(event) => setRollMs(Number(event.target.value))}
-              />
-            </label>
-            <label className="library-roulette-toggle">
-              <span>
-                Tick sound
-                {muted ? <VolumeX /> : <Volume2 />}
-              </span>
-              <span className="switch">
-                <input
-                  type="checkbox"
-                  checked={!muted}
-                  onChange={(event) => setMuted(!event.target.checked)}
-                />
-                <i />
-              </span>
-            </label>
+          {/* Anchored to the gear rather than laid out in the row: these are
+              set once and left, and a panel that pushes the reel down every
+              time it opens makes the dialog jump for no reason. */}
+          <div className="library-roulette-settings-anchor" ref={settingsAnchor}>
+            <button
+              type="button"
+              className="library-roulette-mute"
+              aria-expanded={settingsOpen}
+              aria-label="Roll settings"
+              title="Roll settings"
+              onClick={() => setSettingsOpen((value) => !value)}
+            >
+              <Settings />
+            </button>
+            {settingsOpen && (
+              <div className="library-roulette-settings" role="menu">
+                <label>
+                  <span>
+                    Roll length
+                    <small>{(rollMs / 1000).toFixed(2)}s</small>
+                  </span>
+                  <input
+                    type="range"
+                    min={ROLL_MS_MIN}
+                    max={ROLL_MS_MAX}
+                    step={250}
+                    value={rollMs}
+                    onChange={(event) => setRollMs(Number(event.target.value))}
+                  />
+                </label>
+                <label className="library-roulette-toggle">
+                  <span>
+                    Tick sound
+                    {muted ? <VolumeX /> : <Volume2 />}
+                  </span>
+                  <span className="switch">
+                    <input
+                      type="checkbox"
+                      checked={!muted}
+                      onChange={(event) => setMuted(!event.target.checked)}
+                    />
+                    <i />
+                      </span>
+                    </label>
+              </div>
+            )}
           </div>
-        )}
+        </div>
 
         <div className="library-roulette-frame" ref={viewport}>
           <i className="library-roulette-marker" aria-hidden="true" />

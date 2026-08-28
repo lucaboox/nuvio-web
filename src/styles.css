@@ -7674,7 +7674,6 @@ body.is-locked {
 }
 /* Pushed to the far end: it is a preference, not part of the choice. */
 .library-roulette-mute {
-  margin-left: auto;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -7775,15 +7774,39 @@ body.is-locked {
  * then left alone, and they should not compete with the scope for attention
  * every time the picker opens.
  */
+/* Anchored under the gear and floating over the reel, so opening it moves
+   nothing. The dialog clips at its own rounded edge, which is why the menu is
+   aligned to the right rather than centred on the button. */
+.library-roulette-settings-anchor {
+  position: relative;
+  margin-left: auto;
+}
 .library-roulette-settings {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 10px);
+  z-index: 6;
+  width: 288px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  margin: 0 22px 16px;
-  padding: 14px 16px;
-  border: 1px solid var(--panel-border);
-  border-radius: 14px;
-  background: var(--panel-soft);
+  gap: 16px;
+  padding: 16px;
+  border: 1px solid #333b45;
+  border-radius: 16px;
+  background: #12161b;
+  box-shadow: 0 22px 60px rgba(0, 0, 0, 0.7);
+  animation: roulette-menu-in 0.14s ease-out;
+}
+@keyframes roulette-menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .library-roulette-settings {
+    animation: none;
+  }
 }
 .library-roulette-settings > label {
   display: flex;

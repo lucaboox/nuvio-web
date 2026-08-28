@@ -8017,7 +8017,36 @@ body.is-locked {
    still settling — which read as broken rather than considered. This motion
    was asked for twice over: once by rolling, once by setting how long. */
 
-/* Sits under the Discover filters, since it rolls whatever they have chosen. */
+/* Far right of the filters it rolls from, matching where Library puts it. */
 .discover-random-button {
-  margin: 4px 0 18px;
+  margin-left: auto;
+  align-self: flex-end;
+}
+/* Below them once the row wraps, where "far right" stops meaning anything and
+   a full-width target is easier to hit. */
+@media (max-width: 720px) {
+  .discover-random-button {
+    margin-left: 0;
+    width: 100%;
+    justify-content: center;
+  }
+}
+/* In the picker the filters are the scope, so they take the row and the gear
+   keeps its place at the end. */
+.library-roulette-setup label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 11px;
+  color: #8b95a1;
+}
+.library-roulette-setup select {
+  min-width: 132px;
+  padding: 7px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--panel-border);
+  background: var(--panel-soft);
+  color: #e9eef2;
+  font: inherit;
+  font-size: 13px;
 }

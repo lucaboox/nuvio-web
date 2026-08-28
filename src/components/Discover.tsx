@@ -156,6 +156,67 @@ export function Discover({
     resetKey: searching ? query : `${catalog?.key}:${effectiveGenre ?? ""}`,
   });
 
+  // Defined once and rendered twice: on the page, and inside the picker,
+  // where changing the catalog you are rolling from should not mean closing
+  // it and starting again.
+  const filters = (
+    <>
+            <label>
+              <span>Type</span>
+              <select
+                value={activeType ?? ""}
+                onChange={(event) => {
+                  setType(event.target.value);
+                  setCatalogKey(null);
+                  setGenre(ALL_GENRES);
+                }}
+              >
+                {types.map((option) => (
+                  <option key={option} value={option}>
+                    {typeLabel(option)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <span>Catalog</span>
+              <select
+                value={catalog?.key ?? ""}
+                onChange={(event) => {
+                  setCatalogKey(event.target.value);
+                  setGenre(ALL_GENRES);
+                }}
+              >
+                {typeCatalogs.map((option) => (
+                  <option key={option.key} value={option.key}>
+                    {option.catalogName}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <span>Genre</span>
+              <select
+                value={effectiveGenre ?? ALL_GENRES}
+                disabled={!catalog || catalog.genreOptions.length === 0}
+                onChange={(event) => setGenre(event.target.value)}
+              >
+                {catalog && !catalog.genreRequired && (
+                  <option value={ALL_GENRES}>All genres</option>
+                )}
+                {catalog?.genreOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+                {catalog?.genreOptions.length === 0 && (
+                  <option value={ALL_GENRES}>Not supported</option>
+                )}
+              </select>
+            </label>
+    </>
+  );
+
   return (
     <section className="grid-page">
       <span className="eyebrow">NUVIO WEB</span>
@@ -168,26 +229,13 @@ export function Discover({
           : `${catalog?.addonName ?? "No addon"} · browse installed catalogs`}
       </p>
 
-      {/* Rolls whatever the catalog and genre above have narrowed things to,
-          so the filters are the scope and the picker does not ask again. A
-          handful of titles makes the reel visibly repeat itself, which is
-          worse than not offering it. */}
-      {!searching && items.length >= 8 && (
-        <button
-          type="button"
-          className="library-random-button discover-random-button"
-          onClick={() => setRolling(true)}
-        >
-          <Dices aria-hidden="true" />
-          Random pick
-        </button>
-      )}
       {rolling && (
         <TitleRoulette
           items={items}
           index={index}
           addons={addons}
           showScope={false}
+          controls={filters}
           heading={
             effectiveGenre
               ? `Something from ${effectiveGenre}`
@@ -203,59 +251,20 @@ export function Discover({
 
       {!searching && (
         <div className="discover-filters">
-          <label>
-            <span>Type</span>
-            <select
-              value={activeType ?? ""}
-              onChange={(event) => {
-                setType(event.target.value);
-                setCatalogKey(null);
-                setGenre(ALL_GENRES);
-              }}
+          {filters}
+          {/* Rolls whatever the controls beside it have narrowed things to. A
+              handful of titles makes the reel repeat itself visibly, which is
+              worse than not offering it. */}
+          {items.length >= 8 && (
+            <button
+              type="button"
+              className="library-random-button discover-random-button"
+              onClick={() => setRolling(true)}
             >
-              {types.map((option) => (
-                <option key={option} value={option}>
-                  {typeLabel(option)}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            <span>Catalog</span>
-            <select
-              value={catalog?.key ?? ""}
-              onChange={(event) => {
-                setCatalogKey(event.target.value);
-                setGenre(ALL_GENRES);
-              }}
-            >
-              {typeCatalogs.map((option) => (
-                <option key={option.key} value={option.key}>
-                  {option.catalogName}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            <span>Genre</span>
-            <select
-              value={effectiveGenre ?? ALL_GENRES}
-              disabled={!catalog || catalog.genreOptions.length === 0}
-              onChange={(event) => setGenre(event.target.value)}
-            >
-              {catalog && !catalog.genreRequired && (
-                <option value={ALL_GENRES}>All genres</option>
-              )}
-              {catalog?.genreOptions.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-              {catalog?.genreOptions.length === 0 && (
-                <option value={ALL_GENRES}>Not supported</option>
-              )}
-            </select>
-          </label>
+              <Dices aria-hidden="true" />
+              Random pick
+            </button>
+          )}
         </div>
       )}
 

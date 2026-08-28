@@ -37,6 +37,7 @@ import {
 } from "lucide-react";
 import {
   type CSSProperties,
+  type ReactNode,
   useCallback,
   useDeferredValue,
   useEffect,
@@ -2737,6 +2738,7 @@ export function TitleRoulette({
   initialScope,
   showScope = true,
   heading,
+  controls,
   fullPage,
   onClose,
   onOpen,
@@ -2755,6 +2757,8 @@ export function TitleRoulette({
   showScope?: boolean;
   /** What is being rolled, where it is not the whole library. */
   heading?: string;
+  /** Shown in place of the scope control: the filters that decide the pool. */
+  controls?: ReactNode;
   /** Standing on its own at /random rather than sitting over a page. */
   fullPage?: boolean;
   onClose(): void;
@@ -2827,7 +2831,7 @@ export function TitleRoulette({
   useEffect(() => {
     setRoll(null);
     setSpinning(false);
-  }, [scope, includeWatched]);
+  }, [scope, includeWatched, items]);
 
   const pool = useMemo(
     () =>
@@ -3001,6 +3005,7 @@ export function TitleRoulette({
             after a pick you did not like, and it should not cost a round trip
             through closing the dialog. */}
         <div className="library-roulette-setup">
+          {controls}
           {showScope && (
           <div className="segmented">
             {scopes.map((option) => (

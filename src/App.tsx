@@ -51,7 +51,6 @@ import { ContextMenu } from "./components/ContextMenu";
 import { CalendarView } from "./components/Calendar";
 import { Details } from "./components/Details";
 import { Discover } from "./components/Discover";
-import { MemeCases } from "./components/MemeCases";
 import { Downloads } from "./components/Downloads";
 import { ExternalWatchPrompt } from "./components/ExternalWatchPrompt";
 import {
@@ -2023,25 +2022,6 @@ export function App() {
   // Reached by address rather than by navigation, so it renders instead of the
   // shell rather than on top of it. Signing in still comes first: it is your
   // library being drawn from, so there is nothing to pick without one.
-  // The same picker with a shelf in front of it. Its own address so the plain
-  // one stays exactly as it was.
-  if (route === "randommeme")
-    return (
-      <>
-        <MemeCases
-          library={library}
-          addons={addons}
-          index={watchIndex}
-          onExit={() => go("")}
-          onOpen={(item) => {
-            go("");
-            openDetails(item);
-          }}
-        />
-        {updatePrompt}
-      </>
-    );
-
   if (route === "random")
     return (
       <>

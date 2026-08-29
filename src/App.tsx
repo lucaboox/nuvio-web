@@ -1260,7 +1260,10 @@ export function App() {
 
   const saveProviderCredential = useCallback(
     async (
-      provider: "tmdb" | "mdblist" | "animeskip" | "introdb",
+      // The account's own row name. Debrid rows are namespaced — "debrid:torbox"
+      // — so an exhaustive union here would have to be kept in step with a list
+      // the shell owns.
+      provider: string,
       value: string,
     ) => {
       if (!profile) return;
@@ -4004,10 +4007,7 @@ function SettingsPage({
   onRawSetting(feature: string, key: string, value: unknown): void;
   providerCredentials: ProviderCredentialRow[];
   credentialsReady: boolean;
-  onProviderCredential(
-    provider: "tmdb" | "mdblist" | "animeskip" | "introdb",
-    value: string,
-  ): Promise<void>;
+  onProviderCredential(provider: string, value: string): Promise<void>;
   externalPlayer: ExternalPlayerMode;
   onExternalPlayer(mode: ExternalPlayerMode): void;
   onSignOut(): void;
@@ -4427,10 +4427,31 @@ function SettingsPage({
         ))}
         </div>
         <div hidden={integrationPage !== "connected"}>
-          {/* Stated plainly rather than offered and broken. Torbox sends no
+          {/* Real controls where the shell can reach these services, and an
+              explanation where it cannot. The keys are the account's own and
+              sync either way; what differs is whether anything can be done
+              with them from here. */}
+          {platform.debrid?.services.map((service) => (
+            <IntegrationCredentialField
+              key={service.id}
+              label={`${service.label} API key`}
+              description={`Used to resolve cached links through ${service.label}.`}
+              value={providerCredential(
+                providerCredentials,
+                service.credentialProvider,
+                service.credentialField,
+              )}
+              ready={credentialsReady}
+              onSave={(value) =>
+                onProviderCredential(service.credentialProvider, value)
+              }
+            />
+          ))}
+          {!platform.debrid && (
+          /* Stated plainly rather than offered and broken. Torbox sends no
               cross-origin headers at all, so a browser cannot reach its API —
               not the account linking, not the library, not link resolving.
-              Nothing here can be enabled by trying harder. */}
+              Nothing here can be enabled by trying harder. */
           <div className="integration-unavailable">
             <p>
               Debrid accounts cannot be connected from a browser. Torbox does
@@ -4443,6 +4464,7 @@ function SettingsPage({
               already resolve links for playback on the web.
             </p>
           </div>
+          )}
         </div>
         </div>
         </div>

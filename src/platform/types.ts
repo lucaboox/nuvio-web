@@ -333,33 +333,30 @@ export type DownloadsApi = {
 
 export type DebridProvider = "torbox" | "premiumize" | "realdebrid";
 
-export type DebridAccount = {
-  provider: DebridProvider;
-  /** Whether a credential is stored and the service accepted it. */
-  connected: boolean;
-  /** The account as the service names it, where it says. */
-  username?: string;
+export type DebridService = {
+  id: DebridProvider;
+  label: string;
+  /** The synced credential row and field the key is kept in. */
+  credentialProvider: string;
+  credentialField: string;
 };
 
 /**
- * Debrid accounts.
+ * Debrid accounts, where the shell can reach them.
  *
- * Desktop only, and permanently so rather than pending work. Torbox sends no
- * cross-origin headers at all, so a browser cannot reach its API — not the
- * account linking, not the library, not link resolving. No amount of effort in
- * the web client changes that, which is why the capability is absent there and
- * the Integrations page says why in plain words.
+ * The capability is about reachability, not storage. Keys live in the account's
+ * synced provider credentials, which both shells already read and write — what
+ * a browser cannot do is *use* them: Torbox sends no cross-origin headers, so a
+ * page cannot link an account, browse a cloud library or resolve a link no
+ * matter what key it holds.
  *
- * Resolving a cached link into a playable URL is not here yet, because neither
- * shell does it: the desktop's source list still labels those entries
- * "resolver not ported". When one of them can, it belongs on this contract.
+ * So this is absent on the web and its absence is the whole message: the
+ * Integrations page says why instead of offering fields that could be filled in
+ * and would still do nothing.
  */
 export type DebridApi = {
-  /** Services this shell can talk to, in the order they should be offered. */
-  readonly providers: readonly DebridProvider[];
-  accounts(): Promise<DebridAccount[]>;
-  connect(provider: DebridProvider, apiKey: string): Promise<void>;
-  disconnect(provider: DebridProvider): Promise<void>;
+  /** Services this shell can reach, in the order they should be offered. */
+  readonly services: readonly DebridService[];
 };
 
 /**

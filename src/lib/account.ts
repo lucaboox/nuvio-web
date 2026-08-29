@@ -553,9 +553,14 @@ export async function loadProviderCredentials(
  */
 export async function updateProviderCredential(
   profileIndex: number,
-  provider: "tmdb" | "mdblist" | "animeskip" | "introdb",
+  // The account's own row name, which for Debrid is namespaced —
+  // "debrid:torbox". A union here would have to be kept in step with a list of
+  // providers the other clients own.
+  provider: string,
   value: string,
 ): Promise<ProviderCredentialRow[]> {
+  // Every provider Nuvio seeds keeps its key under api_key; AnimeSkip is the
+  // one exception, and it is a client id rather than a key.
   const field = provider === "animeskip" ? "client_id" : "api_key";
   const current = await loadProviderCredentials(profileIndex);
   const next = withProviderCredential(current, provider, field, value);

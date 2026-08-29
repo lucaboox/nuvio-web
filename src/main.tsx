@@ -2,6 +2,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { registerSW } from "virtual:pwa-register";
 import { App } from "./App";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import { setRegistration, setUpdateHandler } from "./lib/appUpdate";
 import { lockZoom } from "./lib/lockZoom";
 import "./styles.css";
@@ -46,7 +47,9 @@ lockZoom();
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <App />
+    <ErrorBoundary>
+      <App />
+    </ErrorBoundary>
   </StrictMode>,
 );
 

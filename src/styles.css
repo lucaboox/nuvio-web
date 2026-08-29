@@ -8067,3 +8067,51 @@ body.is-locked {
   flex: none;
   align-self: flex-end;
 }
+
+/* A render error, shown rather than left as a black page. */
+.crash-screen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100dvh;
+  padding: 24px;
+  background: var(--app-bg);
+}
+.crash-screen > div {
+  width: min(620px, 100%);
+  padding: 26px;
+  border: 1px solid #3a2a2e;
+  border-radius: 20px;
+  background: #120f11;
+}
+.crash-screen small {
+  color: #ef7a86;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+}
+.crash-screen h1 {
+  margin: 6px 0 10px;
+  font-size: 22px;
+}
+.crash-screen p {
+  margin: 0 0 14px;
+  color: #d7dee6;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.crash-screen pre {
+  max-height: 190px;
+  margin: 0 0 16px;
+  padding: 12px;
+  overflow: auto;
+  border-radius: 12px;
+  background: #0a0809;
+  color: #93a0ad;
+  font-size: 11px;
+  line-height: 1.5;
+}
+.crash-actions {
+  display: flex;
+  gap: 10px;
+}

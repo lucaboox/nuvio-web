@@ -8067,3 +8067,164 @@ body.is-locked {
   flex: none;
   align-self: flex-end;
 }
+
+/* --- Unboxing -------------------------------------------------------------
+ * A shelf of cases. Each one wears a hue derived from its own name, so the
+ * grid reads as a rack of different crates rather than a list of cards, and a
+ * case looks the same every time you come back to it.
+ */
+.crates-page {
+  min-height: 100dvh;
+  padding: 28px 24px 64px;
+  background:
+    radial-gradient(1100px 520px at 50% -10%, #17202b, transparent 70%),
+    var(--app-bg);
+}
+.crates-head {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  max-width: 1240px;
+  margin: 0 auto 28px;
+}
+.crates-head small {
+  display: block;
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+}
+.crates-head h1 {
+  margin: 2px 0 2px;
+  font-size: 30px;
+}
+.crates-head p {
+  margin: 0;
+  color: #8b95a1;
+  font-size: 13px;
+}
+.crate-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 18px;
+  max-width: 1240px;
+  margin: 0 auto;
+}
+
+.crate {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid hsl(var(--crate-hue) 30% 26%);
+  border-radius: 18px;
+  background:
+    linear-gradient(160deg, hsl(var(--crate-hue) 42% 22%), #0b0e12 62%);
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+}
+.crate:hover:not(:disabled),
+.crate:focus-visible {
+  transform: translateY(-4px);
+  border-color: hsl(var(--crate-hue) 62% 52%);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.6);
+}
+.crate:disabled {
+  opacity: 0.42;
+  cursor: default;
+}
+/* The band across the top, which is what makes it read as a lid. */
+.crate-lid {
+  height: 7px;
+  background: linear-gradient(
+    90deg,
+    hsl(var(--crate-hue) 70% 55%),
+    hsl(calc(var(--crate-hue) + 40) 70% 45%)
+  );
+}
+.crate-art {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px;
+  height: 168px;
+  padding: 12px;
+  place-items: center;
+  color: hsl(var(--crate-hue) 40% 60%);
+}
+/* Fanned rather than tiled: four posters at angles look like contents, four
+   squares in a grid look like a contact sheet. */
+.crate-art img,
+.crate-art i {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 6px;
+  background: #10151b;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.55);
+}
+.crate-art img:nth-child(1) {
+  transform: rotate(-7deg) translateY(4px);
+}
+.crate-art img:nth-child(2) {
+  transform: rotate(5deg) translateY(-4px);
+}
+.crate-art img:nth-child(3) {
+  transform: rotate(4deg) translateY(2px);
+}
+.crate-art img:nth-child(4) {
+  transform: rotate(-5deg);
+}
+.crate-art > svg {
+  grid-column: 1 / -1;
+  width: 34px;
+  height: 34px;
+  opacity: 0.6;
+}
+.crate-spinner {
+  animation: crate-spin 1s linear infinite;
+}
+@keyframes crate-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.crate-name {
+  display: block;
+  padding: 12px 14px 14px;
+  border-top: 1px solid hsl(var(--crate-hue) 24% 20%);
+  background: #0a0d11;
+}
+.crate-name strong {
+  display: block;
+  font-size: 14px;
+  line-height: 1.25;
+}
+.crate-name small {
+  display: block;
+  margin-top: 3px;
+  color: #7c8794;
+  font-size: 11.5px;
+}
+
+@media (max-width: 560px) {
+  .crates-page {
+    padding: 20px 14px 48px;
+  }
+  .crate-grid {
+    grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+    gap: 12px;
+  }
+  .crate-art {
+    height: 128px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .crate {
+    transition: none;
+  }
+}

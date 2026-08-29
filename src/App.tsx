@@ -4120,12 +4120,7 @@ function SettingsPage({
   );
   return (
     <section className="settings-page" data-settings-category={category}>
-      <span className="eyebrow">WEB CLIENT</span>
       <h1>Settings</h1>
-      <p>
-        This preview keeps media traffic off the Nuvio host and uses the browser
-        whenever possible.
-      </p>
       <div className="settings-desktop-layout">
       <nav className="settings-category-nav" aria-label="Settings categories">
         {SETTINGS_CATEGORIES.map(({ key, label, icon: Icon }) => (

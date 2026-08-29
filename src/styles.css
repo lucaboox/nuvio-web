@@ -431,7 +431,10 @@ a {
 .grid-page,
 .settings-page {
   max-width: 1500px;
-  margin: 30px auto;
+  /* No bottom margin: the page scrolls inside its own pane, and a margin there
+     stopped the last card short of the bottom with a band of background under
+     it that looked like the end of the list. */
+  margin: 30px auto 0;
 }
 .grid-page h1,
 .settings-page h1 {

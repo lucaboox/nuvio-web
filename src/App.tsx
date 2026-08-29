@@ -3053,11 +3053,13 @@ export function TitleRoulette({
           <button
             className="circle-button"
             type="button"
-            aria-label={fullPage ? "Go to library" : "Close"}
-            title={fullPage ? "Go to library" : "Close"}
+            aria-label={fullPage ? "Go home" : "Close"}
+            title={fullPage ? "Go home" : "Close"}
             onClick={onClose}
           >
-            {fullPage ? <Library /> : <X />}
+            {/* On its own page this leaves for home, not the library — the
+                label said otherwise and the icon agreed with the label. */}
+            {fullPage ? <Home /> : <X />}
           </button>
         </header>
 

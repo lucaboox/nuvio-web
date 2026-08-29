@@ -2883,6 +2883,8 @@ export function TitleRoulette({
   const track = useRef<HTMLDivElement | null>(null);
   const audio = useRef<AudioContext | null>(null);
   const settingsAnchor = useRef<HTMLDivElement | null>(null);
+  /** Whether this context has been woken by playing inside a gesture. */
+  const unlocked = useRef(false);
   // Read by the animation loop through a ref: as a dependency it would restart
   // the roll from the beginning every time the sound was toggled.
   const mutedRef = useRef(muted);
@@ -2922,6 +2924,18 @@ export function TitleRoulette({
       if (Ctor) audio.current = new Ctor();
     }
     void audio.current?.resume?.();
+    // iOS needs more than a context made during a gesture: it stays suspended
+    // until something is actually played inside one. A single silent sample is
+    // the accepted way to unlock it, and it has to happen synchronously here —
+    // by the time the reel is moving, the gesture is over and every later tick
+    // is scheduled into a context that never woke up.
+    if (audio.current && !unlocked.current) {
+      unlocked.current = true;
+      const silence = audio.current.createBufferSource();
+      silence.buffer = audio.current.createBuffer(1, 1, 22050);
+      silence.connect(audio.current.destination);
+      silence.start(0);
+    }
     setRoll({ id: Date.now(), reel, winner });
     setSpinning(true);
   }, [pool, muted]);

@@ -2707,6 +2707,61 @@ function tick(context: AudioContext) {
   oscillator.stop(now + 0.05);
 }
 
+/**
+ * The sound of landing on something.
+ *
+ * A struck chord rather than a single tone: three notes a beat apart so it
+ * arrives rather than beeps, over a low body that drops away quickly. The
+ * spread is what makes it feel like a reward — struck together it is a doorbell,
+ * struck in sequence it is an announcement.
+ *
+ * Synthesised for the same reason the tick is: no file to ship, nothing to
+ * fetch, and it works offline in a shell that cannot reach an audio host.
+ */
+function fanfare(context: AudioContext) {
+  const now = context.currentTime;
+  const master = context.createGain();
+  master.gain.setValueAtTime(0.9, now);
+  master.connect(context.destination);
+
+  // C, G, C — an open fifth and its octave, which reads as bright and settled
+  // rather than happy or sad. A major third would sound like a jingle.
+  const notes: Array<[number, number, number]> = [
+    [523.25, 0, 0.16],
+    [783.99, 0.055, 0.13],
+    [1046.5, 0.11, 0.1],
+  ];
+  for (const [frequency, delay, level] of notes) {
+    const at = now + delay;
+    const oscillator = context.createOscillator();
+    const gain = context.createGain();
+    oscillator.type = "triangle";
+    oscillator.frequency.setValueAtTime(frequency, at);
+    gain.gain.setValueAtTime(0.0001, at);
+    gain.gain.exponentialRampToValueAtTime(level, at + 0.012);
+    // Long tail: the ring is most of the character, and cutting it short makes
+    // the whole thing sound cheap.
+    gain.gain.exponentialRampToValueAtTime(0.0001, at + 1.05);
+    oscillator.connect(gain).connect(master);
+    oscillator.start(at);
+    oscillator.stop(at + 1.1);
+  }
+
+  // The thump underneath, pitched down as it fades so it lands rather than
+  // hums. Without it the chord tinkles and nothing feels like it arrived.
+  const body = context.createOscillator();
+  const bodyGain = context.createGain();
+  body.type = "sine";
+  body.frequency.setValueAtTime(146, now);
+  body.frequency.exponentialRampToValueAtTime(92, now + 0.3);
+  bodyGain.gain.setValueAtTime(0.0001, now);
+  bodyGain.gain.exponentialRampToValueAtTime(0.22, now + 0.015);
+  bodyGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.5);
+  body.connect(bodyGain).connect(master);
+  body.start(now);
+  body.stop(now + 0.55);
+}
+
 type RandomScope = "all" | "movie" | "series";
 
 /**
@@ -2812,7 +2867,12 @@ export function TitleRoulette({
       setRevealed(false);
       return;
     }
-    const timer = window.setTimeout(() => setRevealed(true), 320);
+    const timer = window.setTimeout(() => {
+      setRevealed(true);
+      // With the card, not with the landing: the sound is for what you got,
+      // and the ticking has only just stopped when the strip settles.
+      if (audio.current && !mutedRef.current) fanfare(audio.current);
+    }, 320);
     return () => window.clearTimeout(timer);
   }, [roll, spinning]);
 
@@ -3055,7 +3115,7 @@ export function TitleRoulette({
                 </label>
                 <label className="library-roulette-toggle">
                   <span>
-                    Tick sound
+                    Sound
                     {muted ? <VolumeX /> : <Volume2 />}
                   </span>
                   <span className="switch">

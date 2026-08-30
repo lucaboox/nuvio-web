@@ -4,6 +4,7 @@ import {
   readMetaScreenSettings,
   type MetaScreenSettings,
 } from "./metaScreenSettings";
+import { DEFAULT_REUSE_CACHE_HOURS } from "./streamLinkCache";
 import {
   blobRawValue,
   blobStringPayload,
@@ -67,6 +68,8 @@ export type WebPlayerSettings = {
   autoPlayRegex: string;
   autoPlayTimeoutSeconds: number;
   skipIntroEnabled: boolean;
+  reuseLastStream: boolean;
+  reuseLastStreamHours: number;
 };
 
 export type StreamBadgeFilter = {
@@ -323,6 +326,17 @@ function playerSettings(blob: SettingsBlob | null): WebPlayerSettings {
       30,
     ),
     skipIntroEnabled: booleanValue("skip_intro_enabled", true),
+    // Off by default, matching the desktop client: skipping the stream picker
+    // is a shortcut you opt into, not something that should start happening.
+    reuseLastStream: booleanValue("stream_reuse_last_link_enabled", false),
+    // The same 1–720 hour range the shell validates against, so a value set on
+    // one client is never one the other has to reject.
+    reuseLastStreamHours: numberIn(
+      intValue("stream_reuse_last_link_cache_hours", DEFAULT_REUSE_CACHE_HOURS),
+      DEFAULT_REUSE_CACHE_HOURS,
+      1,
+      720,
+    ),
   };
 }
 

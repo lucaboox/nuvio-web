@@ -103,6 +103,8 @@ a {
   border: 1px solid #292f36;
   border-radius: 16px;
   padding: 0 14px;
+  /* Anchors the recent-searches panel below the field. */
+  position: relative;
 }
 .topbar input {
   flex: 1;
@@ -118,6 +120,80 @@ a {
   border-radius: 9px;
   padding: 6px 9px;
   font-size: 11px;
+}
+/* Recent searches, shown while the field is focused and empty. */
+.search-history {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  z-index: 40;
+  background: #14181d;
+  border: 1px solid #292f36;
+  border-radius: 14px;
+  padding: 6px;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
+  max-height: 320px;
+  overflow-y: auto;
+}
+.search-history > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px 8px;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #7c8894;
+}
+.search-history-row {
+  display: flex;
+  align-items: center;
+  border-radius: 10px;
+}
+.search-history-row:hover {
+  background: #1d2228;
+}
+/* Overrides the submit button's chip styling, which reaches every button
+   inside the form. */
+.topbar form .search-history button {
+  background: transparent;
+  color: #c7d0d9;
+  font-size: 13px;
+  border-radius: 10px;
+}
+.topbar form .search-history > header button {
+  font-size: 11px;
+  color: #7c8894;
+  padding: 0;
+}
+.topbar form .search-history > header button:hover {
+  color: #e6ecf2;
+}
+.search-history-row > button:first-child {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  text-align: left;
+  min-width: 0;
+}
+.search-history-row > button:first-child span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.search-history-row > button:first-child svg {
+  flex: none;
+  color: #7c8894;
+}
+.search-history-row > button:last-child {
+  padding: 9px 10px;
+  color: #7c8894;
+}
+.search-history-row > button:last-child:hover {
+  color: #e6ecf2;
 }
 .profile-switch {
   position: absolute;

@@ -38,6 +38,12 @@ import {
   type WatchIndex,
 } from "../lib/progress";
 import { seriesPlaybackTarget } from "../lib/seriesPlayback";
+import {
+  cachedStreamToSource,
+  contentKey,
+  getValidStreamLink,
+  saveStreamLink,
+} from "../lib/streamLinkCache";
 import type {
   MetaScreenSectionKey,
   MetaScreenSettings,
@@ -641,7 +647,38 @@ export function Details({
       live = false;
     };
   }, [seed, addons, metadataEnrichment]);
+  /** The cache key for what `sources` was opened on. */
+  const reuseKey = (video?: Video) =>
+    contentKey(meta.type, video?.id || meta.id, meta.id, video?.season, video?.episode);
+
+  /**
+   * Plays a stream the user (or autoplay) just chose, and remembers it.
+   *
+   * Only fresh picks are recorded. Replaying from the cache goes straight to
+   * `onPlay`, so an entry ages from when the source was resolved rather than
+   * being renewed every time it is reused — otherwise "reuse for 24 hours"
+   * would quietly mean "forever, as long as you keep watching".
+   */
+  function playFresh(stream: Stream, video?: Video, player?: ExternalPlayerMode) {
+    saveStreamLink(reuseKey(video), stream);
+    onPlay(stream, meta, video, player);
+  }
+
   async function sources(video?: Video, forceManual = false) {
+    // Reuse last stream: play the link this episode was last watched with
+    // rather than asking the addon — and, for a debrid source, resolving it
+    // again — for something already known. `forceManual` is how the user asks
+    // for the picker regardless, so it opts out of this.
+    if (!forceManual && playerSettings.reuseLastStream) {
+      const cached = getValidStreamLink(
+        reuseKey(video),
+        playerSettings.reuseLastStreamHours * 3_600_000,
+      );
+      if (cached) {
+        onPlay(cachedStreamToSource(cached), meta, video);
+        return;
+      }
+    }
     window.clearTimeout(autoPlayTimer.current);
     autoPlayTimer.current = undefined;
     sourceAbort.current?.abort();
@@ -687,7 +724,7 @@ export function Details({
       autoPlayTimer.current = window.setTimeout(() => {
         if (!sourceOpenRef.current) return;
         setSourceOpen(false);
-        onPlay(choice, meta, video);
+        playFresh(choice, video);
       }, playerSettings.autoPlayTimeoutSeconds * 1_000);
     };
 
@@ -1261,9 +1298,7 @@ export function Details({
                     <button
                       className="source-main"
                       disabled={!stream.url && !stream.externalUrl}
-                      onClick={() =>
-                        onPlay(stream, meta, sourceVideo, sheetPlayer)
-                      }
+                      onClick={() => playFresh(stream, sourceVideo, sheetPlayer)}
                     >
                       <span>
                         {stream.addonLogo ? (

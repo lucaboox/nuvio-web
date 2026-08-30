@@ -112,6 +112,12 @@ import {
   subscribeUpdate,
   updateReady,
 } from "./lib/appUpdate";
+import {
+  clearRecentSearches,
+  forgetSearch,
+  readRecentSearches,
+  rememberSearch,
+} from "./lib/recentSearches";
 // The handoff itself is a capability; what is imported by name here is the
 // browser-only remainder — device sniffing for a card that only the web build
 // shows, and the way back into an installed iOS web app, which a shell that
@@ -550,6 +556,10 @@ export function App() {
   const [searchGroups, setSearchGroups] = useState<AddonSearchGroup[]>([]);
   const [searching, setSearching] = useState(false);
   const searchGeneration = useRef(0);
+  // Read once at mount rather than on every render: the store is synchronous,
+  // and touching it during render would make search history a layout cost.
+  const [recentSearches, setRecentSearches] = useState<string[]>(readRecentSearches);
+  const [searchFocused, setSearchFocused] = useState(false);
   const [hasUpdate, setHasUpdate] = useState(updateReady);
   useEffect(() => subscribeUpdate(() => setHasUpdate(true)), []);
   // Ask once at startup rather than waiting for the browser's own schedule,
@@ -959,8 +969,11 @@ export function App() {
   useEffect(() => {
     loadProfileData();
   }, [loadProfileData]);
-  async function runSearch() {
-    if (!query.trim()) return;
+  async function runSearch(term = query) {
+    if (!term.trim()) return;
+    if (term !== query) setQuery(term);
+    setRecentSearches(rememberSearch(term));
+    setSearchFocused(false);
     const request = ++searchGeneration.current;
     const generation = profileGeneration.current;
     const profileIndex = activeProfileIndexRef.current;
@@ -969,7 +982,7 @@ export function App() {
     setSearching(true);
     setActive("discover");
     try {
-      const next = await searchAddons(query.trim(), addons);
+      const next = await searchAddons(term.trim(), addons);
       if (
         request === searchGeneration.current &&
         generation === profileGeneration.current &&
@@ -2078,9 +2091,41 @@ export function App() {
           <input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
+            onFocus={() => setSearchFocused(true)}
+            // Deferred by a frame so a click on the list below lands before
+            // the list stops existing.
+            onBlur={() => window.setTimeout(() => setSearchFocused(false), 120)}
             placeholder="Search movies and series…"
           />
           <button>{searching ? "…" : "Search"}</button>
+          {searchFocused && !query.trim() && recentSearches.length > 0 && (
+            <div className="search-history">
+              <header>
+                <span>Recent</span>
+                <button
+                  type="button"
+                  onClick={() => setRecentSearches(clearRecentSearches())}
+                >
+                  Clear
+                </button>
+              </header>
+              {recentSearches.map((term) => (
+                <div className="search-history-row" key={term}>
+                  <button type="button" onClick={() => runSearch(term)}>
+                    <Search size={14} />
+                    <span>{term}</span>
+                  </button>
+                  <button
+                    type="button"
+                    aria-label={`Forget ${term}`}
+                    onClick={() => setRecentSearches(forgetSearch(term))}
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </form>
         <ProfileSwitcher
           profiles={profiles}
@@ -4996,6 +5041,43 @@ function SettingsPage({
                   "stream_auto_play_regex",
                   "string",
                   event.target.value,
+                )
+              }
+            />
+          </label>
+        )}
+        <SettingToggle
+          title="Reuse last source"
+          description="Plays the link an episode was last watched with instead of asking the addon again. The source list is still one tap away."
+          checked={settings.player.reuseLastStream}
+          disabled={!settingsReady}
+          onChange={(next) =>
+            onTypedSetting(
+              "player_settings",
+              "stream_reuse_last_link_enabled",
+              "boolean",
+              next,
+            )
+          }
+        />
+        {settings.player.reuseLastStream && (
+          <label className="setting-text-row">
+            <span>
+              <strong>Reuse for</strong>
+              <small>Hours before a remembered link is resolved again. 1 to 720.</small>
+            </span>
+            <input
+              type="number"
+              min="1"
+              max="720"
+              value={settings.player.reuseLastStreamHours}
+              disabled={!settingsReady}
+              onChange={(event) =>
+                onTypedSetting(
+                  "player_settings",
+                  "stream_reuse_last_link_cache_hours",
+                  "int",
+                  Number(event.target.value),
                 )
               }
             />

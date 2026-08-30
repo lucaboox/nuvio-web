@@ -1,8 +1,10 @@
 import { resolveTmdbSource } from "./tmdbCollections";
 import {
   createHostLimiter,
+  hostKey,
   isRetryable,
   retryAfterMs,
+  runPool,
   MAX_RETRIES,
 } from "./requestPolicy.ts";
 import { mediaTypeLabel, type HomeLayout } from "./account";
@@ -388,14 +390,32 @@ export async function loadInstalledAddons(
   );
 }
 
+/** Home catalogs fetched at once, across every addon. */
+const HOME_CONCURRENCY = 6;
+
+/**
+ * How long one home catalog is waited for.
+ *
+ * Shorter than the 14s a deliberate action gets, because nothing is on screen
+ * yet: this is the wait the user reads as "the app is broken". A host that has
+ * not answered in eight seconds is not about to.
+ */
+const HOME_CATALOG_TIMEOUT_MS = 8_000;
+
+/**
+ * Failures from one host before the rest of its catalogs are abandoned.
+ *
+ * Two, not one, so a single catalog that 404s does not condemn the addon it
+ * came from.
+ */
+const HOST_FAILURE_LIMIT = 2;
+
 /**
  * Fetches every browsable catalog across the installed addons.
  *
- * `onSection` fires as each batch lands so the home screen can paint rows
- * while the rest are still in flight — waiting for all of them was what made
- * the page sit blank on a slow connection. Batching still caps how many
- * requests are open at once; the addons are independent hosts, so a slow one
- * cannot hold up the rest.
+ * `onSection` fires as each catalog lands so the home screen paints rows while
+ * the rest are still in flight — waiting for all of them was what made the page
+ * sit blank on a slow connection.
  */
 export async function loadHome(
   addons: InstalledAddon[],
@@ -474,58 +494,68 @@ export async function loadHome(
         (layout.orderOf.get(a.prefKey) ?? Number.MAX_SAFE_INTEGER) -
         (layout.orderOf.get(b.prefKey) ?? Number.MAX_SAFE_INTEGER),
     );
-  for (let cursor = 0; cursor < targets.length; cursor += 4) {
-    const batch = await Promise.all(
-      targets.slice(cursor, cursor + 4).map(async ({ addon, catalog }) => {
-        try {
-          const catalogUrl = resourceUrl(
-            addon.url,
-            "catalog",
-            catalog.type,
-            catalog.id,
-          );
-          const payload = await fetchJson<{
-            metas?: Array<Record<string, unknown>>;
-          }>(catalogUrl);
-          const prefKey = `${addon.manifest!.id}:${catalog.type}:${catalog.id}`;
-          const base = catalog.name || catalog.id;
-          return {
-            key: prefKey,
-            // A row renamed in Nuvio wins outright; otherwise the type suffix
-            // disambiguates the several catalogs all called "Popular".
-            name:
-              layout?.customTitleOf.get(prefKey) ??
-              (layout?.showCatalogType !== false
-                ? `${base} - ${mediaTypeLabel(catalog.type)}`
-                : base),
-            type: catalog.type,
-            manifestUrl: addon.url,
-            addonName: addon.manifest!.name,
-            catalogId: catalog.id,
-            items: (payload.metas ?? [])
-              .map((meta) => mapMeta(meta, addon.url, addon.manifest!.name))
-              .filter(
-                (meta) =>
-                  layout?.hideUnreleasedContent !== true ||
-                  !isKnownFutureRelease(meta),
-              )
-              .slice(0, 24),
-          } satisfies CatalogSection;
-        } catch (error) {
-          errors.push(
-            `${addon.name ?? addon.url}: ${error instanceof Error ? error.message : "catalog failed"}`,
-          );
-          return null;
-        }
-      }),
-    );
-    const usable = batch.filter(
-      (section): section is CatalogSection =>
-        section !== null && section.items.length > 0,
-    );
-    sections.push(...usable);
-    for (const section of usable) onSection?.(section);
-  }
+  /**
+   * Failures so far per host, and the reason the pool is worth having.
+   *
+   * One addon supplies most of a home screen, so a host that has stopped
+   * answering is not one timeout but a dozen — and the user waits through every
+   * one of them to reach a page the working addons could have filled in
+   * seconds. After the budget is spent its remaining catalogs are given up on
+   * without being asked.
+   */
+  const failures = new Map<string, number>();
+  await runPool(targets, HOME_CONCURRENCY, async ({ addon, catalog }) => {
+    const host = hostKey(addon.url);
+    if ((failures.get(host) ?? 0) >= HOST_FAILURE_LIMIT) {
+      skipped.push({
+        catalog: `${addon.manifest!.name}: ${catalog.type}/${catalog.id}`,
+        reason: "host stopped answering",
+        detail: host,
+      });
+      return;
+    }
+    try {
+      const catalogUrl = resourceUrl(addon.url, "catalog", catalog.type, catalog.id);
+      const payload = await fetchJson<{
+        metas?: Array<Record<string, unknown>>;
+      }>(catalogUrl, HOME_CATALOG_TIMEOUT_MS);
+      const prefKey = `${addon.manifest!.id}:${catalog.type}:${catalog.id}`;
+      const base = catalog.name || catalog.id;
+      const section = {
+        key: prefKey,
+        // A row renamed in Nuvio wins outright; otherwise the type suffix
+        // disambiguates the several catalogs all called "Popular".
+        name:
+          layout?.customTitleOf.get(prefKey) ??
+          (layout?.showCatalogType !== false
+            ? `${base} - ${mediaTypeLabel(catalog.type)}`
+            : base),
+        type: catalog.type,
+        manifestUrl: addon.url,
+        addonName: addon.manifest!.name,
+        catalogId: catalog.id,
+        items: (payload.metas ?? [])
+          .map((meta) => mapMeta(meta, addon.url, addon.manifest!.name))
+          .filter(
+            (meta) =>
+              layout?.hideUnreleasedContent !== true || !isKnownFutureRelease(meta),
+          )
+          .slice(0, 24),
+      } satisfies CatalogSection;
+      if (!section.items.length) return;
+      sections.push(section);
+      onSection?.(section);
+    } catch (error) {
+      const spent = (failures.get(host) ?? 0) + 1;
+      failures.set(host, spent);
+      errors.push(
+        `${addon.name ?? addon.url}: ${error instanceof Error ? error.message : "catalog failed"}`,
+      );
+      // Said once, when the budget runs out, rather than once per catalog left.
+      if (spent === HOST_FAILURE_LIMIT)
+        errors.push(`${addon.name ?? addon.url}: skipping its remaining catalogs.`);
+    }
+  });
   return { sections, errors };
 }
 

@@ -865,7 +865,7 @@ export function App() {
       if (!isCurrent()) return;
       setAddons(installed);
       hydratedProfileIndexRef.current = profileIndex;
-      // Rows appear as each batch lands instead of after every addon has
+      // Rows appear as each catalog lands instead of after every addon has
       // answered, which is what left the page blank on a slow connection.
       setSections([]);
       const home = await loadHome(

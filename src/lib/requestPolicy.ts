@@ -69,6 +69,36 @@ export function readRetryDelay(previousAttempts: number): number | null {
   return Math.min(0.5 * 2 ** previousAttempts, 4);
 }
 
+/**
+ * Runs `work` over `items` with a fixed number in flight.
+ *
+ * The home screen used to fetch in batches and await each batch whole before
+ * starting the next, which made every batch as slow as its slowest catalog and
+ * the page as slow as the sum of those. Here a worker takes the next item the
+ * moment it finishes one, so a host that never answers costs its own slot
+ * rather than everything queued behind it.
+ *
+ * `work` is expected to handle its own failures. A rejection here would abandon
+ * the worker that hit it and leave the others to finish the queue between them,
+ * which is a confusing way to lose a catalog.
+ */
+export async function runPool<T>(
+  items: readonly T[],
+  concurrency: number,
+  work: (item: T) => Promise<void>,
+): Promise<void> {
+  let cursor = 0;
+  await Promise.all(
+    Array.from({ length: Math.min(concurrency, items.length) }, async () => {
+      while (cursor < items.length) {
+        const item = items[cursor];
+        cursor += 1;
+        await work(item);
+      }
+    }),
+  );
+}
+
 export type HostLimiter = <T>(url: string, work: () => Promise<T>) => Promise<T>;
 
 /**

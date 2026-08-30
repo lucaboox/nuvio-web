@@ -6,8 +6,54 @@ import {
   isRetryable,
   retryAfterMs,
   readRetryDelay,
+  runPool,
   MAX_READ_ATTEMPTS,
 } from "../src/lib/requestPolicy.ts";
+
+test("the pool never exceeds its concurrency", async () => {
+  let inFlight = 0;
+  let peak = 0;
+  await runPool(Array.from({ length: 20 }, (_, i) => i), 6, async () => {
+    inFlight += 1;
+    peak = Math.max(peak, inFlight);
+    await Promise.resolve();
+    inFlight -= 1;
+  });
+  assert.equal(peak, 6);
+});
+
+test("every item runs exactly once", async () => {
+  const seen = [];
+  await runPool(["a", "b", "c", "d", "e"], 2, async (item) => {
+    seen.push(item);
+  });
+  assert.deepEqual(seen.sort(), ["a", "b", "c", "d", "e"]);
+});
+
+test("one item that never settles does not hold up the rest", async () => {
+  // The home screen's actual failure: a dead host used to stop the whole
+  // queue behind it, because batches were awaited whole.
+  const stuck = deferred();
+  const finished = [];
+  const pool = runPool([0, 1, 2, 3, 4, 5], 2, async (item) => {
+    if (item === 0) await stuck.promise;
+    finished.push(item);
+  });
+  // Let the workers drain everything they can while item 0 is still hanging.
+  for (let i = 0; i < 20; i += 1) await Promise.resolve();
+  assert.deepEqual(finished, [1, 2, 3, 4, 5]);
+  stuck.resolve();
+  await pool;
+  assert.equal(finished.length, 6);
+});
+
+test("a pool wider than the queue starts one worker per item", async () => {
+  let started = 0;
+  await runPool([1, 2], 8, async () => {
+    started += 1;
+  });
+  assert.equal(started, 2);
+});
 
 test("requests are bucketed by host, not by path", () => {
   assert.equal(hostKey("https://a.io/catalog/movie/top.json"), "https://a.io");

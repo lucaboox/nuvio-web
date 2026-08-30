@@ -8118,3 +8118,52 @@ body.is-locked {
   display: flex;
   gap: 10px;
 }
+
+/* Download location, shown only where a shell has one. */
+.setting-lede {
+  margin: 0 0 16px;
+  color: #8b95a1;
+  font-size: 13px;
+  line-height: 1.55;
+}
+.download-location {
+  display: block;
+  margin-bottom: 14px;
+}
+.download-location > span {
+  display: block;
+  margin-bottom: 7px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #b7c0cb;
+}
+.download-location > div {
+  display: flex;
+  gap: 10px;
+}
+.download-location input {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 13px;
+  border-radius: 12px;
+  border: 1px solid var(--panel-border);
+  background: var(--panel-soft);
+  color: #dfe6ed;
+  font: inherit;
+  font-size: 13px;
+}
+.download-storage-summary {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 14px;
+  color: #8b95a1;
+  font-size: 12px;
+}
+.inline-note {
+  margin-top: 12px;
+  padding: 9px 13px;
+  border-radius: 12px;
+  background: var(--panel-soft);
+  color: #c8d1db;
+  font-size: 13px;
+}

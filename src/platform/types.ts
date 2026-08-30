@@ -327,6 +327,14 @@ export type DownloadsApi = {
   /** Poster art cached alongside the file, as a URL. Null where there is none. */
   artwork(id: string): Promise<string | null>;
   openFolder(): Promise<void>;
+  /**
+   * Asks for a folder and answers with it, or null if nobody chose one.
+   *
+   * A capability rather than a dialog import: picking a directory is something
+   * only a shell can do, and the shared page must not reach for a native API
+   * to find that out.
+   */
+  chooseFolder(current?: string): Promise<string | null>;
   /** Moves the download root, carrying existing files with it. */
   moveStorage(path: string): Promise<void>;
 };

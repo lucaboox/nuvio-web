@@ -52,6 +52,7 @@ import { CalendarView } from "./components/Calendar";
 import { Details } from "./components/Details";
 import { Discover } from "./components/Discover";
 import { Downloads } from "./components/Downloads";
+import { DownloadSettings } from "./components/DownloadSettings";
 import { ExternalWatchPrompt } from "./components/ExternalWatchPrompt";
 import {
   CollectionFolderView,
@@ -5227,6 +5228,13 @@ function SettingsPage({
           </select>
         </label>
       </div>
+      {/* Only where there is a folder to name. A browser downloads through the
+          browser and has nowhere of its own to put anything. */}
+      {platform.downloads && (
+        <div hidden={category !== "app"}>
+          <DownloadSettings downloads={platform.downloads} />
+        </div>
+      )}
       <div
         className="setting-card settings-category-card"
         hidden={category !== "app"}

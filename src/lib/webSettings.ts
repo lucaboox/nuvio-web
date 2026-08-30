@@ -1,4 +1,5 @@
 import type { Stream } from "../types";
+import type { DebridRules } from "./debridStreams";
 import {
   readMetaScreenSettings,
   type MetaScreenSettings,
@@ -353,6 +354,47 @@ function badgeFilters(blob: SettingsBlob | null): StreamBadgeFilter[] {
   } catch {
     return [];
   }
+}
+
+/**
+ * The Debrid rules Nuvio syncs, read from the same blob the other clients write.
+ *
+ * Read unconditionally, applied only where `platform.debrid` exists. A browser
+ * has no use for them — it cannot resolve a cached link — but reading them
+ * costs nothing and keeps this function free of any question about which shell
+ * it is running in.
+ */
+export function readDebridRules(blob: SettingsBlob | null): DebridRules {
+  const rule = <T extends string>(key: string, fallback: T) =>
+    blobTypedValue(blob, "debrid_settings", key, "string", fallback) as T;
+  return {
+    debridEnabled: blobTypedValue(
+      blob,
+      "debrid_settings",
+      "debrid_enabled",
+      "boolean",
+      false,
+    ),
+    debridPreferredResolverProviderId: blobTypedValue(
+      blob,
+      "debrid_settings",
+      "debrid_preferred_resolver_provider_id",
+      "string",
+      "",
+    ),
+    debridStreamMaxResults: blobTypedValue(
+      blob,
+      "debrid_settings",
+      "debrid_stream_max_results",
+      "int",
+      0,
+    ),
+    debridStreamSortMode: rule("debrid_stream_sort_mode", "DEFAULT"),
+    debridStreamMinimumQuality: rule("debrid_stream_minimum_quality", "ANY"),
+    debridStreamDolbyVisionFilter: rule("debrid_stream_dolby_vision_filter", "ANY"),
+    debridStreamHdrFilter: rule("debrid_stream_hdr_filter", "ANY"),
+    debridStreamCodecFilter: rule("debrid_stream_codec_filter", "ANY"),
+  };
 }
 
 export function readWebSettings(blob: SettingsBlob | null): WebSettings {

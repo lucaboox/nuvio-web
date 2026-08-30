@@ -28,6 +28,10 @@ import {
 } from "../lib/metadataEnrichment";
 import { platform } from "../platform/index.ts";
 import {
+  applyDebridStreamSettings,
+  type DebridRules,
+} from "../lib/debridStreams";
+import {
   episodePercent,
   remainingShort,
   watchKey,
@@ -334,6 +338,7 @@ export function Details({
   watchIndex,
   playerSettings,
   streamBadgeSettings,
+  debridRules,
   metaScreenSettings,
   onClose,
   onLibrary,
@@ -352,6 +357,8 @@ export function Details({
   watchIndex: WatchIndex;
   playerSettings: WebPlayerSettings;
   streamBadgeSettings: StreamBadgeSettings;
+  /** The synced Debrid rules, applied only where a shell can resolve them. */
+  debridRules: DebridRules;
   metaScreenSettings: MetaScreenSettings;
   onClose(): void;
   onLibrary(meta: Meta): void;
@@ -697,7 +704,16 @@ export function Details({
           controller.signal,
         ).catch(() => []);
       if (request !== sourceRequest.current || controller.signal.aborted) return;
-      setStreams(addonStreams);
+      // Debrid entries are filtered and sorted by the rules the account carries,
+      // but only where a shell can actually resolve them. In a browser they are
+      // left exactly as the addon sent them, because nothing here could play
+      // one either way and quietly reordering a list we cannot use would be
+      // worse than leaving it alone.
+      setStreams(
+        platform.debrid && debridRules
+          ? applyDebridStreamSettings(addonStreams, debridRules)
+          : addonStreams,
+      );
       scheduleAutoPlay(addonStreams);
     } finally {
       if (request === sourceRequest.current) setSourceBusy(false);

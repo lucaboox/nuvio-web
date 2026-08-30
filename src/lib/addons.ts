@@ -915,6 +915,13 @@ export async function loadStreams(
             typeof stream.behaviorHints === "object"
               ? (stream.behaviorHints as Stream["behaviorHints"])
               : undefined,
+          // Passed through rather than parsed. Only a shell that can reach a
+          // Debrid service does anything with it, and the filters read fields
+          // this client has no other reason to know about.
+          clientResolve:
+            typeof stream.clientResolve === "object" && stream.clientResolve
+              ? (stream.clientResolve as Stream["clientResolve"])
+              : undefined,
         }));
       } catch {
         return [];

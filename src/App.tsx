@@ -164,6 +164,7 @@ import {
   withMetaScreenSection,
   type MetaScreenSectionKey,
 } from "./lib/metaScreenSettings";
+import { readDebridRules } from "./lib/webSettings";
 import {
   readWebSettings,
   type ContinueWatchingSettings,
@@ -1099,6 +1100,8 @@ export function App() {
       { refreshContent: true },
     ).catch(() => undefined);
   }
+  // Read for both shells; applied only where platform.debrid exists.
+  const debridRules = useMemo(() => readDebridRules(settingsBlob), [settingsBlob]);
   const webSettings = useMemo(
     () => readWebSettings(settingsBlob),
     [settingsBlob],
@@ -2445,6 +2448,7 @@ export function App() {
           metadataEnrichment={metadataEnrichment}
           playerSettings={webSettings.player}
           streamBadgeSettings={webSettings.streamBadges}
+          debridRules={debridRules}
           metaScreenSettings={webSettings.metaScreen}
           watchIndex={watchIndex}
           initialVideoId={detailLaunch?.videoId}

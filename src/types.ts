@@ -209,6 +209,39 @@ export type Stream = {
     videoSize?: number;
     proxyHeaders?: { request?: Record<string, string> };
   };
+  /**
+   * A source an addon expects the client to resolve, rather than a playable
+   * URL. Debrid entries arrive this way — the addon says which service holds
+   * the file and whether it is cached, and something with a key turns that into
+   * a link. Kept whole rather than flattened because the filters read deep into
+   * it, and dropping fields here would silently narrow what they can sort on.
+   */
+  clientResolve?: {
+    type?: string;
+    service?: string;
+    isCached?: boolean;
+    infoHash?: string;
+    fileIdx?: number;
+    magnetUri?: string;
+    torrentName?: string;
+    filename?: string;
+    stream?: {
+      raw?: {
+        torrentName?: string;
+        filename?: string;
+        size?: number;
+        folderSize?: number;
+        parsed?: {
+          raw_title?: string;
+          parsed_title?: string;
+          resolution?: string;
+          quality?: string;
+          codec?: string;
+          hdr?: string[];
+        };
+      };
+    };
+  };
 };
 export type LibraryItem = Meta & { addedAt?: number };
 export type ProgressRow = {

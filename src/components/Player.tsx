@@ -3,6 +3,7 @@ import { platform } from "../platform/index.ts";
 import type { ResizeMode } from "../platform/types.ts";
 import { safeHttpUrl } from "../lib/security";
 import {
+  mediaRectForResizeMode,
   objectFitForResizeMode,
   visibleResizeMode,
 } from "../lib/pictureMode";
@@ -340,6 +341,48 @@ export function Player({
   useEffect(() => {
     setResizeMode(visibleResizeMode(settings.resizeMode));
   }, [settings.resizeMode]);
+  const resizeModeRef = useRef(resizeMode);
+  resizeModeRef.current = resizeMode;
+  const applyBrowserPictureMode = useCallback((mode: ResizeMode) => {
+    if (nativePlayer) return;
+    const viewport = playerRef.current;
+    if (!viewport) return;
+    const viewportWidth = viewport.clientWidth;
+    const viewportHeight = viewport.clientHeight;
+    const targets = [videoRef.current, canvasRef.current].filter(
+      (target): target is HTMLVideoElement | HTMLCanvasElement => !!target,
+    );
+    for (const target of targets) {
+      const mediaWidth =
+        target instanceof HTMLVideoElement ? target.videoWidth : target.width;
+      const mediaHeight =
+        target instanceof HTMLVideoElement ? target.videoHeight : target.height;
+      const rect = mediaRectForResizeMode(
+        mode,
+        mediaWidth,
+        mediaHeight,
+        viewportWidth,
+        viewportHeight,
+      );
+      if (!rect) {
+        target.style.inset = "0";
+        target.style.width = "100%";
+        target.style.height = "100%";
+        target.style.transform = "none";
+        target.style.objectFit = objectFitForResizeMode(mode);
+        continue;
+      }
+      target.style.inset = "auto";
+      target.style.left = "50%";
+      target.style.top = "50%";
+      target.style.width = `${rect.width}px`;
+      target.style.height = `${rect.height}px`;
+      target.style.transform = "translate(-50%, -50%)";
+      // Geometry is already resolved above; avoid asking fullscreen's special
+      // media rendering path to reinterpret it a second time.
+      target.style.objectFit = "fill";
+    }
+  }, []);
   const [pictureNote, setPictureNote] = useState("");
   const cycleResizeMode = useCallback(() => {
     setResizeMode((current) => {
@@ -347,16 +390,14 @@ export function Player({
       // would otherwise have no next step; start from the beginning.
       const at = RESIZE_MODES.indexOf(current);
       const next = RESIZE_MODES[(at + 1) % RESIZE_MODES.length];
-      const fit = objectFitForResizeMode(next);
-      if (videoRef.current) videoRef.current.style.objectFit = fit;
-      if (canvasRef.current) canvasRef.current.style.objectFit = fit;
+      applyBrowserPictureMode(next);
       // The native surface is rescaled by mpv, not by CSS, so it has to be
       // told. Absent on a shell that cannot, and then the button is not built.
       void nativePlayer?.setResizeMode?.(next).catch(() => undefined);
       setPictureNote(next);
       return next;
     });
-  }, []);
+  }, [applyBrowserPictureMode]);
   useEffect(() => {
     if (!pictureNote) return;
     const timer = window.setTimeout(() => setPictureNote(""), PICTURE_NOTE_MS);
@@ -364,11 +405,26 @@ export function Player({
   }, [pictureNote]);
   const videoFit = objectFitForResizeMode(resizeMode);
   const reapplyPictureMode = useCallback(() => {
-    const fit = objectFitForResizeMode(resizeMode);
-    if (videoRef.current) videoRef.current.style.objectFit = fit;
-    if (canvasRef.current) canvasRef.current.style.objectFit = fit;
-    void nativePlayer?.setResizeMode?.(resizeMode).catch(() => undefined);
-  }, [resizeMode]);
+    if (nativePlayer)
+      void nativePlayer.setResizeMode?.(resizeMode).catch(() => undefined);
+    else applyBrowserPictureMode(resizeMode);
+  }, [applyBrowserPictureMode, resizeMode]);
+
+  useEffect(() => {
+    if (nativePlayer) return;
+    const viewport = playerRef.current;
+    const element = videoRef.current;
+    if (!viewport || !element) return;
+    const apply = () => applyBrowserPictureMode(resizeModeRef.current);
+    const observer = new ResizeObserver(apply);
+    observer.observe(viewport);
+    element.addEventListener("loadedmetadata", apply);
+    apply();
+    return () => {
+      observer.disconnect();
+      element.removeEventListener("loadedmetadata", apply);
+    };
+  }, [applyBrowserPictureMode]);
   const cueCss = useMemo(() => {
     const color = browserColor(settings.subtitleTextColor, "#fff");
     const background = browserColor(
@@ -1019,6 +1075,10 @@ export function Player({
         .start()
         .then(() => {
           if (disposed) return;
+          // Canvas intrinsic dimensions become available during start. Apply
+          // the real rectangle now rather than waiting for another viewport
+          // resize that may never come.
+          applyBrowserPictureMode(resizeModeRef.current);
           // Autoplay without a gesture is refused on iOS and increasingly
           // elsewhere; the centre button is then the gesture.
           void engine.play().then(() => setPlaying(!engine.paused));

@@ -15,3 +15,35 @@ export function objectFitForResizeMode(mode: ResizeMode): "contain" | "cover" | 
   if (visible === "Fit") return "contain";
   return "cover";
 }
+
+export type MediaRect = { width: number; height: number };
+
+/**
+ * Explicit browser render size for a media surface.
+ *
+ * Relying on `object-fit` alone is unreliable for WebCodecs canvases and some
+ * fullscreen implementations. Computing the actual rectangle makes video and
+ * canvas use identical contain/cover/stretch geometry before and after the
+ * fullscreen viewport is rebuilt.
+ */
+export function mediaRectForResizeMode(
+  mode: ResizeMode,
+  mediaWidth: number,
+  mediaHeight: number,
+  viewportWidth: number,
+  viewportHeight: number,
+): MediaRect | null {
+  if (
+    ![mediaWidth, mediaHeight, viewportWidth, viewportHeight].every(
+      (value) => Number.isFinite(value) && value > 0,
+    )
+  )
+    return null;
+  if (visibleResizeMode(mode) === "Stretch")
+    return { width: viewportWidth, height: viewportHeight };
+  const scale =
+    visibleResizeMode(mode) === "Fit"
+      ? Math.min(viewportWidth / mediaWidth, viewportHeight / mediaHeight)
+      : Math.max(viewportWidth / mediaWidth, viewportHeight / mediaHeight);
+  return { width: mediaWidth * scale, height: mediaHeight * scale };
+}

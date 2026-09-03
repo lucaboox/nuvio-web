@@ -476,6 +476,17 @@ export function App() {
     meta: Meta;
     video?: Video;
   } | null>(null);
+  /**
+   * Whether Home opens with the featured carousel.
+   *
+   * Device-local, like the official client's `heroEnabled` — its sync payload
+   * (`SyncHomeCatalogPayload`) carries only the catalog list, `show_catalog_type`
+   * and `hide_unreleased_content`, so there is no synced field for this and
+   * inventing one would be a setting no other Nuvio client would honour.
+   */
+  const [heroEnabled, setHeroEnabled] = useState(
+    () => localStorage.getItem("nuvio-web-home-hero") !== "off",
+  );
   const [externalPlayer, setExternalPlayer] = useState<ExternalPlayerMode>(() => {
     const stored = localStorage.getItem(
       "nuvio-web-external-player",
@@ -1708,6 +1719,9 @@ export function App() {
    * first two catalogs in the configured order.
    */
   const heroItems = useMemo(() => {
+    // Switched off means no slides, and `Hero` renders nothing without any —
+    // so the carousel disappears without Home needing to know why.
+    if (!heroEnabled) return [];
     const HERO_SOURCE_LIMIT = 2;
     const HERO_ITEM_LIMIT = 8;
     const sources = homeRows
@@ -1730,7 +1744,7 @@ export function App() {
         if (picked.length === HERO_ITEM_LIMIT) break;
       }
     return picked;
-  }, [homeRows]);
+  }, [homeRows, heroEnabled]);
   const watchIndex = useMemo(
     () => buildWatchIndex(progress, watchedItems),
     [progress, watchedItems],
@@ -2294,6 +2308,11 @@ export function App() {
             homeLayoutLabels={homeLayoutLabels}
             pinnedCollectionKeys={pinnedCollectionKeys}
             onHomeLayout={saveHomeLayout}
+            heroEnabled={heroEnabled}
+            onHeroEnabled={(next) => {
+              setHeroEnabled(next);
+              localStorage.setItem("nuvio-web-home-hero", next ? "on" : "off");
+            }}
             onTypedSetting={updateTypedSetting}
             onPosterSetting={updatePosterSetting}
             onContinueWatchingSetting={updateContinueWatchingSetting}
@@ -4060,6 +4079,8 @@ function SettingsPage({
   homeLayoutLabels,
   pinnedCollectionKeys,
   onHomeLayout,
+  heroEnabled,
+  onHeroEnabled,
   onTypedSetting,
   onPosterSetting,
   onContinueWatchingSetting,
@@ -4089,6 +4110,9 @@ function SettingsPage({
   homeLayoutLabels: Map<string, string>;
   pinnedCollectionKeys: Set<string>;
   onHomeLayout(next: HomeLayout): Promise<void>;
+  /** Device-local, so it is state here rather than part of the synced blob. */
+  heroEnabled: boolean;
+  onHeroEnabled(next: boolean): void;
   onTypedSetting(
     feature: string,
     key: string,
@@ -4703,6 +4727,12 @@ function SettingsPage({
         <p>
           Reorder, rename, show, or hide synced catalogs and collections.
         </p>
+        <SettingToggle
+          title="Show hero section"
+          description="The featured carousel at the top of Home. Kept on this device, matching Nuvio — the shared Home layout has no field for it."
+          checked={heroEnabled}
+          onChange={onHeroEnabled}
+        />
         <HomeLayoutSettings
           layout={homeLayout}
           labels={homeLayoutLabels}

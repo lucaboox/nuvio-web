@@ -510,6 +510,8 @@ a {
   width: 18px;
   height: 18px;
 }
+/* 21 − 13 halves to a whole 4px a side. The mobile size needs its own icon
+   size to stay whole; see the note there. */
 .episode-watched svg {
   width: 13px;
   height: 13px;
@@ -6157,6 +6159,14 @@ body.is-locked {
     right: 8px;
     width: 28px;
     height: 28px;
+  }
+  /* 13px in a 28px circle left 7.5px a side, and a half pixel rounds one way
+     or the other depending on where the row lands while the list scrolls —
+     so the eye read as centred on some episodes and nudged up or left on
+     others. 14 in 28 is a whole 7px however the row falls. */
+  .episode-watched svg {
+    width: 14px;
+    height: 14px;
   }
   .episode-progress {
     right: 4px;

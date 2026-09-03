@@ -64,6 +64,10 @@ export default defineConfig(({ mode }) => {
       "import.meta.env.VITE_NUVIO_SUPABASE_URL": JSON.stringify(env.VITE_NUVIO_SUPABASE_URL || env.NUVIO_SUPABASE_URL || ""),
       "import.meta.env.VITE_NUVIO_SUPABASE_FALLBACK_URL": JSON.stringify(env.VITE_NUVIO_SUPABASE_FALLBACK_URL || env.NUVIO_SUPABASE_FALLBACK_URL || ""),
       "import.meta.env.VITE_NUVIO_SUPABASE_ANON_KEY": JSON.stringify(env.VITE_NUVIO_SUPABASE_ANON_KEY || env.NUVIO_SUPABASE_ANON_KEY || ""),
+      // The episode-ratings service, for a client that can call it directly.
+      // Unset — which is every ordinary web build — the Worker is used instead,
+      // because a browser cannot reach the service at all.
+      "import.meta.env.VITE_NUVIO_IMDB_RATINGS_BASE_URL": JSON.stringify(env.VITE_NUVIO_IMDB_RATINGS_BASE_URL || env.NUVIO_IMDB_RATINGS_BASE_URL || ""),
     },
     plugins: [
       react(),

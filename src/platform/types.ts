@@ -374,9 +374,26 @@ export type DebridApi = {
  * shell must answer for, even if the answer is a thin one — there is no
  * sensible UI without storage, and every client can hand a stream somewhere.
  */
+/**
+ * Reaching the episode-ratings service without a proxy in front of it.
+ *
+ * The service sends no cross-origin headers, so a browser cannot call it and
+ * goes through a Cloudflare Worker instead. A shell makes its requests outside
+ * any origin and has no such problem — and every request it sent through the
+ * Worker would spend someone's Cloudflare budget on a hop it did not need.
+ *
+ * Present only where the shell was built with an address to use. Absent, the
+ * Worker is used, which is what every browser build does.
+ */
+export type RatingsApi = {
+  /** Base address, no trailing slash. `/api/shows/<id>/season-ratings` is appended. */
+  readonly seasonRatingsBase: string;
+};
+
 export type Platform = {
   downloads?: DownloadsApi;
   debrid?: DebridApi;
+  ratings?: RatingsApi;
   auth: AuthApi;
   player?: PlayerApi;
   externalPlayer: ExternalPlayerApi;

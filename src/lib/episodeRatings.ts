@@ -21,6 +21,37 @@ const WORKER_URL = "https://nuvio-imdb-ratings.lucaboox.workers.dev";
 /** Matches the Worker's own budget, so a reopened page asks nobody. */
 const CACHE_TTL_MS = 30 * 60 * 1000;
 
+/**
+ * The upstream's own shape, flattened.
+ *
+ * The Worker does this server-side for browsers, so this is the same rule
+ * written twice — unavoidably, since the Worker is a separate deployment that
+ * cannot import from here. Kept identical on purpose: a score that differs
+ * between the desktop and the web because two flatteners disagreed would be
+ * very hard to trace back to this.
+ *
+ * A zero vote average means "nobody has rated this", not "rated zero". Every
+ * Nuvio client drops those, and a 0.0 badge on an unaired episode is worse than
+ * no badge at all.
+ */
+export function toRatingMap(payload: unknown): EpisodeRatings {
+  const ratings: EpisodeRatings = new Map();
+  if (!Array.isArray(payload)) return ratings;
+  for (const season of payload) {
+    for (const episode of season?.episodes ?? []) {
+      const seasonNumber = episode?.season_number;
+      const episodeNumber = episode?.episode_number;
+      const score = episode?.vote_average;
+      if (typeof seasonNumber !== "number" || typeof episodeNumber !== "number")
+        continue;
+      if (typeof score !== "number" || !Number.isFinite(score) || score <= 0)
+        continue;
+      ratings.set(`${seasonNumber}:${episodeNumber}`, score);
+    }
+  }
+  return ratings;
+}
+
 /** Keyed `season:episode`, matching how the episode list looks them up. */
 export type EpisodeRatings = Map<string, number>;
 
@@ -67,19 +98,28 @@ export async function loadEpisodeRatings(
   const task = (async () => {
     try {
       // The Worker exists because a page cannot call the ratings host itself.
-      // A shell that can should be pointed straight at it instead — this goes
-      // through the capability so that swap is a change of address, not of
-      // this module.
+      // A shell can, and going straight there spends no Cloudflare budget on a
+      // hop it never needed — so where the shell was built with an address, it
+      // is used, and the Worker is the browser's path only.
+      //
+      // The two answer in different shapes: the Worker flattens server-side
+      // and returns `{ ratings }`, while the service itself returns a season
+      // array. Which was asked decides which is parsed.
+      const direct = platform.ratings?.seasonRatingsBase;
       const response = await platform.request(
-        `${WORKER_URL}/season-ratings?tmdb=${encodeURIComponent(tmdb)}`,
+        direct
+          ? `${direct}/api/shows/${encodeURIComponent(tmdb)}/season-ratings`
+          : `${WORKER_URL}/season-ratings?tmdb=${encodeURIComponent(tmdb)}`,
       );
       if (!response.ok) return new Map<string, number>();
-      const payload = JSON.parse(response.body) as {
-        ratings?: Record<string, number>;
-      };
-      const ratings: EpisodeRatings = new Map(
-        Object.entries(payload.ratings ?? {}),
-      );
+      const body = JSON.parse(response.body) as unknown;
+      const ratings: EpisodeRatings = direct
+        ? toRatingMap(body)
+        : new Map(
+            Object.entries(
+              (body as { ratings?: Record<string, number> })?.ratings ?? {},
+            ),
+          );
       cache.set(tmdb, { at: Date.now(), ratings });
       return ratings;
     } catch {

@@ -308,6 +308,27 @@ a {
        rows below the fold entirely. */
     max-height: 78vh;
     background-position: top center;
+    /* Left, against the opaque end of the slide's gradient — which already
+       fades from near-solid at 0% to clear at 100%, so centred copy was
+       sitting half on the artwork. Mobile stays centred. */
+    justify-content: flex-start;
+  }
+  .hero-copy {
+    text-align: left;
+  }
+  .hero-copy > .primary {
+    margin-left: 0;
+    margin-right: auto;
+  }
+  .hero .title-logo {
+    /* A logo is an image, so text-align cannot reach it. */
+    display: block;
+    margin-left: 0;
+  }
+  /* Scoped to the carousel: `.hero-meta` is also the details page's statistics
+     row, which is centred on purpose. */
+  .hero .hero-meta {
+    justify-content: flex-start;
   }
 }
 .hero-copy {

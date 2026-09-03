@@ -1526,7 +1526,11 @@ a {
 }
 .source-column > header,
 .source-column > .source-list,
-.source-column > /* Names the picture mode after a change, then goes. Centred over the video and
+.source-column > .sheet-loading {
+  width: min(980px, 100%);
+  margin-inline: auto;
+}
+/* Names the picture mode after a change, then goes. Centred over the video and
    inert, so it never intercepts a click meant for the controls. */
 .picture-note {
   /* Fixed, not absolute. Absolute depends on which ancestor happens to be
@@ -1557,10 +1561,6 @@ a {
   .picture-note {
     bottom: 120px;
   }
-}
-.sheet-loading {
-  width: min(980px, 100%);
-  margin-inline: auto;
 }
 @media (min-width: 1000px) {
   /* The artwork only where there is room for it beside the list. On a phone

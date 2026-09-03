@@ -357,6 +357,7 @@ export function Details({
   onResetProgress,
   initialVideoId,
   openSourcesOnLoad = false,
+  defaultSourceAddon,
   defaultPlayer,
   onDefaultPlayer,
   onPerson,
@@ -388,6 +389,11 @@ export function Details({
   onResetProgress(meta: Meta, video: Video | undefined): void;
   initialVideoId?: string;
   openSourcesOnLoad?: boolean;
+  /**
+   * The addon the source list opens filtered to, or "" for all of them.
+   * Chosen in Settings; the picker here still overrides it for this title.
+   */
+  defaultSourceAddon: string;
   /** The player chosen in Settings, which this picker also sets. */
   defaultPlayer: ExternalPlayerMode;
   onDefaultPlayer(mode: ExternalPlayerMode): void;
@@ -485,18 +491,28 @@ export function Details({
     y: number;
   } | null>(null);
   const [sourceVideo, setSourceVideo] = useState<Video | undefined>();
-  /** "" is every addon. Reset whenever the panel opens on something new. */
-  const [sourceAddon, setSourceAddon] = useState("");
+  /** "" is every addon. Starts at the configured default. */
+  const [sourceAddon, setSourceAddon] = useState(defaultSourceAddon);
   const sourceAddons = useMemo(
     () => [...new Set(streams.map((item) => item.addonName).filter(Boolean))],
     [streams],
   );
+  /**
+   * The filter actually in force.
+   *
+   * An addon that returned nothing for this title is not a filter, it is an
+   * empty screen — and a default addon is chosen once for everything, so it
+   * will not have answered for everything. Falling back to all sources means a
+   * default can never hide the ones that did arrive.
+   */
+  const activeAddon =
+    sourceAddon && sourceAddons.includes(sourceAddon) ? sourceAddon : "";
   const visibleStreams = useMemo(
     () =>
-      sourceAddon
-        ? streams.filter((item) => item.addonName === sourceAddon)
+      activeAddon
+        ? streams.filter((item) => item.addonName === activeAddon)
         : streams,
-    [streams, sourceAddon],
+    [streams, activeAddon],
   );
   /** Where this would resume from, which is the useful thing to say up here. */
   const sourceResume = useMemo(() => {
@@ -1464,7 +1480,7 @@ export function Details({
                   <label className="source-player">
                     <span>Addon</span>
                     <select
-                      value={sourceAddon}
+                      value={activeAddon}
                       onChange={(event) => setSourceAddon(event.target.value)}
                     >
                       <option value="">All addons</option>
@@ -1493,7 +1509,10 @@ export function Details({
             </header>
             {downloadNote && <div className="sheet-note">{downloadNote}</div>}
             {sourceBusy ? (
-              <div className="sheet-loading">Fetching addon sources…</div>
+              <div className="sheet-loading" role="status">
+                <i className="mini-spinner" aria-hidden="true" />
+                <span>Fetching addon sources…</span>
+              </div>
             ) : visibleStreams.length ? (
               <div className="source-list">
                 {visibleStreams.map((stream, index) => (

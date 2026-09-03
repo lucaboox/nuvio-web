@@ -1659,6 +1659,15 @@ a {
   text-align: center;
   color: #89939d;
 }
+/* The same spinner every other wait in the app uses. Centred beside the text
+   rather than above it, because the sheet opens short and a stacked spinner
+   pushed the message off the visible part of it on a phone. */
+.sheet-loading[role="status"] {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
 .source-list {
   display: grid;
   gap: 12px;

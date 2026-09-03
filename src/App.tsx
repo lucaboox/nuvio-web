@@ -487,6 +487,17 @@ export function App() {
   const [heroEnabled, setHeroEnabled] = useState(
     () => localStorage.getItem("nuvio-web-home-hero") !== "off",
   );
+  /**
+   * The addon the source list opens filtered to. "" is all of them.
+   *
+   * Device-local like the other picks here. The official client has no such
+   * setting — it re-selects whichever addon you last watched *that title* from,
+   * per title rather than globally — so there is no synced field to write to
+   * and no shared shape to match.
+   */
+  const [defaultSourceAddon, setDefaultSourceAddon] = useState(
+    () => localStorage.getItem("nuvio-web-default-source-addon") ?? "",
+  );
   const [externalPlayer, setExternalPlayer] = useState<ExternalPlayerMode>(() => {
     const stored = localStorage.getItem(
       "nuvio-web-external-player",
@@ -1457,6 +1468,24 @@ export function App() {
       ),
     [collections],
   );
+  /**
+   * The names the source list files streams under, for the default picker.
+   *
+   * `stream.addonName` is the manifest name, so the setting has to store that
+   * rather than an addon id — otherwise the saved default would never match
+   * anything and would silently mean "all".
+   */
+  const addonNames = useMemo(
+    () => [
+      ...new Set(
+        addons
+          .filter((addon) => addon.enabled && addon.manifest)
+          .map((addon) => addon.manifest!.name)
+          .filter(Boolean),
+      ),
+    ],
+    [addons],
+  );
   const homeLayoutLabels = useMemo(
     () =>
       new Map<string, string>([
@@ -2308,6 +2337,13 @@ export function App() {
             homeLayoutLabels={homeLayoutLabels}
             pinnedCollectionKeys={pinnedCollectionKeys}
             onHomeLayout={saveHomeLayout}
+            addonNames={addonNames}
+            defaultSourceAddon={defaultSourceAddon}
+            onDefaultSourceAddon={(next) => {
+              setDefaultSourceAddon(next);
+              if (next) localStorage.setItem("nuvio-web-default-source-addon", next);
+              else localStorage.removeItem("nuvio-web-default-source-addon");
+            }}
             heroEnabled={heroEnabled}
             onHeroEnabled={(next) => {
               setHeroEnabled(next);
@@ -2536,6 +2572,7 @@ export function App() {
             setDetailLaunch(null);
           }}
           onLibrary={toggleLibrary}
+          defaultSourceAddon={defaultSourceAddon}
           defaultPlayer={externalPlayer}
           onDefaultPlayer={(mode) => {
             localStorage.setItem("nuvio-web-external-player", mode);
@@ -4079,6 +4116,9 @@ function SettingsPage({
   homeLayoutLabels,
   pinnedCollectionKeys,
   onHomeLayout,
+  addonNames,
+  defaultSourceAddon,
+  onDefaultSourceAddon,
   heroEnabled,
   onHeroEnabled,
   onTypedSetting,
@@ -4110,6 +4150,10 @@ function SettingsPage({
   homeLayoutLabels: Map<string, string>;
   pinnedCollectionKeys: Set<string>;
   onHomeLayout(next: HomeLayout): Promise<void>;
+  /** Installed addon names, for the default-source picker. */
+  addonNames: string[];
+  defaultSourceAddon: string;
+  onDefaultSourceAddon(next: string): void;
   /** Device-local, so it is state here rather than part of the synced blob. */
   heroEnabled: boolean;
   onHeroEnabled(next: boolean): void;
@@ -5014,6 +5058,27 @@ function SettingsPage({
         <header>
           <h2>Playback</h2>
         </header>
+        <label className="setting-select-row">
+          <span>
+            <strong>Default source addon</strong>
+            <small>
+              The addon the source list opens filtered to. Kept on this device.
+              An addon that returned nothing for a title is skipped, so this can
+              never hide the sources that did arrive.
+            </small>
+          </span>
+          <select
+            value={defaultSourceAddon}
+            onChange={(event) => onDefaultSourceAddon(event.target.value)}
+          >
+            <option value="">All addons</option>
+            {addonNames.map((name) => (
+              <option key={name} value={name}>
+                {name}
+              </option>
+            ))}
+          </select>
+        </label>
         <SettingToggle
           title="Loading overlay"
           description="Show the buffering spinner while the video is waiting."

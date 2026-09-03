@@ -23,6 +23,8 @@ import { assessPlayback, shouldUseRemuxFallback } from "../lib/playback";
 import { safeHttpUrl } from "../lib/security";
 import {
   enrichMetadata,
+  loadSeasonCast,
+  mergeCast,
   tmdbIdForMeta,
   type MetadataEnrichmentConfig,
 } from "../lib/metadataEnrichment";
@@ -585,6 +587,44 @@ export function Details({
   );
   const regularSeasonCount = seasons.filter((value) => value > 0).length;
   const [season, setSeason] = useState<number | undefined>();
+  /**
+   * The selected season's own cast, where TMDB has one.
+   *
+   * Null means "nothing of its own" — no season credits, a film, or TMDB off —
+   * and the show-level cast is shown instead.
+   */
+  const [seasonCast, setSeasonCast] = useState<Person[] | null>(null);
+  useEffect(() => {
+    if (meta.type !== "series" || season == null || season <= 0) {
+      setSeasonCast(null);
+      return;
+    }
+    let live = true;
+    // Not cleared first: the previous season's list stays until the new one
+    // arrives, so moving between seasons does not blink the row empty.
+    void tmdbIdForMeta(meta, metadataEnrichment.tmdb)
+      .then((tmdbId) =>
+        tmdbId ? loadSeasonCast(tmdbId, season, metadataEnrichment.tmdb) : [],
+      )
+      .then((cast) => {
+        if (live) setSeasonCast(cast.length ? cast : null);
+      })
+      .catch(() => live && setSeasonCast(null));
+    return () => {
+      live = false;
+    };
+  }, [meta, meta.type, season, metadataEnrichment.tmdb]);
+  /**
+   * The season's cast where it has one, otherwise the show's.
+   *
+   * Merged the same way the show's own cast is, so a season list from TMDB
+   * still picks up anything the addon knew — and so the two paths cannot drift
+   * into showing different things about the same person.
+   */
+  const castForSeason = useMemo(
+    () => (seasonCast ? mergeCast(seasonCast, meta.cast) : meta.cast),
+    [seasonCast, meta.cast],
+  );
   const [episodeQuery, setEpisodeQuery] = useState("");
   const visibleEpisodes = useMemo(() => {
     const query = episodeQuery.trim().toLocaleLowerCase();
@@ -1183,12 +1223,14 @@ export function Details({
           </div>
         </section>
       )}
-      {sectionEnabled("CAST") && meta.cast.length > 0 && (
+      {sectionEnabled("CAST") && castForSeason.length > 0 && (
         <section className="cast" style={{ order: sectionOrder("CAST") }}>
           <span className="eyebrow">CAST</span>
-          <h2>Actors & creators</h2>
+          <h2>
+            {seasonCast ? `Season ${season} cast` : "Actors & creators"}
+          </h2>
           <div>
-            {meta.cast.map((person, index) => {
+            {castForSeason.map((person, index) => {
               const body = (
                 <>
                   {person.photo ? (

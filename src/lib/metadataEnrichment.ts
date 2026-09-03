@@ -198,6 +198,12 @@ function tmdbPeople(payload: Json, series: boolean): {
     }
   }
   const credits = json(payload.credits);
+  // `aggregate_credits` is TMDB's proper endpoint for a show: it bills the cast
+  // across every season and gives each person their roles with episode counts,
+  // where plain `credits` returns a shorter flat "series cast". It is the list
+  // themoviedb.org itself shows, and the reason ours looked thinner.
+  const aggregate = series ? json(payload.aggregate_credits) : null;
+  const aggregateCast = list(aggregate?.cast);
   for (const member of list(credits?.crew)) {
     const name = text(member.name);
     const job = text(member.job) || "";
@@ -215,12 +221,14 @@ function tmdbPeople(payload: Json, series: boolean): {
       writers.push(name);
     }
   }
-  for (const member of list(credits?.cast)) {
+  for (const member of aggregateCast.length ? aggregateCast : list(credits?.cast)) {
     const name = text(member.name);
     if (!name) continue;
     people.push({
       name,
-      role: text(member.character),
+      // An aggregate entry carries `roles[]` rather than one `character`; the
+      // first is the billed one.
+      role: text(member.character) ?? text(list(member.roles)[0]?.character),
       photo: image(member.profile_path, "w500"),
       tmdbId: number(member.id),
     });
@@ -255,6 +263,87 @@ function tmdbTrailers(payload: Json): MetaTrailer[] {
       trailerType: text(item.type) || "Trailer",
       displayName: text(item.name),
     }));
+}
+
+/**
+ * The cast of one season, for a show whose lineup changes between them.
+ *
+ * An anthology is the clear case, but any long-running show gains and loses
+ * people, and the show-level list bills them all together — so the row could
+ * show someone who has not appeared for four years while you are looking at the
+ * newest season.
+ *
+ * Returns an empty list rather than throwing: TMDB has no season credits for
+ * plenty of shows, and the caller falls back to the show's own cast, which is
+ * the right answer when a season has nothing of its own to say.
+ */
+export async function loadSeasonCast(
+  tmdbId: string,
+  season: number,
+  config: MetadataEnrichmentConfig["tmdb"],
+): Promise<Person[]> {
+  if (!config.enabled || !config.apiKey.trim() || !/^\d+$/.test(tmdbId))
+    return [];
+  try {
+    const payload = json(
+      await cachedJson(
+        tmdbUrl(
+          `tv/${tmdbId}/season/${season}/aggregate_credits`,
+          config.apiKey,
+          config.language,
+        ),
+      ),
+    );
+    const cast: Person[] = [];
+    for (const member of list(payload?.cast)) {
+      const name = text(member.name);
+      if (!name) continue;
+      cast.push({
+        name,
+        role: text(list(member.roles)[0]?.character) ?? text(member.character),
+        photo: image(member.profile_path, "w500"),
+        tmdbId: number(member.id),
+      });
+    }
+    return cast;
+  } catch {
+    return [];
+  }
+}
+
+/** Case- and punctuation-insensitive, so "J. K. Simmons" matches "J.K. Simmons". */
+const nameKey = (name: string) =>
+  name.toLowerCase().replace(/[^a-z0-9]/g, "");
+
+/**
+ * The addon's cast, with TMDB filling the gaps — not replacing it.
+ *
+ * TMDB used to win outright, which is why this client showed fewer actors than
+ * the official one: the official client never asks TMDB for credits at all, and
+ * shows whatever the addon put in `app_extras.cast`. So the addon decides who
+ * appears and in what order.
+ *
+ * TMDB is still worth having, because an addon commonly sends names and nothing
+ * else — and a cast member with no `tmdbId` cannot be opened, so deferring
+ * wholesale would have quietly cost the actor pages. Anyone TMDB knows about
+ * who the addon did not mention is appended rather than dropped.
+ */
+export function mergeCast(addon: Person[], tmdb: Person[]): Person[] {
+  if (!addon.length) return tmdb;
+  if (!tmdb.length) return addon;
+  const byName = new Map(tmdb.map((person) => [nameKey(person.name), person]));
+  const merged = addon.map((person) => {
+    const match = byName.get(nameKey(person.name));
+    if (!match) return person;
+    byName.delete(nameKey(person.name));
+    return {
+      ...person,
+      role: person.role ?? match.role,
+      photo: person.photo ?? match.photo,
+      tmdbId: person.tmdbId ?? match.tmdbId,
+    };
+  });
+  return [...merged, ...byName.values()];
 }
 
 export function applyTmdbPayload(
@@ -310,7 +399,7 @@ export function applyTmdbPayload(
     const people = tmdbPeople(payload, series);
     next = {
       ...next,
-      cast: people.cast.length ? people.cast : next.cast,
+      cast: mergeCast(next.cast, people.cast),
       director: people.directors.length ? people.directors : next.director,
       writer: people.writers.length ? people.writers : next.writer,
     };
@@ -535,7 +624,10 @@ export async function enrichMetadata(
             tmdbUrl(`${media}/${id}`, config.tmdb.apiKey, language, {
               append_to_response:
                 media === "tv"
-                  ? "credits,videos,content_ratings,external_ids"
+                  ? // Both: `aggregate_credits` bills the cast across every
+                    // season, while the crew this screen reads (director,
+                    // writer) is only on `credits`.
+                    "aggregate_credits,credits,videos,content_ratings,external_ids"
                   : "credits,videos,release_dates,external_ids",
             }),
           ),

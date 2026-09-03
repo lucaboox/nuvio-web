@@ -317,6 +317,11 @@ export function Player({
   // that event its child video window can still be transparent, which would
   // otherwise expose whatever desktop window happens to sit behind Nuvio.
   const [nativeSurfaceReady, setNativeSurfaceReady] = useState(!nativePlayer);
+  // `player.open` starts libmpv's thread but returns before its video output is
+  // configured. A resize command sent in that gap can be accepted and then
+  // overwritten by the first VO setup. Apply the selected mode once more when
+  // the native state reports its first frame, exactly once per opened stream.
+  const nativePictureModeReadyRef = useRef(false);
   const url = stream.url;
   const externalUrl = stream.externalUrl || url;
   const navigableExternalUrl = useMemo(
@@ -674,6 +679,7 @@ export function Player({
     setWaiting(true);
     setPlaying(false);
     setNativeSurfaceReady(false);
+    nativePictureModeReadyRef.current = false;
     pendingNativeSeekRef.current = null;
     nativeProgressSnapshotRef.current = {
       positionMs: 0,
@@ -696,6 +702,17 @@ export function Player({
         setPlaying(next.active && !next.paused && !next.ended);
         if (next.active && !next.loading && !next.error) {
           setNativeSurfaceReady(true);
+          if (!nativePictureModeReadyRef.current) {
+            nativePictureModeReadyRef.current = true;
+            try {
+              await nativePlayer.setResizeMode?.(resizeModeRef.current);
+            } catch (reason) {
+              // Permit the next poll to retry instead of permanently accepting
+              // a command that never reached the native player.
+              nativePictureModeReadyRef.current = false;
+              throw reason;
+            }
+          }
         }
         const sampledSeconds = Math.max(0, next.positionMs) / 1000;
         const pendingSeek = pendingNativeSeekRef.current;

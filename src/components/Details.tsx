@@ -50,6 +50,7 @@ import type {
   MetaScreenSectionKey,
   MetaScreenSettings,
 } from "../lib/metaScreenSettings";
+import { useDragScroll } from "../lib/useDragScroll";
 import { useLongPress } from "../lib/useLongPress";
 import { useScrollLock } from "../lib/useScrollLock";
 import { useSwipeBack } from "../lib/useSwipeBack";
@@ -463,6 +464,8 @@ export function Details({
   // stand down while it is up: a swipe there would otherwise carry both away
   // at once. The panel closes with its own X.
   const swipeRef = useSwipeBack<HTMLDivElement>(onClose, !sourceOpen);
+  // The cast row pans by drag on desktop, like the catalog rows.
+  const castRef = useDragScroll<HTMLDivElement>();
   const [streams, setStreams] = useState<Stream[]>([]);
   const [sourceBusy, setSourceBusy] = useState(false);
   // Cleared by the next attempt rather than a timer: the answer belongs to
@@ -1231,7 +1234,7 @@ export function Details({
           <span className="eyebrow">
             {seasonCast ? `CAST · SEASON ${season}` : "CAST"}
           </span>
-          <div>
+          <div ref={castRef}>
             {castForSeason.map((person, index) => {
               const body = (
                 <>

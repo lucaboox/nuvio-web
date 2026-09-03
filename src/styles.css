@@ -1379,6 +1379,13 @@ a {
   display: flex;
   gap: 14px;
   overflow-x: auto;
+  overscroll-behavior-x: contain;
+  /* Dragged rather than scrolled, like the catalog rows, so the bar below it
+     was only taking up space. */
+  scrollbar-width: none;
+}
+.cast > div::-webkit-scrollbar {
+  display: none;
 }
 .cast article {
   flex: 0 0 120px;
@@ -1423,10 +1430,16 @@ a {
   outline: 2px solid #5b8cff;
   outline-offset: 3px;
 }
+/* One line each, cut with an ellipsis. A long name used to wrap and make its
+   card taller than the rest of the row; `overflow: hidden` also stops the text
+   forcing the card wider than its flex basis. */
 .cast article strong,
 .cast article small {
   display: block;
   margin-top: 7px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 .cast article small {
   color: #7f8994;
@@ -4807,11 +4820,13 @@ body.is-locked {
 /* Desktop has no way to pan a horizontal row without a trackpad, so the
    carousels are draggable. Touch already pans natively and is left alone. */
 .media-row,
-.continue-row {
+.continue-row,
+.cast > div {
   cursor: grab;
 }
 .media-row.is-dragging,
-.continue-row.is-dragging {
+.continue-row.is-dragging,
+.cast > div.is-dragging {
   cursor: grabbing;
   user-select: none;
 }
@@ -4825,7 +4840,8 @@ body.is-locked {
   }
 }
 .media-row.is-dragging img,
-.continue-row.is-dragging img {
+.continue-row.is-dragging img,
+.cast > div.is-dragging img {
   pointer-events: none;
 }
 
@@ -5857,22 +5873,39 @@ body.is-locked {
   /* Mobile detail composition follows the native Nuvio layout: centered
      identity/actions above left-aligned long-form copy. */
   .detail-hero {
+    /*
+     * The artwork runs behind the title and the actions and fades out under
+     * them, the way the official app does it — rather than stopping at a hard
+     * edge with the copy stacked on flat black below.
+     *
+     * The two layers are sized to one variable on purpose. They used to differ:
+     * the gradient covered the whole hero (which grows with the synopsis) while
+     * the artwork was a fixed height, so the point the fade finished had no
+     * relationship to where the picture actually ended, and the seam moved
+     * about depending on how long the description was. Sharing a box makes the
+     * percentage stops below mean something — they are positions on the
+     * artwork.
+     */
+    --detail-art: clamp(620px, 84svh, 880px);
     min-height: 0;
     align-items: flex-start;
     justify-content: flex-start;
-    padding: clamp(470px, 62svh, 620px) 20px 30px;
+    /* Puts the title around 56% down the artwork, which is where the official
+       app sits it — over the picture, not after it. */
+    padding: clamp(340px, 47svh, 500px) 20px 30px;
     background-image:
       linear-gradient(
         to bottom,
-        transparent 36%,
-        rgb(0 0 0 / 0.12) 46%,
-        var(--app-bg) 72%,
+        transparent 40%,
+        rgb(0 0 0 / 0.28) 58%,
+        rgb(0 0 0 / 0.78) 74%,
+        var(--app-bg) 92%,
         var(--app-bg) 100%
       ),
       var(--detail-backdrop) !important;
     background-position: center top;
     background-repeat: no-repeat;
-    background-size: 100% 100%, auto clamp(560px, 70svh, 700px);
+    background-size: 100% var(--detail-art), auto var(--detail-art);
     text-align: center;
   }
   .detail-copy {

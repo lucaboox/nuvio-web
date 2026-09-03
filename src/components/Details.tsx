@@ -63,6 +63,7 @@ import type {
   ExternalRating,
   InstalledAddon,
   Meta,
+  Person,
   Stream,
   Video,
 } from "../types";
@@ -355,6 +356,7 @@ export function Details({
   openSourcesOnLoad = false,
   defaultPlayer,
   onDefaultPlayer,
+  onPerson,
 }: {
   seed: Meta;
   addons: InstalledAddon[];
@@ -386,6 +388,11 @@ export function Details({
   /** The player chosen in Settings, which this picker also sets. */
   defaultPlayer: ExternalPlayerMode;
   onDefaultPlayer(mode: ExternalPlayerMode): void;
+  /**
+   * Opens a cast member's own page. Absent where the person page cannot work —
+   * without TMDB there are no person ids to open with.
+   */
+  onPerson?(person: Person & { tmdbId: number }): void;
 }) {
   const [menu, setMenu] = useState<{ x: number; y: number; video: Video } | null>(
     null,
@@ -1058,17 +1065,38 @@ export function Details({
           <span className="eyebrow">CAST</span>
           <h2>Actors & creators</h2>
           <div>
-            {meta.cast.map((person, index) => (
-              <article key={`${person.name}:${index}`}>
-                {person.photo ? (
-                  <img src={person.photo} alt="" loading="lazy" />
-                ) : (
-                  <span>{person.name.slice(0, 1)}</span>
-                )}
-                <strong>{person.name}</strong>
-                <small>{person.role}</small>
-              </article>
-            ))}
+            {meta.cast.map((person, index) => {
+              const body = (
+                <>
+                  {person.photo ? (
+                    <img src={person.photo} alt="" loading="lazy" />
+                  ) : (
+                    <span>{person.name.slice(0, 1)}</span>
+                  )}
+                  <strong>{person.name}</strong>
+                  <small>{person.role}</small>
+                </>
+              );
+              // Only openable where there is something to open with. Cast
+              // arrives from TMDB enrichment, so a build without a TMDB key has
+              // no ids and the card stays what it always was — the affordance
+              // is absent rather than present and broken.
+              return onPerson && person.tmdbId ? (
+                <article key={`${person.name}:${index}`}>
+                  <button
+                    className="cast-open"
+                    onClick={() =>
+                      onPerson({ ...person, tmdbId: person.tmdbId as number })
+                    }
+                    aria-label={`Browse ${person.name}`}
+                  >
+                    {body}
+                  </button>
+                </article>
+              ) : (
+                <article key={`${person.name}:${index}`}>{body}</article>
+              );
+            })}
           </div>
         </section>
       )}

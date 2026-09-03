@@ -60,6 +60,7 @@ import {
 } from "./components/Collections";
 import { Hero, MediaRow, PosterCard } from "./components/Media";
 import { Player } from "./components/Player";
+import { PersonPage } from "./components/Person";
 import { ProfileSwitcher } from "./components/ProfileSwitcher";
 import {
   loadAddons,
@@ -188,6 +189,7 @@ import type {
   LibraryItem,
   Meta,
   NavKey,
+  Person,
   Profile,
   ProgressRow,
   Session,
@@ -507,6 +509,10 @@ export function App() {
   // render happens in a later, interruptible pass instead of blocking it.
   const deferredActive = useDeferredValue(active);
   const [selected, setSelected] = useState<Meta | null>(null);
+  // The cast member whose page is open, over the details it was opened from.
+  // Closing it returns to that title rather than to the grid, which is the only
+  // reason it is a separate piece of state rather than a replacement for it.
+  const [person, setPerson] = useState<(Person & { tmdbId: number }) | null>(null);
   const [detailLaunch, setDetailLaunch] = useState<{
     videoId?: string;
     openSources?: boolean;
@@ -2514,6 +2520,14 @@ export function App() {
             localStorage.setItem("nuvio-web-external-player", mode);
             setExternalPlayer(mode);
           }}
+          // Absent without TMDB, which is where person ids and the filmography
+          // both come from — so the cast cards stay unclickable rather than
+          // opening a page that could only apologise.
+          onPerson={
+            metadataEnrichment.tmdb.enabled && metadataEnrichment.tmdb.apiKey
+              ? setPerson
+              : undefined
+          }
           onPlay={(stream, meta, video, player) => {
             // The picker in the sources panel wins for this launch only.
             const chosen = player ?? externalPlayer;
@@ -2533,6 +2547,24 @@ export function App() {
             });
           }}
         />
+      )}
+      {person && (
+        <div className="person-overlay">
+          <PersonPage
+            seed={person}
+            index={watchIndex}
+            config={metadataEnrichment.tmdb}
+            onBack={() => setPerson(null)}
+            onOpen={(item) => {
+              // Opening a credit leaves the person behind rather than stacking
+              // another layer on top: two overlays deep, "back" stops meaning
+              // anything you can predict.
+              setPerson(null);
+              setSelected(item);
+              setDetailLaunch(null);
+            }}
+          />
+        </div>
       )}
     </div>
   );

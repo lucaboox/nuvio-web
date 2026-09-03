@@ -55,6 +55,16 @@ async function cachedJson(url: string): Promise<unknown> {
   return request;
 }
 
+/**
+ * The TMDB layer, shared with the person page.
+ *
+ * `person.ts` is the same layer seen from a different entry point, and it needs
+ * this module's cache rather than one of its own: opening an actor from a title
+ * whose credits were just fetched should not re-ask TMDB for what is already in
+ * memory here.
+ */
+export { cachedJson as tmdbJson, tmdbUrl, image as tmdbImage };
+
 const imdbId = (value: string): string | undefined => {
   const found = value.match(/tt\d+/i)?.[0];
   return found?.toLowerCase();

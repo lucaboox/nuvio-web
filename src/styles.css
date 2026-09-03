@@ -605,6 +605,116 @@ a {
   background: #080a0d;
   overflow-y: auto;
 }
+/* Above the details it was opened from, which stays mounted underneath so
+   closing returns to the title rather than to the grid. */
+.person-overlay {
+  position: fixed;
+  z-index: 110;
+  inset: 0;
+  background: #080a0d;
+  overflow-y: auto;
+}
+.person-page {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-bottom: 48px;
+}
+.person-back {
+  position: sticky;
+  top: 18px;
+  align-self: start;
+  margin: 18px 0 0 7vw;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(12, 15, 19, 0.82);
+  backdrop-filter: blur(8px);
+  color: white;
+  cursor: pointer;
+}
+.person-back:hover {
+  background: rgba(30, 36, 44, 0.92);
+}
+.person-identity {
+  display: flex;
+  gap: 32px;
+  align-items: flex-start;
+  padding: 8px 7vw 28px;
+}
+.person-identity > img,
+.person-photo-fallback {
+  flex: none;
+  width: 190px;
+  height: 265px;
+  border-radius: 18px;
+  object-fit: cover;
+  background: #1b2025;
+  display: grid;
+  place-items: center;
+  font-size: 68px;
+}
+.person-identity > div {
+  min-width: 0;
+}
+.person-identity h1 {
+  margin: 6px 0 0;
+  font-size: clamp(30px, 4vw, 46px);
+  line-height: 1.1;
+}
+.person-role {
+  margin: 8px 0 0;
+  color: #9aa4b0;
+}
+.person-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  margin-top: 12px;
+  color: #7f8994;
+  font-size: 13px;
+}
+.person-facts span + span::before {
+  content: "·";
+  margin-right: 18px;
+}
+.person-biography {
+  margin: 18px 0 0;
+  max-width: 74ch;
+  line-height: 1.65;
+  color: #c2cbd5;
+}
+.person-note {
+  padding: 24px 7vw;
+  color: #7f8994;
+}
+.person-note.is-error {
+  color: #ff8f8f;
+}
+@media (max-width: 760px) {
+  .person-identity {
+    flex-direction: column;
+    gap: 20px;
+  }
+  .person-identity > img,
+  .person-photo-fallback {
+    width: 132px;
+    height: 186px;
+    font-size: 48px;
+  }
+  .person-back {
+    margin-left: 5vw;
+  }
+  .person-identity,
+  .person-note {
+    padding-left: 5vw;
+    padding-right: 5vw;
+  }
+}
 .detail-view.is-loading {
   overflow: hidden;
 }
@@ -1196,7 +1306,10 @@ a {
   flex: 0 0 120px;
 }
 .cast article img,
-.cast article > span {
+.cast article > span,
+/* The photo moved inside a button when cast became openable, so the child
+   combinator above stopped reaching the initial-letter fallback. */
+.cast .cast-open > span {
   width: 120px;
   height: 150px;
   border-radius: 12px;
@@ -1205,6 +1318,31 @@ a {
   display: grid;
   place-items: center;
   font-size: 38px;
+}
+/* Openable only where TMDB gave us an id; the plain article is unchanged. */
+.cast .cast-open {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 12px;
+}
+.cast .cast-open img,
+.cast .cast-open > span {
+  transition: transform 140ms ease;
+}
+.cast .cast-open:hover img,
+.cast .cast-open:hover > span {
+  transform: scale(1.04);
+}
+.cast .cast-open:focus-visible {
+  outline: 2px solid #5b8cff;
+  outline-offset: 3px;
 }
 .cast article strong,
 .cast article small {

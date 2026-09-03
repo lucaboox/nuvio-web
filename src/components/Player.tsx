@@ -75,7 +75,7 @@ const AUDIO_ECHO_MS = 900;
  * keepaspect/panscan pair, so cycling both would present a step that changes
  * the label and nothing on screen.
  */
-const RESIZE_MODES: ResizeMode[] = ["Fit", "Zoom", "Stretch"];
+const RESIZE_MODES: ResizeMode[] = ["Fit", "Stretch", "Zoom"];
 
 /** How long the picture-mode name stays up after a change. */
 const PICTURE_NOTE_MS = 5000;
@@ -471,10 +471,16 @@ export function Player({
   const toggleMuted = useCallback(() => {
     if (nativePlayer) {
       audioEchoUntil.current = Date.now() + AUDIO_ECHO_MS;
-      setMuted((value) => !value);
-      void nativePlayer.toggleMute().catch((reason: unknown) =>
-        setError(reason instanceof Error ? reason.message : "Could not change mute."),
-      );
+      setMuted((value) => {
+        const next = !value;
+        const applied = nativePlayer.setMuted
+          ? nativePlayer.setMuted(next)
+          : nativePlayer.toggleMute();
+        void applied.catch((reason: unknown) =>
+          setError(reason instanceof Error ? reason.message : "Could not change mute."),
+        );
+        return next;
+      });
       return;
     }
     const engine = engineRef.current;
@@ -1202,6 +1208,11 @@ export function Player({
       void nativePlayer.setVolume(Math.round(normalized * 100)).catch((reason: unknown) =>
         setError(reason instanceof Error ? reason.message : "Could not change volume."),
       );
+      // mpv's mute is a separate property from its volume, so moving the
+      // slider off zero while muted left it silent — and the next poll put the
+      // slider back to muted, which is what looked like the value snapping
+      // back on its own.
+      void nativePlayer.setMuted?.(normalized === 0).catch(() => undefined);
       return;
     }
     if (engineRef.current) {

@@ -147,6 +147,14 @@ export type PlayerApi = {
   seekRelative(offsetMs: number): Promise<void>;
   setVolume(volume: number): Promise<void>;
   toggleMute(): Promise<void>;
+  /**
+   * Mute stated outright rather than flipped.
+   *
+   * A toggle has to be told what the current state is, and the only source for
+   * that is a poll that lags the change — raising the volume while muted then
+   * left the shell muted and the next poll undid it.
+   */
+  setMuted?(muted: boolean): Promise<void>;
   setSpeed(speed: number): Promise<void>;
   /**
    * Picture mode, changed mid-playback from the player's own control.

@@ -1088,6 +1088,12 @@ a {
 .cast {
   padding: 36px 7vw;
 }
+/* The heading that used to sit under the eyebrow carried the gap above the
+   row; without it the faces sat against the label. */
+.cast > .eyebrow {
+  display: block;
+  margin-bottom: 18px;
+}
 .episodes header {
   display: flex;
   /* The picker sits next to the title rather than being flung to the far edge

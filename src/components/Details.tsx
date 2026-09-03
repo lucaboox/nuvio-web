@@ -1225,10 +1225,12 @@ export function Details({
       )}
       {sectionEnabled("CAST") && castForSeason.length > 0 && (
         <section className="cast" style={{ order: sectionOrder("CAST") }}>
-          <span className="eyebrow">CAST</span>
-          <h2>
-            {seasonCast ? `Season ${season} cast` : "Actors & creators"}
-          </h2>
+          {/* The eyebrow says what this is; a heading under it only repeated
+              itself. The season rides along here so a changed list is still
+              accounted for. */}
+          <span className="eyebrow">
+            {seasonCast ? `CAST · SEASON ${season}` : "CAST"}
+          </span>
           <div>
             {castForSeason.map((person, index) => {
               const body = (

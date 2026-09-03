@@ -344,7 +344,12 @@ export function mapMeta(
   };
 }
 
-function supports(
+/**
+ * Whether a manifest declares a resource — the same test `loadStreams` uses to
+ * decide who to ask, so anything built on it agrees with what actually gets
+ * queried.
+ */
+export function supports(
   manifest: AddonManifest,
   resource: string,
   type?: string,

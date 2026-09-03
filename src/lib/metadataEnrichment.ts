@@ -176,6 +176,17 @@ function ageRating(payload: Json, series: boolean): string | undefined {
     .find(Boolean);
 }
 
+/**
+ * How many cast members are worth keeping.
+ *
+ * `aggregate_credits` bills a show's cast across every season it ever had, and
+ * a season's own credits include every guest — so both can run to hundreds of
+ * people where the old `credits` endpoint returned a couple of dozen. Rendering
+ * that many cards blocked the page for seconds on a phone when the season
+ * picker changed, which is the whole reason there is a number here.
+ */
+const TMDB_CAST_LIMIT = 40;
+
 function tmdbPeople(payload: Json, series: boolean): {
   cast: Person[];
   directors: string[];
@@ -235,12 +246,16 @@ function tmdbPeople(payload: Json, series: boolean): {
   }
   const seen = new Set<string>();
   return {
-    cast: people.filter((person) => {
-      const key = `${person.name.toLowerCase()}|${person.role || ""}`;
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    }),
+    cast: people
+      .filter((person) => {
+        const key = `${person.name.toLowerCase()}|${person.role || ""}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      })
+      // TMDB returns these in billing order, so this keeps the people the show
+      // is actually about.
+      .slice(0, TMDB_CAST_LIMIT),
     directors: [...new Set(directors)],
     writers: [...new Set(writers)],
   };
@@ -295,7 +310,9 @@ export async function loadSeasonCast(
       ),
     );
     const cast: Person[] = [];
-    for (const member of list(payload?.cast)) {
+    // Bounded for the same reason as above: a season's aggregate credits list
+    // every guest, and this list is rebuilt every time the picker moves.
+    for (const member of list(payload?.cast).slice(0, TMDB_CAST_LIMIT)) {
       const name = text(member.name);
       if (!name) continue;
       cast.push({

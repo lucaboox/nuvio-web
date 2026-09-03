@@ -51,6 +51,7 @@ import type {
   MetaScreenSettings,
 } from "../lib/metaScreenSettings";
 import { useDragScroll } from "../lib/useDragScroll";
+import { useProgressiveList } from "../lib/useProgressiveList";
 import { useLongPress } from "../lib/useLongPress";
 import { useScrollLock } from "../lib/useScrollLock";
 import { useSwipeBack } from "../lib/useSwipeBack";
@@ -644,6 +645,19 @@ export function Details({
     () => (seasonCast ? mergeCast(seasonCast, meta.cast) : meta.cast),
     [seasonCast, meta.cast],
   );
+  /**
+   * Painted in slices, like the catalog rows.
+   *
+   * Changing the season replaces the whole cast row, and committing every card
+   * in the same pass as the episode list left the page unresponsive for
+   * seconds on a phone. The source lists are bounded now too, but this is what
+   * makes the row's cost independent of how long any of them turn out to be.
+   */
+  const { visible: visibleCast } = useProgressiveList(castForSeason, {
+    resetKey: `${meta.id}:${season ?? ""}`,
+    first: 12,
+    chunk: 12,
+  });
   const [episodeQuery, setEpisodeQuery] = useState("");
   const visibleEpisodes = useMemo(() => {
     const query = episodeQuery.trim().toLocaleLowerCase();
@@ -1251,7 +1265,7 @@ export function Details({
             {seasonCast ? `CAST · SEASON ${season}` : "CAST"}
           </span>
           <div ref={castRef}>
-            {castForSeason.map((person, index) => {
+            {visibleCast.map((person, index) => {
               const body = (
                 <>
                   {person.photo ? (

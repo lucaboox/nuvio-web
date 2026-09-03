@@ -105,6 +105,7 @@ import {
   normalizeManifestUrl,
   resolveMeta,
   searchAddons,
+  supports,
   type AddonSearchGroup,
 } from "./lib/addons";
 import {
@@ -1479,7 +1480,15 @@ export function App() {
     () => [
       ...new Set(
         addons
-          .filter((addon) => addon.enabled && addon.manifest)
+          .filter(
+            (addon) =>
+              addon.enabled &&
+              addon.manifest &&
+              // Stream providers only. A metadata or subtitle addon never
+              // appears in this list, so offering it as the default meant
+              // choosing a filter that could only ever match nothing.
+              supports(addon.manifest, "stream"),
+          )
           .map((addon) => addon.manifest!.name)
           .filter(Boolean),
       ),

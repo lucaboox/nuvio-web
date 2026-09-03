@@ -1,5 +1,6 @@
 import { ArrowLeft } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { useSwipeBack } from "../lib/useSwipeBack";
 import {
   lifespan,
   loadPersonDetail,
@@ -34,6 +35,9 @@ export function PersonPage({
 }) {
   const [person, setPerson] = useState<PersonDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // The same gesture the details page uses, on the same kind of scroller, so
+  // going back from an actor feels like going back from anything else.
+  const swipeRef = useSwipeBack<HTMLDivElement>(onBack);
 
   useEffect(() => {
     let live = true;
@@ -63,10 +67,14 @@ export function PersonPage({
   const photo = person?.profilePhoto || seed.photo;
 
   return (
-    <section className="person-page">
-      <button className="person-back" onClick={onBack} aria-label="Back">
+    // The overlay is this component's own root rather than a wrapper in App,
+    // because the swipe listeners have to sit on the scrolling node — exactly
+    // where `.detail-view` puts them.
+    <div className="person-view" ref={swipeRef}>
+      <button className="circle-button back" onClick={onBack} aria-label="Back">
         <ArrowLeft />
       </button>
+      <section className="person-page">
       <header className="person-identity">
         {photo ? (
           <img src={photo} alt="" />
@@ -100,14 +108,15 @@ export function PersonPage({
           No film or television credits were found.
         </div>
       )}
-      {sections.map((section) => (
-        <MediaRow
-          key={section.key}
-          section={section}
-          index={index}
-          onOpen={onOpen}
-        />
-      ))}
-    </section>
+        {sections.map((section) => (
+          <MediaRow
+            key={section.key}
+            section={section}
+            index={index}
+            onOpen={onOpen}
+          />
+        ))}
+      </section>
+    </div>
   );
 }

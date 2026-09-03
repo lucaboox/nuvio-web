@@ -2551,7 +2551,6 @@ export function App() {
         />
       )}
       {person && (
-        <div className="person-overlay">
           <PersonPage
             seed={person}
             index={watchIndex}
@@ -2566,7 +2565,6 @@ export function App() {
               setDetailLaunch(null);
             }}
           />
-        </div>
       )}
     </div>
   );

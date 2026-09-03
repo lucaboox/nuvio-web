@@ -644,39 +644,34 @@ a {
   overflow-y: auto;
 }
 /* Above the details it was opened from, which stays mounted underneath so
-   closing returns to the title rather than to the grid. */
-.person-overlay {
+   closing returns to the title rather than to the grid.
+
+   Built like `.detail-view` deliberately: the same theme token rather than a
+   colour of its own — a hardcoded near-black is not black, so OLED mode was
+   the one theme where this page visibly did not belong — and the same fixed,
+   scrolling box, which is what the back gesture attaches to. */
+.person-view {
   position: fixed;
   z-index: 110;
   inset: 0;
-  background: #080a0d;
+  background: var(--app-bg);
   overflow-y: auto;
+}
+/* Identical to `.detail-view > .back`, so the control does not move or change
+   shape depending on which page you reached. */
+.person-view > .back {
+  position: fixed;
+  z-index: 4;
+  top: max(22px, env(safe-area-inset-top));
+  left: max(22px, env(safe-area-inset-left));
 }
 .person-page {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  /* Clears the fixed back button above it. */
+  padding-top: 86px;
   padding-bottom: 48px;
-}
-.person-back {
-  position: sticky;
-  top: 18px;
-  align-self: start;
-  margin: 18px 0 0 7vw;
-  z-index: 2;
-  display: grid;
-  place-items: center;
-  width: 44px;
-  height: 44px;
-  border: 0;
-  border-radius: 50%;
-  background: rgba(12, 15, 19, 0.82);
-  backdrop-filter: blur(8px);
-  color: white;
-  cursor: pointer;
-}
-.person-back:hover {
-  background: rgba(30, 36, 44, 0.92);
 }
 .person-identity {
   display: flex;
@@ -748,9 +743,6 @@ a {
     width: 132px;
     height: 186px;
     font-size: 48px;
-  }
-  .person-back {
-    margin-left: 5vw;
   }
   .person-identity,
   .person-note,

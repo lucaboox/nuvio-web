@@ -90,6 +90,9 @@ export type AuthApi = {
  * a polled snapshot: it crosses IPC cleanly and lets the same React player
  * drive libmpv without exposing a native handle or event emitter to the page.
  */
+/** The four picture modes, named as the settings blob stores them. */
+export type ResizeMode = "Fit" | "Fill" | "Zoom" | "Stretch";
+
 export type PlayerSource = {
   url: string;
   /** A resolver-provided fallback when the primary stream has no direct URL. */
@@ -145,6 +148,13 @@ export type PlayerApi = {
   setVolume(volume: number): Promise<void>;
   toggleMute(): Promise<void>;
   setSpeed(speed: number): Promise<void>;
+  /**
+   * Picture mode, changed mid-playback from the player's own control.
+   *
+   * Optional: a shell that cannot rescale its surface simply does not offer
+   * the button, the same way every other capability here works.
+   */
+  setResizeMode?(mode: ResizeMode): Promise<void>;
   setAudioTrack(id: number): Promise<void>;
   setSubtitleTrack(id: number): Promise<void>;
   /** Expands the native window, rather than a transparent webview element. */

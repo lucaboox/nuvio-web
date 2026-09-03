@@ -1,5 +1,6 @@
 import type Hls from "hls.js";
 import { platform } from "../platform/index.ts";
+import type { ResizeMode } from "../platform/types.ts";
 import { safeHttpUrl } from "../lib/security";
 import {
   assessPlayback,
@@ -20,6 +21,7 @@ import {
   List,
   LoaderCircle,
   Maximize,
+  Ratio,
   Music2,
   Pause,
   Play,
@@ -61,6 +63,9 @@ import type { ExternalPlayerMode, Meta, Stream, Video } from "../types";
 // the player chrome shared while the bytes still take the right route: a web
 // page decodes in <video>/canvas, and Tauri hands the same source to libmpv.
 const nativePlayer = platform.player;
+
+/** Cycled in this order by the player's picture-mode control. */
+const RESIZE_MODES: ResizeMode[] = ["Fit", "Fill", "Zoom", "Stretch"];
 
 type AudioChoice = { id: number; label: string };
 type NativeAudioTrackList = {
@@ -265,10 +270,35 @@ export function Player({
     () => /truehd|dts(?:-hd)?|e-?ac-?3|dd\+|atmos|\.mkv\b/i.test(sourceText),
     [sourceText],
   );
+  /**
+   * Picture mode for this playback.
+   *
+   * Seeded from the account setting and then cycled from the control below, so
+   * a one-off change for a badly-cropped print does not rewrite the default
+   * every title inherits.
+   */
+  const [resizeMode, setResizeMode] = useState<ResizeMode>(
+    () => RESIZE_MODES.find((mode) => mode === settings.resizeMode) ?? "Fit",
+  );
+  useEffect(() => {
+    setResizeMode(
+      RESIZE_MODES.find((mode) => mode === settings.resizeMode) ?? "Fit",
+    );
+  }, [settings.resizeMode]);
+  const cycleResizeMode = useCallback(() => {
+    setResizeMode((current) => {
+      const next =
+        RESIZE_MODES[(RESIZE_MODES.indexOf(current) + 1) % RESIZE_MODES.length];
+      // The native surface is rescaled by mpv, not by CSS, so it has to be
+      // told. Absent on a shell that cannot, and then the button is not built.
+      void nativePlayer?.setResizeMode?.(next).catch(() => undefined);
+      return next;
+    });
+  }, []);
   const videoFit =
-    settings.resizeMode === "Stretch"
+    resizeMode === "Stretch"
       ? "fill"
-      : settings.resizeMode === "Fit"
+      : resizeMode === "Fit"
         ? "contain"
         : "cover";
   const cueCss = useMemo(() => {
@@ -1413,6 +1443,18 @@ export function Player({
                 }}
               >
                 <List />
+              </button>
+            )}
+            {/* Only where the picture can actually be rescaled: CSS does it for
+                a browser video, and mpv does it for the native surface — a
+                shell offering neither would leave a button that does nothing. */}
+            {(!nativePlayer || nativePlayer.setResizeMode) && (
+              <button
+                aria-label={`Picture mode: ${resizeMode}`}
+                title={`Picture mode: ${resizeMode}`}
+                onClick={cycleResizeMode}
+              >
+                <Ratio />
               </button>
             )}
             <button aria-label="Fullscreen" onClick={toggleFullscreen}>

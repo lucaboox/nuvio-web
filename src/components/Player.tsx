@@ -102,7 +102,7 @@ const AUDIO_ECHO_MS = 900;
  * keepaspect/panscan pair, so cycling both would present a step that changes
  * the label and nothing on screen.
  */
-const RESIZE_MODES: ResizeMode[] = ["Fit", "Stretch", "Zoom"];
+const RESIZE_MODES: ResizeMode[] = ["Fit", "Zoom", "Stretch"];
 
 /** How long the picture-mode name stays up after a change. */
 const PICTURE_NOTE_MS = 5000;

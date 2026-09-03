@@ -1696,6 +1696,17 @@ a {
   gap: 12px;
   margin-top: 22px;
 }
+/* Quieter than a source row: it is a note about what is still coming, not
+   something to choose. */
+.source-pending {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 14px 10px 4px;
+  color: #7f8994;
+  font-size: 13px;
+}
 /* White at 0.05 on the blurred ground, like the official client's stream card,
    rather than an opaque panel colour — an opaque card on a translucent sheet
    loses the depth the blur is there to create. */

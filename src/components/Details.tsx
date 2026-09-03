@@ -475,6 +475,14 @@ export function Details({
   const castRef = useDragScroll<HTMLDivElement>();
   const [streams, setStreams] = useState<Stream[]>([]);
   const [sourceBusy, setSourceBusy] = useState(false);
+  /**
+   * Addons still outstanding after the first results have painted.
+   *
+   * `sourceBusy` now means "nothing has arrived yet", so it clears the moment
+   * the first addon answers — which left a slower one arriving into silence,
+   * indistinguishable from an addon that had simply failed.
+   */
+  const [sourcesPending, setSourcesPending] = useState(false);
   // Cleared by the next attempt rather than a timer: the answer belongs to
   // the source that was clicked.
   const [downloadNote, setDownloadNote] = useState("");
@@ -897,6 +905,7 @@ export function Details({
     setSourceVideo(video);
     setSourceOpen(true);
     setSourceBusy(true);
+    setSourcesPending(true);
     setStreams([]);
     const scheduleAutoPlay = (available: Stream[]) => {
       if (forceManual || autoPlayTimer.current !== undefined) return;
@@ -972,7 +981,10 @@ export function Details({
       );
       scheduleAutoPlay(addonStreams);
     } finally {
-      if (request === sourceRequest.current) setSourceBusy(false);
+      if (request === sourceRequest.current) {
+        setSourceBusy(false);
+        setSourcesPending(false);
+      }
     }
 
     const pluginStreams = await pluginStreamsTask;
@@ -1697,6 +1709,15 @@ export function Details({
                         : []),
                     ]}
                   />
+                )}
+                {sourcesPending && (
+                  /* Under the results rather than over them: what has arrived
+                     stays usable, and a slower addon landing later no longer
+                     looks like one that failed. */
+                  <div className="source-pending" role="status">
+                    <i className="mini-spinner" aria-hidden="true" />
+                    <span>Still checking other addons…</span>
+                  </div>
                 )}
               </div>
             ) : (

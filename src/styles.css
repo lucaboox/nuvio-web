@@ -2774,6 +2774,19 @@ input[type="password"]::-ms-clear {
   background: #000;
   isolation: isolate;
 }
+.player-view:fullscreen,
+.player-view:-webkit-full-screen {
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  max-width: none;
+  max-height: none;
+  background: #000;
+}
+.player-view::backdrop {
+  background: #000;
+}
 /* libmpv renders into the Tauri window below WebView2.  Only the native
    player route makes the web surface transparent; the browser/PWA route keeps
    its solid black video canvas.  The controls and shades remain ordinary DOM
@@ -2811,6 +2824,7 @@ html.native-player-active .player-view.native-player.native-player-loading {
   height: 100%;
   object-fit: contain;
   background: #000;
+  object-position: center center;
 }
 /*
  * Audible HTML video is surfaced by iOS in Dynamic Island/Now Playing and the
@@ -7602,6 +7616,7 @@ body.is-locked {
   width: 100%;
   height: 100%;
   background: #000;
+  object-position: center center;
 }
 
 /* ---- Up next, and the episode list ------------------------------------ */

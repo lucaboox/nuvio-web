@@ -3,6 +3,10 @@ import { platform } from "../platform/index.ts";
 import type { ResizeMode } from "../platform/types.ts";
 import { safeHttpUrl } from "../lib/security";
 import {
+  objectFitForResizeMode,
+  visibleResizeMode,
+} from "../lib/pictureMode";
+import {
   assessPlayback,
   audioIsSilent,
   shouldUseRemuxFallback,
@@ -331,12 +335,10 @@ export function Player({
    * every title inherits.
    */
   const [resizeMode, setResizeMode] = useState<ResizeMode>(
-    () => RESIZE_MODES.find((mode) => mode === settings.resizeMode) ?? "Fit",
+    () => visibleResizeMode(settings.resizeMode),
   );
   useEffect(() => {
-    setResizeMode(
-      RESIZE_MODES.find((mode) => mode === settings.resizeMode) ?? "Fit",
-    );
+    setResizeMode(visibleResizeMode(settings.resizeMode));
   }, [settings.resizeMode]);
   const [pictureNote, setPictureNote] = useState("");
   const cycleResizeMode = useCallback(() => {
@@ -345,6 +347,9 @@ export function Player({
       // would otherwise have no next step; start from the beginning.
       const at = RESIZE_MODES.indexOf(current);
       const next = RESIZE_MODES[(at + 1) % RESIZE_MODES.length];
+      const fit = objectFitForResizeMode(next);
+      if (videoRef.current) videoRef.current.style.objectFit = fit;
+      if (canvasRef.current) canvasRef.current.style.objectFit = fit;
       // The native surface is rescaled by mpv, not by CSS, so it has to be
       // told. Absent on a shell that cannot, and then the button is not built.
       void nativePlayer?.setResizeMode?.(next).catch(() => undefined);
@@ -357,12 +362,13 @@ export function Player({
     const timer = window.setTimeout(() => setPictureNote(""), PICTURE_NOTE_MS);
     return () => window.clearTimeout(timer);
   }, [pictureNote]);
-  const videoFit =
-    resizeMode === "Stretch"
-      ? "fill"
-      : resizeMode === "Fit"
-        ? "contain"
-        : "cover";
+  const videoFit = objectFitForResizeMode(resizeMode);
+  const reapplyPictureMode = useCallback(() => {
+    const fit = objectFitForResizeMode(resizeMode);
+    if (videoRef.current) videoRef.current.style.objectFit = fit;
+    if (canvasRef.current) canvasRef.current.style.objectFit = fit;
+    void nativePlayer?.setResizeMode?.(resizeMode).catch(() => undefined);
+  }, [resizeMode]);
   const cueCss = useMemo(() => {
     const color = browserColor(settings.subtitleTextColor, "#fff");
     const background = browserColor(
@@ -526,6 +532,11 @@ export function Player({
       try {
         await nativePlayer.setFullscreen(next);
         setNativeFullscreen(next);
+        // Tauri finishes changing the native client bounds after the bridge
+        // promise resolves. Reapply once now and once after layout settles so
+        // mpv does not retain pre-fullscreen Fit/Zoom geometry.
+        reapplyPictureMode();
+        window.setTimeout(reapplyPictureMode, 180);
       } catch (reason) {
         setError(reason instanceof Error ? reason.message : "Could not change fullscreen mode.");
       }
@@ -535,10 +546,56 @@ export function Player({
     const element = videoRef.current as
       (HTMLVideoElement & { webkitEnterFullscreen?: () => void }) | null;
     if (!container || !element) return;
-    if (document.fullscreenElement) await document.exitFullscreen();
-    else if (container.requestFullscreen) await container.requestFullscreen();
-    else element.webkitEnterFullscreen?.();
-  }, [nativeFullscreen]);
+    const webkitDocument = document as Document & {
+      webkitFullscreenElement?: Element | null;
+      webkitExitFullscreen?: () => Promise<void> | void;
+    };
+    const webkitContainer = container as HTMLDivElement & {
+      webkitRequestFullscreen?: () => Promise<void> | void;
+    };
+    const fullscreenElement =
+      document.fullscreenElement ?? webkitDocument.webkitFullscreenElement;
+    if (fullscreenElement) {
+      if (document.exitFullscreen) await document.exitFullscreen();
+      else await webkitDocument.webkitExitFullscreen?.();
+    } else if (container.requestFullscreen) {
+      await container.requestFullscreen();
+    } else if (webkitContainer.webkitRequestFullscreen) {
+      await webkitContainer.webkitRequestFullscreen();
+    } else if (!decoding && !engineRef.current && element.webkitEnterFullscreen) {
+      // iPhone only offers native video fullscreen. It is valid for direct
+      // <video> playback, but never send it the hidden element while WebCodecs
+      // is drawing into the canvas—that produced a blank, dead fullscreen.
+      element.style.objectFit = videoFit;
+      element.webkitEnterFullscreen();
+    } else {
+      // An installed iPhone PWA already gives this fixed player the complete
+      // app viewport. There is no second canvas-fullscreen surface to enter.
+      setStatus("The player is already using the full app screen.");
+      showControls();
+    }
+  }, [decoding, nativeFullscreen, reapplyPictureMode, showControls, videoFit]);
+
+  useEffect(() => {
+    const element = videoRef.current;
+    const onFullscreenLayout = () => {
+      // Browsers rebuild the fullscreen top layer before/after firing this
+      // event. Apply on the event and the next painted frame so contain/cover
+      // cannot remain stuck on the old box.
+      reapplyPictureMode();
+      window.requestAnimationFrame(() => reapplyPictureMode());
+    };
+    document.addEventListener("fullscreenchange", onFullscreenLayout);
+    document.addEventListener("webkitfullscreenchange", onFullscreenLayout);
+    element?.addEventListener("webkitbeginfullscreen", onFullscreenLayout);
+    element?.addEventListener("webkitendfullscreen", onFullscreenLayout);
+    return () => {
+      document.removeEventListener("fullscreenchange", onFullscreenLayout);
+      document.removeEventListener("webkitfullscreenchange", onFullscreenLayout);
+      element?.removeEventListener("webkitbeginfullscreen", onFullscreenLayout);
+      element?.removeEventListener("webkitendfullscreen", onFullscreenLayout);
+    };
+  }, [reapplyPictureMode]);
 
   useEffect(() => {
     if (!nativePlayer) return;

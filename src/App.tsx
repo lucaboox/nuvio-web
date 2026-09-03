@@ -5291,6 +5291,30 @@ function SettingsPage({
         </label>
         <label className="setting-select-row">
           <span>
+            <strong>Fallback audio</strong>
+            <small>Used when nothing matches the preferred language.</small>
+          </span>
+          <select
+            value={settings.player.secondaryPreferredAudioLanguage}
+            disabled={!settingsReady}
+            onChange={(event) =>
+              onTypedSetting(
+                "player_settings",
+                "secondary_preferred_audio_language",
+                "string",
+                event.target.value,
+              )
+            }
+          >
+            <option value="">None</option>
+            <option value="original">Original language</option>
+            {LANGUAGE_OPTIONS.map(([value, label]) => (
+              <option key={value} value={value}>{label}</option>
+            ))}
+          </select>
+        </label>
+        <label className="setting-select-row">
+          <span>
             <strong>Preferred subtitles</strong>
             <small>Selects matching embedded browser tracks when present.</small>
           </span>
@@ -5309,6 +5333,30 @@ function SettingsPage({
             <option value="none">Off</option>
             <option value="forced">Forced only</option>
             <option value="device">Device language</option>
+            {LANGUAGE_OPTIONS.map(([value, label]) => (
+              <option key={value} value={value}>{label}</option>
+            ))}
+          </select>
+        </label>
+        <label className="setting-select-row">
+          <span>
+            <strong>Fallback subtitles</strong>
+            <small>Used when nothing matches the preferred language.</small>
+          </span>
+          <select
+            value={settings.player.secondaryPreferredSubtitleLanguage}
+            disabled={!settingsReady}
+            onChange={(event) =>
+              onTypedSetting(
+                "player_settings",
+                "secondary_preferred_subtitle_language",
+                "string",
+                event.target.value,
+              )
+            }
+          >
+            <option value="">None</option>
+            <option value="forced">Forced only</option>
             {LANGUAGE_OPTIONS.map(([value, label]) => (
               <option key={value} value={value}>{label}</option>
             ))}

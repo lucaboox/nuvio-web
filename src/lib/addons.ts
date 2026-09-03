@@ -916,11 +916,21 @@ export async function searchAddons(
   return { items, groups };
 }
 
+/**
+ * Sources from every addon that provides them.
+ *
+ * `onStreams` fires as each addon answers, so the list fills in rather than
+ * appearing all at once when the slowest one is done. Waiting for the whole
+ * set meant a single slow provider decided how long the sheet sat empty — with
+ * a 20s ceiling, one that had stopped responding held back results that had
+ * arrived in a fraction of a second.
+ */
 export async function loadStreams(
   type: string,
   id: string,
   addons: InstalledAddon[],
   signal?: AbortSignal,
+  onStreams?: (streams: Stream[]) => void,
 ): Promise<Stream[]> {
   const targets = addons.filter(
     (addon) =>
@@ -934,7 +944,7 @@ export async function loadStreams(
         const payload = await fetchJson<{
           streams?: Array<Record<string, unknown>>;
         }>(resourceUrl(addon.url, "stream", type, id), 20_000, signal);
-        return (payload.streams ?? []).map((stream): Stream => ({
+        const mapped = (payload.streams ?? []).map((stream): Stream => ({
           name: String(stream.name ?? addon.manifest!.name),
           title: String(stream.title ?? ""),
           description: String(stream.description ?? ""),
@@ -958,6 +968,10 @@ export async function loadStreams(
               ? (stream.clientResolve as Stream["clientResolve"])
               : undefined,
         }));
+        // Reported before the rest are back. An addon that returned nothing is
+        // not announced: an empty batch would only cause a re-render.
+        if (mapped.length && !signal?.aborted) onStreams?.(mapped);
+        return mapped;
       } catch {
         return [];
       }

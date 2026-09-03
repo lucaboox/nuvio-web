@@ -948,6 +948,16 @@ export function Details({
           video?.id || meta.id,
           addons,
           controller.signal,
+          // Painted as each addon answers rather than when the slowest does.
+          // The final `setStreams` below still replaces the list wholesale, so
+          // the debrid rules are applied to the complete set exactly as before
+          // — these are only what to look at while the rest are in flight.
+          (batch) => {
+            if (request !== sourceRequest.current || controller.signal.aborted)
+              return;
+            setStreams((current) => [...current, ...batch]);
+            setSourceBusy(false);
+          },
         ).catch(() => []);
       if (request !== sourceRequest.current || controller.signal.aborted) return;
       // Debrid entries are filtered and sorted by the rules the account carries,

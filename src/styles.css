@@ -1466,7 +1466,10 @@ a {
      before they reach the sheet. Dragging the scrollbar still worked, because
      that bypasses the chain; WebKit ignores it, which is why iOS was fine.
      The sheet, which is the real scroller, carries `contain` itself. */
-  background: #000a;
+  /* Lighter than it was: the sheet above is translucent now and does its own
+     darkening, and two scrims stacked made the artwork behind it invisible —
+     which is the thing the blur exists to show. */
+  background: rgb(0 0 0 / 0.35);
   display: flex;
   align-items: flex-end;
   justify-content: center;
@@ -1485,8 +1488,16 @@ a {
   /* Without this, reaching the end of the source list hands the scroll to the
      detail page behind it. */
   overscroll-behavior: contain;
-  background: var(--app-bg);
-  background-color: var(--app-bg);
+  /*
+   * The artwork behind, blurred, under a dark scrim — the official client's
+   * treatment, at its values: a 22dp blur of the hero with black at 0.82 over
+   * it. Here the blur is taken from what is actually behind the sheet rather
+   * than by drawing a second copy of the image, which is the same result for
+   * less work and stays correct if the page behind scrolls.
+   */
+  background: rgb(6 8 11 / 0.82);
+  backdrop-filter: blur(22px) saturate(118%);
+  -webkit-backdrop-filter: blur(22px) saturate(118%);
   border: 0;
   border-radius: 0;
   /* No top padding of its own: that belongs to the sticky header below, which
@@ -1685,11 +1696,20 @@ a {
   gap: 12px;
   margin-top: 22px;
 }
+/* White at 0.05 on the blurred ground, like the official client's stream card,
+   rather than an opaque panel colour — an opaque card on a translucent sheet
+   loses the depth the blur is there to create. */
 .source-list article {
-  background: var(--panel-soft);
-  border: 1px solid var(--panel-border);
-  border-radius: 16px;
+  background: rgb(255 255 255 / 0.05);
+  border: 1px solid rgb(255 255 255 / 0.07);
+  border-radius: 12px;
   overflow: hidden;
+}
+@media (hover: hover) and (pointer: fine) {
+  .source-list article:hover {
+    background: rgb(255 255 255 / 0.09);
+    border-color: rgb(255 255 255 / 0.12);
+  }
 }
 .source-main {
   width: 100%;

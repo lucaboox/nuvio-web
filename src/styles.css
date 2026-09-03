@@ -1389,6 +1389,16 @@ a {
 }
 .cast article {
   flex: 0 0 120px;
+  /*
+   * Without this the ellipsis below never applies. A flex item's automatic
+   * minimum size is its min-content width, and a `white-space: nowrap` name is
+   * one unbreakable run — so the card grew to fit "Christopher Rodriguez
+   * Marquette" instead of clipping it, and the basis above was ignored.
+   */
+  min-width: 0;
+  /* Centred under a fixed-width photo: a short name floating at the left edge
+     of its card read as misaligned against the face above it. */
+  text-align: center;
 }
 /* Matched by class, not by position. These two are the same slot and must stay
    the same size; when the cast became openable the photo gained a button around
@@ -1414,7 +1424,9 @@ a {
   background: none;
   color: inherit;
   font: inherit;
-  text-align: left;
+  /* Inherit the article's centring rather than resetting it: a button defaults
+     to centred text, and the explicit `left` here was overriding the card. */
+  text-align: inherit;
   cursor: pointer;
   border-radius: 12px;
 }

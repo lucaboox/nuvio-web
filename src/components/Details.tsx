@@ -470,6 +470,15 @@ export function Details({
   // pressed. A queued download shows nothing for seconds otherwise, and a
   // button that looks inert gets pressed again.
   const [savedSource, setSavedSource] = useState<number | null>(null);
+  // Right-click on a source. The copy and download actions used to sit on every
+  // row as visible buttons, which made a list of twenty sources three times as
+  // busy as the choice it exists to present.
+  const [sourceMenu, setSourceMenu] = useState<{
+    stream: Stream;
+    index: number;
+    x: number;
+    y: number;
+  } | null>(null);
   const [sourceVideo, setSourceVideo] = useState<Video | undefined>();
   /** "" is every addon. Reset whenever the panel opens on something new. */
   const [sourceAddon, setSourceAddon] = useState("");
@@ -654,6 +663,120 @@ export function Details({
       live = false;
     };
   }, [seed, addons, metadataEnrichment]);
+  /**
+   * The touch half of the source menu.
+   *
+   * `useLongPress` is a hook and the rows are a `map`, so it cannot be called
+   * per row. One timer at this level is enough regardless: only one finger is
+   * ever down, and the row it belongs to is captured in the closure.
+   */
+  const holdTimer = useRef<number | null>(null);
+  const holdOrigin = useRef<{ x: number; y: number } | null>(null);
+  const holdFired = useRef(false);
+  const cancelHold = () => {
+    if (holdTimer.current != null) window.clearTimeout(holdTimer.current);
+    holdTimer.current = null;
+    holdOrigin.current = null;
+  };
+  const sourceHold = (stream: Stream, index: number) => ({
+    onTouchStart(event: React.TouchEvent) {
+      const touch = event.touches[0];
+      if (!touch || !stream.url) return;
+      holdFired.current = false;
+      holdOrigin.current = { x: touch.clientX, y: touch.clientY };
+      holdTimer.current = window.setTimeout(() => {
+        holdFired.current = true;
+        setSourceMenu({ stream, index, x: touch.clientX, y: touch.clientY });
+      }, 450);
+    },
+    onTouchMove(event: React.TouchEvent) {
+      const touch = event.touches[0];
+      const start = holdOrigin.current;
+      if (!touch || !start) return;
+      // Scrolling the list must never open a menu.
+      if (
+        Math.abs(touch.clientX - start.x) + Math.abs(touch.clientY - start.y) >
+        12
+      )
+        cancelHold();
+    },
+    onTouchEnd(event: React.TouchEvent) {
+      if (holdFired.current) event.preventDefault();
+      cancelHold();
+    },
+    onTouchCancel: cancelHold,
+  });
+
+  /** One stream, queued against one episode. */
+  function queueDownload(stream: Stream, video: Video | undefined) {
+    return platform.downloads!.enqueue({
+      contentId: meta.id,
+      contentType: meta.type,
+      videoId: video?.id ?? meta.id,
+      title: video?.title || meta.name,
+      showName: meta.type === "series" ? meta.name : undefined,
+      season: video?.season,
+      episode: video?.episode,
+      posterUrl: meta.poster,
+      backdropUrl: meta.background || meta.banner,
+      url: stream.url!,
+      requestHeaders: stream.behaviorHints?.proxyHeaders?.request,
+      sourceName: stream.name || stream.title || stream.addonName,
+      filename: stream.behaviorHints?.filename,
+    });
+  }
+
+  /**
+   * Every episode of the season the chosen source belongs to.
+   *
+   * Each episode is resolved on its own, because a source for episode 1 is not
+   * a source for episode 2 — the URL is per-file. What carries across is the
+   * binge group: the addon and quality the user just picked. Episodes without a
+   * match in that group fall back to the first playable source rather than being
+   * skipped, so "download the season" returns the season and not a subset of it.
+   */
+  async function queueSeason(seed: Stream, video: Video | undefined) {
+    const season = video?.season;
+    if (season == null) return;
+    const episodes = meta.videos
+      .filter((item) => item.season === season)
+      .sort((left, right) => (left.episode ?? 0) - (right.episode ?? 0));
+    const group = seed.behaviorHints?.bingeGroup;
+    let queued = 0;
+    let failed = 0;
+    for (const episode of episodes) {
+      setDownloadNote(
+        `Finding sources — episode ${episode.episode ?? "?"} of ${episodes.length}…`,
+      );
+      try {
+        // The already-open episode does not need looking up again.
+        const available =
+          episode.id === video?.id
+            ? [seed, ...streams]
+            : await loadStreams(meta.type, episode.id, addons).catch(() => []);
+        const choice =
+          available.find(
+            (item) => item.url && item.behaviorHints?.bingeGroup === group,
+          ) ?? available.find((item) => item.url);
+        if (!choice) {
+          failed += 1;
+          continue;
+        }
+        await queueDownload(choice, episode);
+        queued += 1;
+      } catch {
+        failed += 1;
+      }
+    }
+    setDownloadNote(
+      queued
+        ? `Queued ${queued} episode${queued === 1 ? "" : "s"}${
+            failed ? `, ${failed} had no source` : ""
+          }.`
+        : "No episodes could be queued.",
+    );
+  }
+
   /** The cache key for what `sources` was opened on. */
   const reuseKey = (video?: Video) =>
     contentKey(meta.type, video?.id || meta.id, meta.id, video?.season, video?.episode);
@@ -1322,11 +1445,34 @@ export function Details({
             ) : visibleStreams.length ? (
               <div className="source-list">
                 {visibleStreams.map((stream, index) => (
-                  <article key={`${stream.addonName}:${index}`}>
+                  <article
+                    key={`${stream.addonName}:${index}`}
+                    // Copy and download moved here from buttons on every row.
+                    // Touch has no right-click, so a long press opens the same
+                    // menu — the pattern the episode list already uses.
+                    onContextMenu={(event) => {
+                      if (!stream.url) return;
+                      event.preventDefault();
+                      setSourceMenu({
+                        stream,
+                        index,
+                        x: event.clientX,
+                        y: event.clientY,
+                      });
+                    }}
+                    {...sourceHold(stream, index)}
+                  >
                     <button
                       className="source-main"
                       disabled={!stream.url && !stream.externalUrl}
-                      onClick={() => playFresh(stream, sourceVideo, sheetPlayer)}
+                      onClick={() => {
+                        // A hold that opened the menu must not also play.
+                        if (holdFired.current) {
+                          holdFired.current = false;
+                          return;
+                        }
+                        playFresh(stream, sourceVideo, sheetPlayer);
+                      }}
                     >
                       <span>
                         {stream.addonLogo ? (
@@ -1378,75 +1524,79 @@ export function Details({
                         )}
                       </div>
                     </button>
-                    {stream.url && (
-                      <div className="source-tools">
-                        <button
-                          onClick={() =>
-                            navigator.clipboard.writeText(stream.url!)
-                          }
-                        >
-                          <Copy size={16} /> Copy
-                        </button>
-                        {/* Only where a shell can save files. On the web the
-                            button is not disabled, it is not built. */}
-                        {platform.downloads && (
-                          <button
-                            disabled={savedSource === index}
-                            onClick={() => {
-                              void platform
-                                .downloads!.enqueue({
-                                  contentId: meta.id,
-                                  contentType: meta.type,
-                                  videoId: sourceVideo?.id ?? meta.id,
-                                  title: sourceVideo?.title || meta.name,
-                                  showName:
-                                    meta.type === "series" ? meta.name : undefined,
-                                  season: sourceVideo?.season,
-                                  episode: sourceVideo?.episode,
-                                  posterUrl: meta.poster,
-                                  backdropUrl: meta.background || meta.banner,
-                                  url: stream.url!,
-                                  requestHeaders:
-                                    stream.behaviorHints?.proxyHeaders?.request,
-                                  sourceName:
-                                    stream.name || stream.title || stream.addonName,
-                                  filename: stream.behaviorHints?.filename,
-                                })
-                                .then(() => {
-                                  setSavedSource(index);
-                                  setDownloadNote("Added to Downloads");
-                                  window.setTimeout(
-                                    () =>
-                                      setSavedSource((current) =>
-                                        current === index ? null : current,
-                                      ),
-                                    2500,
-                                  );
-                                })
-                                .catch((reason: unknown) =>
-                                  setDownloadNote(
-                                    reason instanceof Error
-                                      ? reason.message
-                                      : "Could not be queued",
-                                  ),
-                                );
-                            }}
-                          >
-                            {savedSource === index ? (
-                              <>
-                                <Check size={16} /> Saved
-                              </>
-                            ) : (
-                              <>
-                                <DownloadIcon size={16} /> Save
-                              </>
-                            )}
-                          </button>
-                        )}
-                      </div>
-                    )}
                   </article>
                 ))}
+                {sourceMenu && (
+                  <ContextMenu
+                    x={sourceMenu.x}
+                    y={sourceMenu.y}
+                    onClose={() => setSourceMenu(null)}
+                    items={[
+                      {
+                        label: "Copy link",
+                        icon: <Copy size={16} />,
+                        onSelect: () =>
+                          void navigator.clipboard.writeText(
+                            sourceMenu.stream.url!,
+                          ),
+                      },
+                      // Downloading is a shell capability. In a browser the
+                      // entry is not built rather than shown and refused —
+                      // "Copy link" is the useful thing there, and it is
+                      // already above.
+                      ...(platform.downloads
+                        ? [
+                            {
+                              label:
+                                savedSource === sourceMenu.index
+                                  ? "Queued"
+                                  : "Download",
+                              icon: <DownloadIcon size={16} />,
+                              onSelect: () => {
+                                const at = sourceMenu.index;
+                                void queueDownload(sourceMenu.stream, sourceVideo)
+                                  .then(() => {
+                                    setSavedSource(at);
+                                    setDownloadNote("Added to Downloads");
+                                    window.setTimeout(
+                                      () =>
+                                        setSavedSource((current) =>
+                                          current === at ? null : current,
+                                        ),
+                                      2500,
+                                    );
+                                  })
+                                  .catch((reason: unknown) =>
+                                    setDownloadNote(
+                                      reason instanceof Error
+                                        ? reason.message
+                                        : "Could not be queued",
+                                    ),
+                                  );
+                              },
+                            },
+                            // Only for an episode that belongs to a season, so
+                            // a film never offers to download a season it has
+                            // no concept of.
+                            ...(meta.type === "series" &&
+                            sourceVideo?.season != null
+                              ? [
+                                  {
+                                    label: `Download season ${sourceVideo.season}`,
+                                    icon: <DownloadIcon size={16} />,
+                                    onSelect: () =>
+                                      void queueSeason(
+                                        sourceMenu.stream,
+                                        sourceVideo,
+                                      ),
+                                  },
+                                ]
+                              : []),
+                          ]
+                        : []),
+                    ]}
+                  />
+                )}
               </div>
             ) : (
               <div className="sheet-loading">

@@ -121,6 +121,19 @@ a {
   padding: 6px 9px;
   font-size: 11px;
 }
+/* Desktop searches with Return and does not need the chip. It is hidden rather
+   than deleted because it is also the only "searching…" indicator there is —
+   so it comes back for as long as a search is actually running. Mobile keeps it
+   throughout: a touch keyboard's Search key works, but the visible target is
+   worth the space on a small field. */
+@media (min-width: 761px) {
+  .topbar form .search-submit:not([data-busy]) {
+    display: none;
+  }
+  .topbar form .search-submit[data-busy] {
+    pointer-events: none;
+  }
+}
 /* Recent searches, shown while the field is focused and empty. */
 .search-history {
   position: absolute;
@@ -273,6 +286,29 @@ a {
   justify-content: center;
   padding: 58px;
   overflow: hidden;
+}
+/*
+ * Desktop crops the artwork badly at a fixed height, and the wider the window
+ * the worse it gets: a 1900px hero 520px tall is a 3.65:1 box, and a TMDB
+ * backdrop is 1.78:1, so `cover` scales the image to 1067px tall and shows the
+ * middle 520 of it — which is why heads were being cut off. Zooming the browser
+ * to 140% appeared to fix it because it narrows the CSS viewport to ~1360px and
+ * so shallows the box to 2.6:1.
+ *
+ * A ratio rather than a height, so the crop stays the same on any window
+ * instead of worsening as it widens, and anchored to the top because faces sit
+ * in the upper half of nearly every backdrop. Mobile is untouched: its hero is
+ * narrow enough that the fixed height already reads correctly.
+ */
+@media (min-width: 761px) {
+  .hero {
+    min-height: 0;
+    aspect-ratio: 5 / 2;
+    /* Never taller than the window: on a short screen the ratio would push the
+       rows below the fold entirely. */
+    max-height: 78vh;
+    background-position: top center;
+  }
 }
 .hero-copy {
   width: min(650px, 100%);
@@ -688,6 +724,11 @@ a {
   line-height: 1.65;
   color: #c2cbd5;
 }
+/* Aligned with the identity block above rather than running to the window
+   edge, which left the rows looking detached from the person they belong to. */
+.person-page .media-section {
+  padding: 0 7vw;
+}
 .person-note {
   padding: 24px 7vw;
   color: #7f8994;
@@ -710,7 +751,8 @@ a {
     margin-left: 5vw;
   }
   .person-identity,
-  .person-note {
+  .person-note,
+  .person-page .media-section {
     padding-left: 5vw;
     padding-right: 5vw;
   }
@@ -1622,30 +1664,6 @@ a {
 .source-main small {
   color: #707b86;
 }
-.source-tools {
-  display: flex;
-  gap: 10px;
-  padding: 0 16px 14px;
-}
-.source-tools button,
-.source-tools a {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  border: 0;
-  background: #282e35;
-  border-radius: 9px;
-  padding: 8px 10px;
-  text-decoration: none;
-  /* Absent since these were added, so Copy never looked pressable either. */
-  cursor: pointer;
-}
-/* Saved: the row says so for a moment, and cannot be queued twice by someone
-   who saw no answer the first time. */
-.source-tools button:disabled {
-  cursor: default;
-  color: #7fd6a8;
-}
 .player-view {
   position: fixed;
   z-index: 200;
@@ -2506,9 +2524,6 @@ a {
   }
   .detail-actions > .icon-pill {
     flex: 0 0 54px;
-  }
-  .source-tools {
-    overflow-x: auto;
   }
 }
 

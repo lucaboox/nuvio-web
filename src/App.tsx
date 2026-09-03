@@ -2103,7 +2103,9 @@ export function App() {
             onBlur={() => window.setTimeout(() => setSearchFocused(false), 120)}
             placeholder="Search movies and series…"
           />
-          <button>{searching ? "…" : "Search"}</button>
+          <button className="search-submit" data-busy={searching || undefined}>
+            {searching ? "…" : "Search"}
+          </button>
           {searchFocused && !query.trim() && recentSearches.length > 0 && (
             <div className="search-history">
               <header>

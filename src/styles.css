@@ -1529,8 +1529,12 @@ a {
 .source-column > /* Names the picture mode after a change, then goes. Centred over the video and
    inert, so it never intercepts a click meant for the controls. */
 .picture-note {
-  position: absolute;
-  z-index: 5;
+  /* Fixed, not absolute. Absolute depends on which ancestor happens to be
+     positioned, and in the native player it was resolving against something
+     other than the player view and landing at the top of the screen. The
+     player fills the window, so the viewport is the right frame anyway. */
+  position: fixed;
+  z-index: 240;
   /* Above the controls rather than over the middle of the picture: it is a
      confirmation of what you just pressed, and the thing you want to look at
      while pressing it is the framing behind it. */

@@ -66,7 +66,19 @@ import type { ExternalPlayerMode, Meta, Stream, Video } from "../types";
 const nativePlayer = platform.player;
 
 /** Cycled in this order by the player's picture-mode control. */
-const RESIZE_MODES: ResizeMode[] = ["Fit", "Fill", "Zoom", "Stretch"];
+const AUDIO_ECHO_MS = 900;
+
+/**
+ * The modes the player's own control cycles.
+ *
+ * Three, not the settings screen's four: mpv maps Fill and Zoom to the same
+ * keepaspect/panscan pair, so cycling both would present a step that changes
+ * the label and nothing on screen.
+ */
+const RESIZE_MODES: ResizeMode[] = ["Fit", "Zoom", "Stretch"];
+
+/** How long the picture-mode name stays up after a change. */
+const PICTURE_NOTE_MS = 5000;
 
 type AudioChoice = { id: number; label: string };
 type NativeAudioTrackList = {
@@ -209,8 +221,15 @@ export function Player({
   const [controlsVisible, setControlsVisible] = useState(true);
   const [audioOpen, setAudioOpen] = useState(false);
   const [subsOpen, setSubsOpen] = useState(false);
+  /**
+   * How long polled audio state is disregarded after a local change.
+   *
+   * Long enough for the bridge round trip and mpv to act, short enough that a
+   * change made elsewhere still shows up promptly.
+   */
+  const audioEchoUntil = useRef(0);
   const [subtitleTracks, setSubtitleTracks] = useState<
-    Array<{ id: number; label: string }>
+    Array<{ id: number; lang: string; label: string }>
   >([]);
   /** mpv's own convention: -1, or "no", means subtitles are off. */
   const [selectedSubtitle, setSelectedSubtitle] = useState(-1);
@@ -292,16 +311,25 @@ export function Player({
       RESIZE_MODES.find((mode) => mode === settings.resizeMode) ?? "Fit",
     );
   }, [settings.resizeMode]);
+  const [pictureNote, setPictureNote] = useState("");
   const cycleResizeMode = useCallback(() => {
     setResizeMode((current) => {
-      const next =
-        RESIZE_MODES[(RESIZE_MODES.indexOf(current) + 1) % RESIZE_MODES.length];
+      // A mode the settings screen offers but this cycle does not — Fill —
+      // would otherwise have no next step; start from the beginning.
+      const at = RESIZE_MODES.indexOf(current);
+      const next = RESIZE_MODES[(at + 1) % RESIZE_MODES.length];
       // The native surface is rescaled by mpv, not by CSS, so it has to be
       // told. Absent on a shell that cannot, and then the button is not built.
       void nativePlayer?.setResizeMode?.(next).catch(() => undefined);
+      setPictureNote(next);
       return next;
     });
   }, []);
+  useEffect(() => {
+    if (!pictureNote) return;
+    const timer = window.setTimeout(() => setPictureNote(""), PICTURE_NOTE_MS);
+    return () => window.clearTimeout(timer);
+  }, [pictureNote]);
   const videoFit =
     resizeMode === "Stretch"
       ? "fill"
@@ -442,6 +470,7 @@ export function Player({
    */
   const toggleMuted = useCallback(() => {
     if (nativePlayer) {
+      audioEchoUntil.current = Date.now() + AUDIO_ECHO_MS;
       setMuted((value) => !value);
       void nativePlayer.toggleMute().catch((reason: unknown) =>
         setError(reason instanceof Error ? reason.message : "Could not change mute."),
@@ -538,8 +567,14 @@ export function Player({
           setCurrentTime(sampledSeconds);
         }
         setDuration(Math.max(0, next.durationMs) / 1000);
-        setVolume(clamp(next.volume / 100, 0, 1));
-        setMuted(next.muted);
+        // Not while a local change is still on its way to mpv. The poll
+        // reports what mpv has applied, so between pressing mute and mpv
+        // acting on it every poll answered with the old value and undid the
+        // press — mute read as muted, then full, then muted again.
+        if (Date.now() >= audioEchoUntil.current) {
+          setVolume(clamp(next.volume / 100, 0, 1));
+          setMuted(next.muted);
+        }
         setError(next.error ?? "");
         if (next.warning) setWarning(next.warning);
         const tracks = next.tracks
@@ -557,6 +592,7 @@ export function Player({
             .filter((track) => track.kind === "sub")
             .map((track) => ({
               id: track.id,
+              lang: track.lang ?? "",
               label: track.title || track.lang || `Subtitle ${track.id}`,
             })),
         );
@@ -1069,6 +1105,40 @@ export function Player({
    * element and its own cue rendering, so the control is not built there —
    * there is nothing for it to switch between that the page did not put there.
    */
+  /**
+   * The subtitle tracks worth offering.
+   *
+   * A release with forty language tracks made this menu a wall, and the account
+   * already says which languages are wanted — "only preferred languages" was
+   * being honoured when mpv picked a track automatically and ignored the moment
+   * you opened the list to pick one yourself.
+   *
+   * The filter never empties the menu: if nothing matches, everything is shown,
+   * because a list of nothing is worse than a long one.
+   */
+  const visibleSubtitleTracks = useMemo(() => {
+    if (!settings.subtitleShowOnlyPreferredLanguages) return subtitleTracks;
+    const wanted = [
+      settings.preferredSubtitleLanguage,
+      settings.secondaryPreferredSubtitleLanguage,
+    ]
+      .map((value) => value.trim().toLowerCase())
+      .filter(
+        (value) =>
+          value && !["none", "device", "forced", "default"].includes(value),
+      );
+    if (!wanted.length) return subtitleTracks;
+    const matching = subtitleTracks.filter((track) =>
+      wanted.some((code) => track.lang.toLowerCase().startsWith(code)),
+    );
+    return matching.length ? matching : subtitleTracks;
+  }, [
+    subtitleTracks,
+    settings.subtitleShowOnlyPreferredLanguages,
+    settings.preferredSubtitleLanguage,
+    settings.secondaryPreferredSubtitleLanguage,
+  ]);
+
   const selectSubtitle = (id: number) => {
     setSelectedSubtitle(id);
     setSubsOpen(false);
@@ -1126,6 +1196,7 @@ export function Player({
   const setPlayerVolume = (next: number) => {
     if (nativePlayer) {
       const normalized = clamp(next, 0, 1);
+      audioEchoUntil.current = Date.now() + AUDIO_ECHO_MS;
       setVolume(normalized);
       setMuted(normalized === 0);
       void nativePlayer.setVolume(Math.round(normalized * 100)).catch((reason: unknown) =>
@@ -1312,6 +1383,11 @@ export function Player({
           </button>
         </div>
       )}
+      {pictureNote && (
+        <div className="picture-note" role="status">
+          {pictureNote}
+        </div>
+      )}
       <div className="player-controls">
         <div className="player-timeline">
           <span>{formatTime(displayedTime)}</span>
@@ -1411,7 +1487,7 @@ export function Player({
                   <Captions />
                 </button>
                 {subsOpen && (
-                  <div className="audio-menu">
+                  <div className="audio-menu subtitle-menu">
                     <strong>Subtitles</strong>
                     {/* Always offered, even with no tracks: turning subtitles
                         off is the thing most often wanted here, and it has to
@@ -1422,7 +1498,7 @@ export function Player({
                     >
                       Off
                     </button>
-                    {subtitleTracks.map((track) => (
+                    {visibleSubtitleTracks.map((track) => (
                       <button
                         key={track.id}
                         className={selectedSubtitle === track.id ? "selected" : ""}

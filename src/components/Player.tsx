@@ -22,7 +22,6 @@ import {
   LoaderCircle,
   Captions,
   Maximize,
-  Ratio,
   Music2,
   Pause,
   Play,
@@ -66,6 +65,34 @@ import type { ExternalPlayerMode, Meta, Stream, Video } from "../types";
 const nativePlayer = platform.player;
 
 /** Cycled in this order by the player's picture-mode control. */
+/**
+ * lucide's `square-dimensions`, drawn here rather than imported.
+ *
+ * It postdates the pinned lucide-react, and pulling the whole icon set forward
+ * for one glyph would restyle every other icon in the app. Traced from the
+ * upstream source at the same 24px grid and stroke, so it sits with its
+ * neighbours.
+ */
+function PictureModeGlyph({ size = 22 }: { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <rect width="18" height="18" x="3" y="3" rx="2" />
+      <path d="M12 7H7v5" />
+      <path d="M12 17h5v-5" />
+    </svg>
+  );
+}
+
 const AUDIO_ECHO_MS = 900;
 
 /**
@@ -1620,7 +1647,7 @@ export function Player({
                 title={`Picture mode: ${resizeMode}`}
                 onClick={cycleResizeMode}
               >
-                <Ratio />
+                <PictureModeGlyph />
               </button>
             )}
             <button aria-label="Fullscreen" onClick={toggleFullscreen}>

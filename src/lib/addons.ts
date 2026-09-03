@@ -919,18 +919,22 @@ export async function searchAddons(
 /**
  * Sources from every addon that provides them.
  *
- * `onStreams` fires as each addon answers, so the list fills in rather than
- * appearing all at once when the slowest one is done. Waiting for the whole
- * set meant a single slow provider decided how long the sheet sat empty — with
- * a 20s ceiling, one that had stopped responding held back results that had
+ * `onAddon` fires as each one answers, so the list fills in rather than
+ * appearing all at once when the slowest is done. Waiting for the whole set
+ * meant a single slow provider decided how long the sheet sat empty — with a
+ * 20s ceiling, one that had stopped responding held back results that had
  * arrived in a fraction of a second.
+ *
+ * It fires for every addon, including those that return nothing or fail, so a
+ * caller can tell "still working" from "answered with nothing" — which is the
+ * difference between a spinner and a wrong impression that a source is missing.
  */
 export async function loadStreams(
   type: string,
   id: string,
   addons: InstalledAddon[],
   signal?: AbortSignal,
-  onStreams?: (streams: Stream[]) => void,
+  onAddon?: (addonName: string, streams: Stream[]) => void,
 ): Promise<Stream[]> {
   const targets = addons.filter(
     (addon) =>
@@ -968,11 +972,12 @@ export async function loadStreams(
               ? (stream.clientResolve as Stream["clientResolve"])
               : undefined,
         }));
-        // Reported before the rest are back. An addon that returned nothing is
-        // not announced: an empty batch would only cause a re-render.
-        if (mapped.length && !signal?.aborted) onStreams?.(mapped);
+        if (!signal?.aborted) onAddon?.(addon.manifest!.name, mapped);
         return mapped;
       } catch {
+        // Announced too. An addon that failed has finished, and saying so is
+        // what stops it being waited on for ever in the caller's tally.
+        if (!signal?.aborted) onAddon?.(addon.manifest!.name, []);
         return [];
       }
     }),

@@ -18,7 +18,7 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
-import { loadStreams, resolveMeta } from "../lib/addons";
+import { loadStreams, resolveMeta, supports } from "../lib/addons";
 import { assessPlayback, shouldUseRemuxFallback } from "../lib/playback";
 import { safeHttpUrl } from "../lib/security";
 import {
@@ -483,6 +483,8 @@ export function Details({
    * indistinguishable from an addon that had simply failed.
    */
   const [sourcesPending, setSourcesPending] = useState(false);
+  /** Addons that have finished, by name — including those that found nothing. */
+  const [answered, setAnswered] = useState<string[]>([]);
   // Cleared by the next attempt rather than a timer: the answer belongs to
   // the source that was clicked.
   const [downloadNote, setDownloadNote] = useState("");
@@ -502,9 +504,31 @@ export function Details({
   const [sourceVideo, setSourceVideo] = useState<Video | undefined>();
   /** "" is every addon. Starts at the configured default. */
   const [sourceAddon, setSourceAddon] = useState(defaultSourceAddon);
+  /**
+   * Every addon that will be asked, not only those that have answered.
+   *
+   * Derived from the manifests rather than from the results, so the picker is
+   * complete the moment the sheet opens. Built from `streams` it appeared to
+   * gain options as slow addons landed, and until the second one arrived there
+   * was no picker at all.
+   */
   const sourceAddons = useMemo(
-    () => [...new Set(streams.map((item) => item.addonName).filter(Boolean))],
-    [streams],
+    () =>
+      addons
+        .filter(
+          (addon) =>
+            addon.enabled &&
+            addon.manifest &&
+            supports(addon.manifest, "stream", meta.type),
+        )
+        .map((addon) => addon.manifest!.name)
+        .filter(Boolean),
+    [addons, meta.type],
+  );
+  /** Named in the footer, so a slow scraper is visibly still working. */
+  const pendingAddons = useMemo(
+    () => sourceAddons.filter((name) => !answered.includes(name)),
+    [sourceAddons, answered],
   );
   /**
    * The filter actually in force.
@@ -906,6 +930,7 @@ export function Details({
     setSourceOpen(true);
     setSourceBusy(true);
     setSourcesPending(true);
+    setAnswered([]);
     setStreams([]);
     const scheduleAutoPlay = (available: Stream[]) => {
       if (forceManual || autoPlayTimer.current !== undefined) return;
@@ -961,10 +986,11 @@ export function Details({
           // The final `setStreams` below still replaces the list wholesale, so
           // the debrid rules are applied to the complete set exactly as before
           // — these are only what to look at while the rest are in flight.
-          (batch) => {
+          (addonName, batch) => {
             if (request !== sourceRequest.current || controller.signal.aborted)
               return;
-            setStreams((current) => [...current, ...batch]);
+            setAnswered((current) => [...current, addonName]);
+            if (batch.length) setStreams((current) => [...current, ...batch]);
             setSourceBusy(false);
           },
         ).catch(() => []);
@@ -1716,7 +1742,11 @@ export function Details({
                      looks like one that failed. */
                   <div className="source-pending" role="status">
                     <i className="mini-spinner" aria-hidden="true" />
-                    <span>Still checking other addons…</span>
+                    <span>
+                      {pendingAddons.length
+                        ? `Still scraping — ${pendingAddons.join(", ")}`
+                        : "Still checking other addons…"}
+                    </span>
                   </div>
                 )}
               </div>

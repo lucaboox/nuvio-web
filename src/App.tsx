@@ -5307,12 +5307,27 @@ function SettingsPage({
             }
           >
             <option value="none">Off</option>
+            <option value="forced">Forced only</option>
             <option value="device">Device language</option>
             {LANGUAGE_OPTIONS.map(([value, label]) => (
               <option key={value} value={value}>{label}</option>
             ))}
           </select>
         </label>
+        <SettingToggle
+          title="Use forced subtitles"
+          description="Prefer forced subtitles when the audio already matches the subtitle language; if there is no forced track, show nothing."
+          checked={settings.player.subtitleUseForcedSubtitles}
+          disabled={!settingsReady}
+          onChange={(next) =>
+            onTypedSetting(
+              "player_settings",
+              "subtitle_use_forced_subtitles",
+              "boolean",
+              next,
+            )
+          }
+        />
         <div className="setting-grid subtitle-grid">
           <label>
             <span>Font size</span>

@@ -1238,7 +1238,12 @@ export function Details({
                   {person.photo ? (
                     <img src={person.photo} alt="" loading="lazy" />
                   ) : (
-                    <span>{person.name.slice(0, 1)}</span>
+                    // Named rather than matched by position: the photo has been
+                    // wrapped once already, and every `> span` selector aimed at
+                    // it silently stopped applying when it was.
+                    <span className="cast-fallback">
+                      {person.name.slice(0, 1)}
+                    </span>
                   )}
                   <strong>{person.name}</strong>
                   <small>{person.role}</small>

@@ -1383,11 +1383,12 @@ a {
 .cast article {
   flex: 0 0 120px;
 }
+/* Matched by class, not by position. These two are the same slot and must stay
+   the same size; when the cast became openable the photo gained a button around
+   it, and every `> span` selector aimed at the fallback quietly stopped
+   applying — leaving a letter card larger than the photos beside it. */
 .cast article img,
-.cast article > span,
-/* The photo moved inside a button when cast became openable, so the child
-   combinator above stopped reaching the initial-letter fallback. */
-.cast .cast-open > span {
+.cast .cast-fallback {
   width: 120px;
   height: 150px;
   border-radius: 12px;
@@ -1411,11 +1412,11 @@ a {
   border-radius: 12px;
 }
 .cast .cast-open img,
-.cast .cast-open > span {
+.cast .cast-open .cast-fallback {
   transition: transform 140ms ease;
 }
 .cast .cast-open:hover img,
-.cast .cast-open:hover > span {
+.cast .cast-open:hover .cast-fallback {
   transform: scale(1.04);
 }
 .cast .cast-open:focus-visible {
@@ -6608,7 +6609,7 @@ body.is-locked {
     flex-basis: 92px;
   }
   .detail-view.has-episode-panel .cast article img,
-  .detail-view.has-episode-panel .cast article > span {
+  .detail-view.has-episode-panel .cast .cast-fallback {
     width: 92px;
     height: 116px;
   }

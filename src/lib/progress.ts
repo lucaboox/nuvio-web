@@ -92,7 +92,18 @@ export function buildContinueWatching(
           (entry) =>
             entry.season === resumable.season &&
             entry.episode === resumable.episode,
-        );
+        ) ??
+        // Home can paint from library metadata before the episode list lands.
+        // Keep the actual saved video identity rather than falling back to a
+        // whole-series source request when that card is clicked immediately.
+        (isSeries(item.type) && resumable.videoId && resumable.videoId !== item.id
+          ? {
+              id: resumable.videoId,
+              title: `Episode ${resumable.episode ?? ""}`.trim(),
+              season: resumable.season,
+              episode: resumable.episode,
+            }
+          : undefined);
       cards.push({
         item,
         video,

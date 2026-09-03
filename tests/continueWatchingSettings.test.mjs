@@ -12,6 +12,25 @@ const blobWith = (payload) => ({
   },
 });
 
+test("a quick Continue Watching click retains the saved episode before metadata arrives", () => {
+  const progress = [{ contentId: "show", contentType: "series", videoId: "show:4:2",
+    season: 4, episode: 2, positionMs: 20000, durationMs: 60000, lastWatched: 100 }];
+  const meta = { id: "show", type: "series", name: "Show", videos: [] };
+  const [card] = buildContinueWatching(progress, [], [meta]);
+  assert.equal(card.video.id, "show:4:2");
+  assert.equal(card.video.season, 4);
+  assert.equal(card.video.episode, 2);
+  const fullVideo = { id: "show:4:2", title: "Full metadata", season: 4, episode: 2 };
+  assert.equal(buildContinueWatching(progress, [], [{ ...meta, videos: [fullVideo] }])[0].video, fullVideo);
+});
+
+test("movie resume never invents an episode", () => {
+  const [card] = buildContinueWatching([{ contentId: "movie", contentType: "movie", videoId: "movie",
+    positionMs: 20000, durationMs: 60000, lastWatched: 100 }], [],
+    [{ id: "movie", type: "movie", name: "Movie", videos: [] }]);
+  assert.equal(card.video, undefined);
+});
+
 test("Continue Watching writes keep the outer string and unknown fields", () => {
   const before = blobWith({ style: "Card", futureOption: { keep: true } });
   const after = withBlobStringPayload(

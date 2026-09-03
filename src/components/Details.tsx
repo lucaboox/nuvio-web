@@ -357,6 +357,7 @@ export function Details({
   onSetWatched,
   onResetProgress,
   initialVideoId,
+  initialVideo,
   openSourcesOnLoad = false,
   defaultSourceAddon,
   defaultPlayer,
@@ -389,6 +390,7 @@ export function Details({
   /** Clears the resume point without touching the watched mark. */
   onResetProgress(meta: Meta, video: Video | undefined): void;
   initialVideoId?: string;
+  initialVideo?: Video;
   openSourcesOnLoad?: boolean;
   /**
    * The addon the source list opens filtered to, or "" for all of them.
@@ -906,6 +908,9 @@ export function Details({
   }
 
   async function sources(video?: Video, forceManual = false) {
+    // A series ID is not an episode ID. Never ask addons for a whole-series
+    // source list while the selected episode is still missing its metadata.
+    if (meta.type === "series" && !video) return;
     // Reuse last stream: play the link this episode was last watched with
     // rather than asking the addon — and, for a debrid source, resolving it
     // again — for something already known. `forceManual` is how the user asks
@@ -982,15 +987,17 @@ export function Details({
           video?.id || meta.id,
           addons,
           controller.signal,
-          // Painted as each addon answers rather than when the slowest does.
-          // The final `setStreams` below still replaces the list wholesale, so
-          // the debrid rules are applied to the complete set exactly as before
-          // — these are only what to look at while the rest are in flight.
-          (addonName, batch) => {
+          // Paint progressively, but in installed-addon order (including
+          // separately configured addons that share the same display name).
+          (addonName, _batch, ordered) => {
             if (request !== sourceRequest.current || controller.signal.aborted)
               return;
             setAnswered((current) => [...current, addonName]);
-            if (batch.length) setStreams((current) => [...current, ...batch]);
+            setStreams(
+              platform.debrid && debridRules
+                ? applyDebridStreamSettings(ordered, debridRules)
+                : ordered,
+            );
             setSourceBusy(false);
           },
         ).catch(() => []);
@@ -1000,11 +1007,11 @@ export function Details({
       // left exactly as the addon sent them, because nothing here could play
       // one either way and quietly reordering a list we cannot use would be
       // worse than leaving it alone.
-      setStreams(
+      addonStreams =
         platform.debrid && debridRules
           ? applyDebridStreamSettings(addonStreams, debridRules)
-          : addonStreams,
-      );
+          : addonStreams;
+      setStreams(addonStreams);
       scheduleAutoPlay(addonStreams);
     } finally {
       if (request === sourceRequest.current) {
@@ -1022,11 +1029,11 @@ export function Details({
   useEffect(() => {
     if (busy || !openSourcesOnLoad || initialSourceConsumed.current) return;
     const video = initialVideoId
-      ? meta.videos.find((entry) => entry.id === initialVideoId)
+      ? meta.videos.find((entry) => entry.id === initialVideoId) ?? initialVideo
       : undefined;
     initialSourceConsumed.current = true;
     void sources(video, true);
-  }, [busy, initialVideoId, meta, openSourcesOnLoad]);
+  }, [busy, initialVideoId, initialVideo, meta, openSourcesOnLoad]);
   return (
     <div
       className={`detail-view background-${metaScreenSettings.backgroundMode}${sourceOpen ? " has-sheet" : ""}${compactHeader ? " has-compact-header" : ""}${busy ? " is-loading" : ""}${trailerOpen ? " has-trailer-panel" : ""}${meta.type === "series" && sectionEnabled("EPISODES") ? " has-episode-panel" : ""}`}

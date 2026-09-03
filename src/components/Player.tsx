@@ -783,6 +783,12 @@ export function Player({
         mediaId: video?.title || meta.name,
         startPositionMs,
         requestHeaders: stream.behaviorHints?.proxyHeaders?.request,
+        deviceLanguages: navigator.languages?.length
+          ? [...navigator.languages]
+          : navigator.language
+            ? [navigator.language]
+            : [],
+        contentLanguage: meta.language,
         progress: {
           contentId: meta.id,
           contentType: meta.type,
@@ -1434,7 +1440,7 @@ export function Player({
     [onPlayEpisode, switching, video?.id],
   );
 
-  const closePlayer = useCallback(() => {
+  const closePlayer = useCallback(async () => {
     if (nativePlayer) {
       const snapshot = nativeProgressSnapshotRef.current;
       if (snapshot.positionMs > 0 || snapshot.ended) {
@@ -1444,7 +1450,33 @@ export function Player({
           snapshot.ended,
         );
       }
-      void nativePlayer.stop();
+      // The player lives in the same native window as the WebView. Closing the
+      // React overlay without restoring that window leaves the entire desktop
+      // app fullscreen on the screen behind it.
+      try {
+        await nativePlayer.setFullscreen?.(false);
+      } catch {
+        // Stopping and returning is still more useful than trapping the viewer
+        // in a player whose window manager rejected the fullscreen change.
+      }
+      setNativeFullscreen(false);
+      try {
+        await nativePlayer.stop();
+      } catch {
+        // The player may already have stopped at EOF.
+      }
+    } else {
+      const webkitDocument = document as Document & {
+        webkitFullscreenElement?: Element | null;
+        webkitExitFullscreen?: () => Promise<void> | void;
+      };
+      if (document.fullscreenElement && document.exitFullscreen) {
+        await document.exitFullscreen().catch(() => undefined);
+      } else if (webkitDocument.webkitFullscreenElement) {
+        await Promise.resolve(webkitDocument.webkitExitFullscreen?.()).catch(
+          () => undefined,
+        );
+      }
     }
     onClose();
   }, [onClose, onNativeProgressSnapshot]);

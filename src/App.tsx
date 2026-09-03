@@ -174,6 +174,7 @@ import {
   type MetaScreenSectionKey,
 } from "./lib/metaScreenSettings";
 import { readDebridRules } from "./lib/webSettings";
+import { applyDebridStreamSettings } from "./lib/debridStreams";
 import {
   readWebSettings,
   type ContinueWatchingSettings,
@@ -537,6 +538,7 @@ export function App() {
   // reason it is a separate piece of state rather than a replacement for it.
   const [person, setPerson] = useState<(Person & { tmdbId: number }) | null>(null);
   const [detailLaunch, setDetailLaunch] = useState<{
+    video?: Video;
     videoId?: string;
     openSources?: boolean;
     startAtBeginning?: boolean;
@@ -1904,6 +1906,7 @@ export function App() {
       const openTitle = () => {
         setLoading(false);
         setDetailLaunch({
+          video: card.video,
           videoId: card.video?.id,
           openSources: true,
           startAtBeginning,
@@ -1943,7 +1946,10 @@ export function App() {
       ])
         .then(([streams, meta]) => {
           if (generation !== episodeSwitch.current) return;
-          const chosen = pickBingeStream(streams, group);
+          const orderedStreams = platform.debrid
+            ? applyDebridStreamSettings(streams, debridRules)
+            : streams;
+          const chosen = pickBingeStream(orderedStreams, group);
           finish();
           if (!chosen) {
             openTitle();
@@ -1952,7 +1958,7 @@ export function App() {
           setPlayback({
             stream: chosen,
             meta: { ...meta, selectedVideoId: target.id },
-            video: target,
+            video: meta.videos.find((entry) => entry.id === target.id) ?? target,
             startAtBeginning,
           });
         })
@@ -1962,7 +1968,7 @@ export function App() {
           openTitle();
         });
     },
-    [addons],
+    [addons, debridRules],
   );
 
   const dismissContinueCard = useCallback(
@@ -2462,7 +2468,10 @@ export function App() {
             void loadStreams(current.meta.type, next.id, addons)
               .then((streams) => {
                 if (generation !== episodeSwitch.current) return;
-                const chosen = pickBingeStream(streams, bingeGroup);
+                const orderedStreams = platform.debrid
+                  ? applyDebridStreamSettings(streams, debridRules)
+                  : streams;
+                const chosen = pickBingeStream(orderedStreams, bingeGroup);
                 if (!chosen) {
                   setMessage(
                     "No playable source was found for that episode. Open it from the title page to choose one.",
@@ -2485,7 +2494,12 @@ export function App() {
                 setMessage("That episode's sources could not be loaded.");
               });
           }}
-          onClose={() => setPlayback(null)}
+          onClose={() => {
+            // A pending episode lookup must not reopen playback after Back.
+            episodeSwitch.current += 1;
+            setLoading(false);
+            setPlayback(null);
+          }}
           onExternalPlay={(mode, url, positionMs) => {
             // The web player is torn down first. Leaving it mounted keeps it
             // decoding and downloading behind the app that is now playing the
@@ -2580,6 +2594,7 @@ export function App() {
           metaScreenSettings={webSettings.metaScreen}
           watchIndex={watchIndex}
           initialVideoId={detailLaunch?.videoId}
+          initialVideo={detailLaunch?.video}
           openSourcesOnLoad={detailLaunch?.openSources}
           onSetWatched={toggleWatched}
           onResetProgress={resetProgress}

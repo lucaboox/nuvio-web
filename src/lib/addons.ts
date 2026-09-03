@@ -934,7 +934,7 @@ export async function loadStreams(
   id: string,
   addons: InstalledAddon[],
   signal?: AbortSignal,
-  onAddon?: (addonName: string, streams: Stream[]) => void,
+  onAddon?: (addonName: string, streams: Stream[], orderedStreams: Stream[]) => void,
 ): Promise<Stream[]> {
   const targets = addons.filter(
     (addon) =>
@@ -942,8 +942,9 @@ export async function loadStreams(
       addon.manifest &&
       supports(addon.manifest, "stream", type),
   );
+  const batches: Stream[][] = targets.map(() => []);
   const groups = await Promise.all(
-    targets.map(async (addon) => {
+    targets.map(async (addon, index) => {
       try {
         const payload = await fetchJson<{
           streams?: Array<Record<string, unknown>>;
@@ -972,12 +973,13 @@ export async function loadStreams(
               ? (stream.clientResolve as Stream["clientResolve"])
               : undefined,
         }));
-        if (!signal?.aborted) onAddon?.(addon.manifest!.name, mapped);
+        batches[index] = mapped;
+        if (!signal?.aborted) onAddon?.(addon.manifest!.name, mapped, batches.flat());
         return mapped;
       } catch {
         // Announced too. An addon that failed has finished, and saying so is
         // what stops it being waited on for ever in the caller's tally.
-        if (!signal?.aborted) onAddon?.(addon.manifest!.name, []);
+        if (!signal?.aborted) onAddon?.(addon.manifest!.name, [], batches.flat());
         return [];
       }
     }),

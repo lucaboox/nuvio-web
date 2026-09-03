@@ -104,6 +104,10 @@ export type PlayerSource = {
   startPositionMs?: number;
   /** Headers the source insists on, which a `<video>` element cannot attach. */
   requestHeaders?: Record<string, string>;
+  /** Browser/OS language order, used by native players for the "Device" choice. */
+  deviceLanguages?: string[];
+  /** Metadata language, used by native players for the "Original" choice. */
+  contentLanguage?: string;
   /** The exact server identity used by Nuvio's watch-progress RPCs. */
   progress: {
     contentId: string;

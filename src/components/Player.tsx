@@ -20,6 +20,7 @@ import {
   FastForward,
   List,
   LoaderCircle,
+  Captions,
   Maximize,
   Ratio,
   Music2,
@@ -207,6 +208,12 @@ export function Player({
   );
   const [controlsVisible, setControlsVisible] = useState(true);
   const [audioOpen, setAudioOpen] = useState(false);
+  const [subsOpen, setSubsOpen] = useState(false);
+  const [subtitleTracks, setSubtitleTracks] = useState<
+    Array<{ id: number; label: string }>
+  >([]);
+  /** mpv's own convention: -1, or "no", means subtitles are off. */
+  const [selectedSubtitle, setSelectedSubtitle] = useState(-1);
   const [externalPlayerOpen, setExternalPlayerOpen] = useState(false);
   const [episodesOpen, setEpisodesOpen] = useState(false);
   /** Dismissed by hand, so it does not come back for the rest of the episode. */
@@ -543,6 +550,17 @@ export function Player({
           }));
         setAudioTracks(tracks);
         setSelectedAudio(next.audioTrack);
+        // mpv reports these alongside the audio ones; they were being filtered
+        // out and thrown away, which is why there was no way to change them.
+        setSubtitleTracks(
+          next.tracks
+            .filter((track) => track.kind === "sub")
+            .map((track) => ({
+              id: track.id,
+              label: track.title || track.lang || `Subtitle ${track.id}`,
+            })),
+        );
+        setSelectedSubtitle(next.subtitleTrack);
       } catch (reason) {
         if (live)
           setError(reason instanceof Error ? reason.message : "Could not read native player state.");
@@ -1044,6 +1062,23 @@ export function Player({
     };
   }, []);
 
+  /**
+   * Subtitle track, including turning them off.
+   *
+   * Native only. A browser video's text tracks are already driven by the
+   * element and its own cue rendering, so the control is not built there —
+   * there is nothing for it to switch between that the page did not put there.
+   */
+  const selectSubtitle = (id: number) => {
+    setSelectedSubtitle(id);
+    setSubsOpen(false);
+    void nativePlayer?.setSubtitleTrack(id).catch((reason: unknown) =>
+      setError(
+        reason instanceof Error ? reason.message : "Could not select subtitles.",
+      ),
+    );
+  };
+
   const selectAudio = (id: number) => {
     if (nativePlayer) {
       setSelectedAudio(id);
@@ -1361,12 +1396,56 @@ export function Player({
                 } as CSSProperties
               }
             />
+            {nativePlayer && (
+              <div className="audio-picker">
+                <button
+                  aria-label="Subtitles"
+                  className={subsOpen ? "active" : ""}
+                  aria-expanded={subsOpen}
+                  onClick={() => {
+                    setExternalPlayerOpen(false);
+                    setAudioOpen(false);
+                    setSubsOpen((value) => !value);
+                  }}
+                >
+                  <Captions />
+                </button>
+                {subsOpen && (
+                  <div className="audio-menu">
+                    <strong>Subtitles</strong>
+                    {/* Always offered, even with no tracks: turning subtitles
+                        off is the thing most often wanted here, and it has to
+                        be reachable whatever the file contains. */}
+                    <button
+                      className={selectedSubtitle < 0 ? "selected" : ""}
+                      onClick={() => selectSubtitle(-1)}
+                    >
+                      Off
+                    </button>
+                    {subtitleTracks.map((track) => (
+                      <button
+                        key={track.id}
+                        className={selectedSubtitle === track.id ? "selected" : ""}
+                        onClick={() => selectSubtitle(track.id)}
+                      >
+                        {track.label}
+                      </button>
+                    ))}
+                    {!subtitleTracks.length && (
+                      <p>This source carries no subtitle tracks.</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
             <div className="audio-picker">
               <button
+                aria-label="Audio track"
                 className={audioOpen ? "active" : ""}
                 aria-expanded={audioOpen}
                 onClick={() => {
                   setExternalPlayerOpen(false);
+                  setSubsOpen(false);
                   setAudioOpen((value) => !value);
                 }}
               >

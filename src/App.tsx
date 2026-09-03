@@ -2561,6 +2561,16 @@ export function App() {
       )}
       {selected && (
         <Details
+          /*
+           * A new title is a new page, not the old one with different data.
+           *
+           * Opening a credit from an actor's page swaps `selected` while this
+           * stays mounted — the only route that does — so React reused the
+           * instance and everything in it carried across: the cast row stayed
+           * scrolled where the previous title left it, and so did the rest of
+           * the view's state. Keying by the title remounts instead.
+           */
+          key={`${selected.type}:${selected.id}`}
           seed={selected}
           addons={addons}
           metadataEnrichment={metadataEnrichment}

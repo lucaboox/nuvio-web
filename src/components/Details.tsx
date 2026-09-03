@@ -658,6 +658,12 @@ export function Details({
     first: 12,
     chunk: 12,
   });
+  useEffect(() => {
+    // The list above restarts at twelve cards when the season changes, but the
+    // row keeps whatever it was scrolled to — which lands you past the end of
+    // the new list, looking at nothing.
+    if (castRef.current) castRef.current.scrollLeft = 0;
+  }, [season, castRef]);
   const [episodeQuery, setEpisodeQuery] = useState("");
   const visibleEpisodes = useMemo(() => {
     const query = episodeQuery.trim().toLocaleLowerCase();

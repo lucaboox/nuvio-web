@@ -1531,9 +1531,12 @@ a {
 .picture-note {
   position: absolute;
   z-index: 5;
-  top: 50%;
+  /* Above the controls rather than over the middle of the picture: it is a
+     confirmation of what you just pressed, and the thing you want to look at
+     while pressing it is the framing behind it. */
+  bottom: 150px;
   left: 50%;
-  transform: translate(-50%, -50%);
+  transform: translateX(-50%);
   padding: 14px 26px;
   border-radius: 14px;
   background: rgb(6 8 11 / 0.82);
@@ -1545,6 +1548,11 @@ a {
   font-weight: 700;
   letter-spacing: 0.02em;
   pointer-events: none;
+}
+@media (max-width: 760px) {
+  .picture-note {
+    bottom: 120px;
+  }
 }
 .sheet-loading {
   width: min(980px, 100%);

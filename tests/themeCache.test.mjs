@@ -51,7 +51,10 @@ test("profile startup keeps the navigation covered through the hydration handoff
   assert.match(app, /const activateProfile[^]*?setProfileStarting\(next !== null\)/);
   const hydrate = app.slice(app.indexOf("const hydrate ="), app.indexOf("const loadProfileData ="));
   assert.doesNotMatch(hydrate, /setProfileStarting\(false\)/);
-  assert.match(app, /\{profileStarting && <LoadingScreen overlay \/>\}/);
+  // Restoring the session and starting the profile are one wait to the reader,
+  // so they drive one screen. Rendered as two, the second element replaced the
+  // first and the spinner restarted its rotation partway through.
+  assert.match(app, /useFadeOut\(booting \|\| profileStarting/);
   assert.match(css, /\.app-shell\.is-loading > \.bottom-nav,[^}]*visibility: hidden/);
 });
 
@@ -60,5 +63,13 @@ test("ordinary navigation and background loading do not show the startup splash"
   assert.doesNotMatch(app, /const pageLoading =/);
   assert.match(app, /profileStarting \? " is-loading" : ""/);
   assert.match(app, /loading && !profileStarting && \([^]*?className="app-loading-status" role="status"/);
-  assert.equal((app.match(/<LoadingScreen overlay/g) || []).length, 1);
+  assert.equal((app.match(/<LoadingScreen\s+overlay/g) || []).length, 1);
+  // That single element is rendered first in every branch App can return, so
+  // React reconciles it as the same node rather than tearing it down when an
+  // early return swaps the tree underneath it. A fade needs the element to
+  // survive the swap; so does an animation that should not restart.
+  assert.ok(
+    (app.match(/\{loadingScreen\}/g) || []).length >= 4,
+    "the loading screen must lead every branch, or it remounts",
+  );
 });

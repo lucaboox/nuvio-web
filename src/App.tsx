@@ -388,15 +388,6 @@ const DETAIL_SECTION_LABELS: Record<
 
 export function App() {
   const [booting, setBooting] = useState(true);
-  /**
-   * Holds the boot screen on top of the app for its fade.
-   *
-   * `booting` gates an early return, so when it flips the whole tree is
-   * replaced and the loading screen is simply gone. Keeping it mounted here as
-   * an overlay means the app paints underneath and the screen leaves over it,
-   * rather than the two swapping between frames.
-   */
-  const bootFade = useFadeOut(booting, 420);
   const [session, setSession] = useState<Session | null>(null);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -612,6 +603,29 @@ export function App() {
   // Set with profile selection, not in its later effect: account hydration
   // finishing must not uncover the navbar before Home starts fetching.
   const [profileStarting, setProfileStarting] = useState(false);
+  /**
+   * The one loading screen, from first paint to the app being ready.
+   *
+   * Restoring the session and starting the profile are two waits in a row, and
+   * rendering a screen for each meant a second element replaced the first: a
+   * CSS animation begins when its element is created, so the spinner snapped
+   * back to the top mid-wait. Treated as one condition it is one element that
+   * is never torn down, and the wait reads as continuous.
+   *
+   * It also has to outlive the early returns below. `booting` gates one, so
+   * when it flips the whole tree is replaced and a screen rendered inside a
+   * branch would simply be gone — nothing left to fade. Rendering it first in
+   * every branch keeps React on the same node, so the app paints underneath
+   * and the screen leaves over it.
+   */
+  const loadingFade = useFadeOut(booting || profileStarting, 420);
+  const loadingScreen = loadingFade.mounted ? (
+    <LoadingScreen
+      overlay
+      leaving={loadingFade.leaving}
+      label={t("boot.restoring")}
+    />
+  ) : null;
   const [message, setMessage] = useState("");
   // Status notices are informational, not decisions to act on, so they clear
   // themselves rather than sitting over the page until dismissed.
@@ -2046,13 +2060,14 @@ export function App() {
   if (booting)
     return (
       <>
-        <LoadingScreen label={t("boot.restoring")} />
+        {loadingScreen}
         {updatePrompt}
       </>
     );
   if (!session)
     return (
       <>
+        {loadingScreen}
         <AuthScreen onSession={setSession} />
         {updatePrompt}
       </>
@@ -2062,6 +2077,7 @@ export function App() {
   if (!profile && !pinTarget)
     return (
       <>
+        {loadingScreen}
         {profiles.length > 0 ? (
           <ProfileGate
             profiles={profiles}
@@ -2160,18 +2176,9 @@ export function App() {
     );
 
   return (
-    <div className={`app-shell${playback ? " player-active" : ""}${profileStarting ? " is-loading" : ""}`}>
-      {/* The boot screen, still on top while it fades. The app below is
-          already painted, so this reveals a finished page rather than cutting
-          to one. */}
-      {bootFade.mounted && (
-        <LoadingScreen
-          overlay
-          leaving={bootFade.leaving}
-          label={t("boot.restoring")}
-        />
-      )}
-      {profileStarting && <LoadingScreen overlay />}
+    <>
+      {loadingScreen}
+      <div className={`app-shell${playback ? " player-active" : ""}${profileStarting ? " is-loading" : ""}`}>
       {loading && !profileStarting && (
         <div className="app-loading-status" role="status">
           <i className="mini-spinner" aria-hidden="true" />
@@ -2715,7 +2722,8 @@ export function App() {
             }}
           />
       )}
-    </div>
+      </div>
+    </>
   );
 }
 

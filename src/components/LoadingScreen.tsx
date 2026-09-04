@@ -1,3 +1,23 @@
+/**
+ * Where the spinner should be in its rotation right now.
+ *
+ * A CSS animation starts when its element is created, so every remount snaps
+ * the spinner back to twelve o'clock. This screen is built at least twice —
+ * the static one in index.html is replaced by this component once the bundle
+ * runs — and the restart is the visible jolt in what should be one continuous
+ * wait. A negative delay offsets the animation into the position it would have
+ * been in had it never stopped.
+ */
+function spinnerPhase(): string {
+  const reduced =
+    typeof matchMedia === "function" &&
+    matchMedia("(prefers-reduced-motion: reduce)").matches;
+  // Must match `animation: spin …` on .nuvio-loading-spinner.
+  const duration = reduced ? 2000 : 850;
+  const elapsed = typeof performance === "undefined" ? 0 : performance.now();
+  return `-${(elapsed % duration).toFixed(0)}ms`;
+}
+
 /** One opaque, branded loading state for both the website and native shell. */
 export function LoadingScreen({
   overlay = false,
@@ -21,7 +41,11 @@ export function LoadingScreen({
       <div className="nuvio-loading-brand">
         <img src={`${import.meta.env.BASE_URL}Nuvio-icon.png`} width="96" height="96" alt="" />
         <span className="nuvio-loading-name">Nuvio</span>
-        <i className="nuvio-loading-spinner" aria-hidden="true" />
+        <i
+          className="nuvio-loading-spinner"
+          style={{ animationDelay: spinnerPhase() }}
+          aria-hidden="true"
+        />
         <span className="nuvio-loading-label">{label}</span>
       </div>
     </div>

@@ -1,3 +1,4 @@
+import { t } from "../lib/i18n.ts";
 import { Lock, Plus } from "lucide-react";
 import { useState } from "react";
 import { MAX_PROFILES } from "../lib/account";
@@ -70,7 +71,7 @@ export function ProfileGate({
                 )}
               </span>
               <strong>{profile.name}</strong>
-              {profile.pinEnabled && <small>Locked</small>}
+              {profile.pinEnabled && <small>{t("common.locked")}</small>}
             </button>
           ))}
           {/* Six is the official clients' ceiling, so the tile goes when it is

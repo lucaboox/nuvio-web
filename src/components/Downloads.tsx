@@ -1,3 +1,4 @@
+import { t } from "../lib/i18n.ts";
 import { Check, Download, Play, RefreshCw, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { platform } from "../platform/index.ts";
@@ -284,7 +285,7 @@ function Row({
         {!waiting && (
           <button
             type="button"
-            aria-label="Remove download"
+            aria-label={t("downloads.remove")}
             title="Remove download"
             onClick={onRemove}
           >

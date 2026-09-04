@@ -3,6 +3,7 @@ import { SolidPause, SolidPlay } from "./PlaybackIcons";
 import { automaticSkipSegment, nextEpisodeDue, shouldBlurEpisode } from "../lib/playbackPolicy";
 import { nativePlayerPreferences } from "../lib/nativePlayerPreferences";
 import { platform } from "../platform/index.ts";
+import { t } from "../lib/i18n.ts";
 import { languageName } from "../lib/languageName.ts";
 import type { ResizeMode } from "../platform/types.ts";
 import { safeHttpUrl } from "../lib/security";
@@ -1692,7 +1693,7 @@ export function Player({
                 aria-label={
                   nextEpisode.season != null && nextEpisode.episode != null
                     ? `Next episode: S${nextEpisode.season} E${nextEpisode.episode}`
-                    : "Next episode"
+                    : t("player.nextEpisode")
                 }
                 disabled={switching}
                 onClick={() => startEpisode(nextEpisode)}
@@ -1726,7 +1727,7 @@ export function Player({
             {nativePlayer && (
               <div className="audio-picker">
                 <button
-                  aria-label="Subtitles"
+                  aria-label={t("player.subtitles")}
                   className={subsOpen ? "active" : ""}
                   aria-expanded={subsOpen}
                   onClick={() => {
@@ -1739,7 +1740,7 @@ export function Player({
                 </button>
                 {subsOpen && (
                   <div className="audio-menu subtitle-menu">
-                    <strong>Subtitles</strong>
+                    <strong>{t("player.subtitles")}</strong>
                     {/* Always offered, even with no tracks: turning subtitles
                         off is the thing most often wanted here, and it has to
                         be reachable whatever the file contains. */}
@@ -1747,7 +1748,7 @@ export function Player({
                       className={selectedSubtitle < 0 ? "selected" : ""}
                       onClick={() => selectSubtitle(-1)}
                     >
-                      Off
+                      {t("player.off")}
                     </button>
                     {visibleSubtitleTracks.map((track) => (
                       <button
@@ -1767,7 +1768,7 @@ export function Player({
             )}
             <div className="audio-picker">
               <button
-                aria-label="Audio track"
+                aria-label={t("player.audioTrack")}
                 className={audioOpen ? "active" : ""}
                 aria-expanded={audioOpen}
                 onClick={() => {
@@ -1780,7 +1781,7 @@ export function Player({
               </button>
               {audioOpen && (
                 <div className="audio-menu">
-                  <strong>Audio track</strong>
+                  <strong>{t("player.audioTrack")}</strong>
                   {audioTracks.length ? (
                     audioTracks.map((track) => (
                       <button
@@ -1839,7 +1840,7 @@ export function Player({
             )}
             {!!episodes?.length && onPlayEpisode && (
               <button
-                aria-label="Episodes"
+                aria-label={t("player.episodes")}
                 className={episodesOpen ? "active" : ""}
                 aria-expanded={episodesOpen}
                 onClick={() => {
@@ -1863,7 +1864,7 @@ export function Player({
                 <PictureModeGlyph />
               </button>
             )}
-            <button aria-label="Fullscreen" onClick={toggleFullscreen}>
+            <button aria-label={t("player.fullscreen")} onClick={toggleFullscreen}>
               <Maximize />
             </button>
           </div>
@@ -1921,7 +1922,7 @@ export function Player({
               </div>
               <button
                 className="circle-button"
-                aria-label="Close"
+                aria-label={t("action.close")}
                 onClick={() => setEpisodesOpen(false)}
               >
                 <X />

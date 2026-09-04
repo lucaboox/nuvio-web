@@ -1,3 +1,4 @@
+import { t } from "../lib/i18n.ts";
 import { ArrowLeft } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -261,7 +262,7 @@ export function CollectionFolderView({
 
       {!loading && items.length === 0 ? (
         <div className="empty-state">
-          <strong>Nothing returned</strong>
+          <strong>{t("common.nothingReturned")}</strong>
           <span>These catalogs produced no titles.</span>
         </div>
       ) : (

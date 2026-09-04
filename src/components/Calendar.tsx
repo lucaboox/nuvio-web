@@ -1,3 +1,4 @@
+import { t } from "../lib/i18n.ts";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import {
   useEffect,
@@ -525,7 +526,7 @@ export function CalendarView({
             ))}
             {!selected.length && (
               <div className="calendar-empty-day">
-                <strong>No releases this day</strong>
+                <strong>{t("calendar.noReleases")}</strong>
                 <span>{loading ? "Still checking your library…" : "Pick a highlighted day or change the month."}</span>
               </div>
             )}
@@ -617,7 +618,7 @@ export function CalendarView({
               })}
               {!selected.length && (
                 <div className="calendar-sheet-empty">
-                  <strong>No releases this day</strong>
+                  <strong>{t("calendar.noReleases")}</strong>
                   <span>Choose a day with artwork to see its releases.</span>
                 </div>
               )}

@@ -99,7 +99,18 @@ export async function setLanguage(choice: string): Promise<void> {
     messages = fallback;
     tag = "en";
   }
+  document.documentElement.lang = tag;
   announce();
+}
+
+/**
+ * Applies whatever was stored, at startup.
+ *
+ * `storedLanguage` only reports the choice; something has to act on it, and
+ * until this existed nothing did.
+ */
+export function applyStoredLanguage(): Promise<void> {
+  return setLanguage(storedLanguage());
 }
 
 /** The active BCP 47 tag, for `Intl` and for the `lang` attribute. */

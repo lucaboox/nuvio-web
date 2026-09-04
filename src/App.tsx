@@ -124,6 +124,7 @@ import {
 } from "./lib/appUpdate";
 import {
   LOCALES,
+  plural,
   setLanguage,
   storedLanguage,
   t,
@@ -323,43 +324,43 @@ const SETTINGS_CATEGORIES: Array<{
 }> = [
   {
     key: "appearance",
-    label: "Appearance",
+    label: "settings.appearance",
     description: "Theme, navigation, and poster cards",
     icon: Palette,
   },
   {
     key: "home",
-    label: "Home",
+    label: "settings.home",
     description: "Continue Watching and home presentation",
     icon: Home,
   },
   {
     key: "details",
-    label: "Details",
+    label: "settings.details",
     description: "Detail page layout and episode cards",
     icon: LayoutGrid,
   },
   {
     key: "addons",
-    label: "Content & discovery",
+    label: "settings.contentDiscovery",
     description: "Manage addons and discovery sources",
     icon: Puzzle,
   },
   {
     key: "playback",
-    label: "Playback",
+    label: "settings.playback",
     description: "Player, subtitles, sources, and auto-play",
     icon: Play,
   },
   {
     key: "integrations",
-    label: "Integrations",
+    label: "settings.integrations",
     description: "TMDB, MDBList, and metadata providers",
     icon: Link2,
   },
   {
     key: "app",
-    label: "App & account",
+    label: "settings.account",
     description: "Profile, notifications, updates, and install",
     icon: UserRound,
   },
@@ -2117,7 +2118,7 @@ export function App() {
                   setSession(null);
                 }}
               >
-                Sign out
+                {t("settings.signOut")}
               </button>
             </div>
           </div>
@@ -2154,7 +2155,7 @@ export function App() {
       {loading && !profileStarting && (
         <div className="app-loading-status" role="status">
           <i className="mini-spinner" aria-hidden="true" />
-          <span>Loading…</span>
+          <span>{t("common.loading")}</span>
         </div>
       )}
       <aside className="rail">
@@ -2279,7 +2280,7 @@ export function App() {
             <span>{message}</span>
             <button
               className="notice-dismiss"
-              aria-label="Dismiss"
+              aria-label={t("common.dismiss")}
               onClick={() => setMessage("")}
             >
               <X size={18} />
@@ -2807,17 +2808,17 @@ function LibraryView({
   );
   const { visible } = useProgressiveList(filtered, { resetKey: tab });
   const tabs = [
-    { key: "all", label: "All", count: counts.all },
-    { key: "movie", label: "Movies", count: counts.movie },
-    { key: "series", label: "Series", count: counts.series },
+    { key: "all", label: t("library.all"), count: counts.all },
+    { key: "movie", label: t("library.movies"), count: counts.movie },
+    { key: "series", label: t("library.series"), count: counts.series },
   ] as const;
 
 
   return (
     <section className="grid-page">
       <span className="eyebrow">NUVIO WEB</span>
-      <h1>Your library</h1>
-      <p>{counts.all} synced titles</p>
+      <h1>{t("library.title")}</h1>
+      <p>{plural("library.count", counts.all)}</p>
       <div className="library-toolbar">
         <div className="segmented">
           {tabs.map((item) => (
@@ -2839,15 +2840,15 @@ function LibraryView({
           onClick={() => setRandomOpen(true)}
         >
           <Dices aria-hidden="true" />
-          Random pick
+          {t("library.randomPick")}
         </button>
       </div>
       {filtered.length === 0 ? (
         <div className="empty-state">
-          <strong>Nothing here yet</strong>
+          <strong>{t("library.empty.title")}</strong>
           <span>
             {tab === "all"
-              ? "Titles you add to your Nuvio library will appear here."
+              ? t("library.empty.body")
               : `No ${tab === "movie" ? "movies" : "series"} in your library.`}
           </span>
         </div>
@@ -3248,9 +3249,9 @@ export function TitleRoulette({
   useEffect(() => () => void audio.current?.close(), []);
 
   const scopes = [
-    { key: "all", label: "All" },
-    { key: "movie", label: "Movies" },
-    { key: "series", label: "Series" },
+    { key: "all", label: t("library.all") },
+    { key: "movie", label: t("library.movies") },
+    { key: "series", label: t("library.series") },
   ] as const;
   const winner = spinning ? null : roll?.winner;
 
@@ -3274,7 +3275,7 @@ export function TitleRoulette({
       >
         <header>
           <div>
-            <small>RANDOM PICK</small>
+            <small>{t("roulette.title")}</small>
             <h2 id="library-roulette-title">{heading ?? "What should I watch?"}</h2>
           </div>
           <button
@@ -3577,7 +3578,7 @@ function CatalogView({
       {loadingMore && (
         <div className="grid-more" role="status">
           <i className="mini-spinner" />
-          Loading more…
+          {t("common.loadingMore")}
         </div>
       )}
     </section>
@@ -3670,7 +3671,7 @@ function AddonSettings({
           type="url"
           value={url}
           onChange={(event) => setUrl(event.target.value)}
-          placeholder="https://addon.example/manifest.json"
+          placeholder={t("addons.placeholder")}
         />
         <button className="primary">Install</button>
       </form>
@@ -3747,7 +3748,7 @@ function AddonSettings({
                 <em>{enabled ? "Active" : "Disabled"}</em>
                 <em>{resources.length} resource{resources.length === 1 ? "" : "s"}</em>
                 <em>{addon.manifest?.catalogs?.length ?? 0} catalog{(addon.manifest?.catalogs?.length ?? 0) === 1 ? "" : "s"}</em>
-                {configurable && <em>Configurable</em>}
+                {configurable && <em>{t("addons.configurable")}</em>}
                 {addon.error && <em className="bad">Unreachable</em>}
               </div>
               {/* The description says what the addon is for; the URL said only
@@ -3908,7 +3909,7 @@ function UpdateRow() {
     <>
       <div className="theme-row">
         <span>
-          <strong>Check for updates</strong>
+          <strong>{t("settings.checkUpdates")}</strong>
           <small>{detail()}</small>
         </span>
         <button className="secondary" disabled={busy} onClick={act}>
@@ -4432,14 +4433,14 @@ function SettingsPage({
           <button
             key={key}
             type="button"
-            title={label}
-            aria-label={label}
+            title={t(label)}
+            aria-label={t(label)}
             className={category === key ? "active" : ""}
             aria-current={category === key ? "page" : undefined}
             onClick={() => setCategory(key)}
           >
             <Icon />
-            <span>{label}</span>
+            <span>{t(label)}</span>
           </button>
         ))}
       </nav>
@@ -4880,7 +4881,7 @@ function SettingsPage({
       >
         <header>
           <h2>Home layout</h2>
-          <span>Shared with Nuvio</span>
+          <span>{t("common.sharedWithNuvio")}</span>
         </header>
         <p>
           Reorder, rename, show, or hide synced catalogs and collections.
@@ -4921,8 +4922,8 @@ function SettingsPage({
         hidden={category !== "home"}
       >
         <header>
-          <h2>Continue watching</h2>
-          <span>Shared with Nuvio</span>
+          <h2>{t("home.continueWatching")}</h2>
+          <span>{t("common.sharedWithNuvio")}</span>
         </header>
         <SettingToggle
           title="Show Continue Watching"
@@ -5020,7 +5021,7 @@ function SettingsPage({
       >
         <header>
           <h2>Details screens</h2>
-          <span>Shared with Nuvio</span>
+          <span>{t("common.sharedWithNuvio")}</span>
         </header>
         <DetailsDebugToggle />
         <label className="setting-select-row">
@@ -5413,8 +5414,8 @@ function SettingsPage({
               )
             }
           >
-            <option value="device">Device language</option>
-            <option value="original">Original language</option>
+            <option value="device">{t("language.deviceLanguage")}</option>
+            <option value="original">{t("language.originalLanguage")}</option>
             {LANGUAGE_OPTIONS.map(([value, label]) => (
               <option key={value} value={value}>{label}</option>
             ))}
@@ -5423,7 +5424,7 @@ function SettingsPage({
         <label className="setting-select-row">
           <span>
             <strong>Fallback audio</strong>
-            <small>Used when nothing matches the preferred language.</small>
+            <small>{t("language.fallbackHint")}</small>
           </span>
           <select
             value={settings.player.secondaryPreferredAudioLanguage}
@@ -5437,8 +5438,8 @@ function SettingsPage({
               )
             }
           >
-            <option value="">None</option>
-            <option value="original">Original language</option>
+            <option value="">{t("common.none")}</option>
+            <option value="original">{t("language.originalLanguage")}</option>
             {LANGUAGE_OPTIONS.map(([value, label]) => (
               <option key={value} value={value}>{label}</option>
             ))}
@@ -5462,8 +5463,8 @@ function SettingsPage({
             }
           >
             <option value="none">Off</option>
-            <option value="forced">Forced only</option>
-            <option value="device">Device language</option>
+            <option value="forced">{t("language.forcedOnly")}</option>
+            <option value="device">{t("language.deviceLanguage")}</option>
             {LANGUAGE_OPTIONS.map(([value, label]) => (
               <option key={value} value={value}>{label}</option>
             ))}
@@ -5472,7 +5473,7 @@ function SettingsPage({
         <label className="setting-select-row">
           <span>
             <strong>Fallback subtitles</strong>
-            <small>Used when nothing matches the preferred language.</small>
+            <small>{t("language.fallbackHint")}</small>
           </span>
           <select
             value={settings.player.secondaryPreferredSubtitleLanguage}
@@ -5486,8 +5487,8 @@ function SettingsPage({
               )
             }
           >
-            <option value="">None</option>
-            <option value="forced">Forced only</option>
+            <option value="">{t("common.none")}</option>
+            <option value="forced">{t("language.forcedOnly")}</option>
             {LANGUAGE_OPTIONS.map(([value, label]) => (
               <option key={value} value={value}>{label}</option>
             ))}

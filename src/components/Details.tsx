@@ -45,6 +45,7 @@ import {
   watchKey,
   type WatchIndex,
 } from "../lib/progress";
+import { t } from "../lib/i18n.ts";
 import { languageName } from "../lib/languageName.ts";
 import { seriesPlaybackTarget } from "../lib/seriesPlayback";
 import {
@@ -1102,7 +1103,7 @@ export function Details({
         </div>
         <button
           className="mobile-detail-library"
-          aria-label={inLibrary ? "Remove from library" : "Add to library"}
+          aria-label={inLibrary ? t("details.removeFromLibrary") : t("details.addToLibrary")}
           aria-pressed={inLibrary}
           onClick={() => onLibrary(meta)}
         >
@@ -1185,7 +1186,7 @@ export function Details({
               <button
                 className={`icon-pill${heroTargetWatched ? " active" : ""}`}
                 title={heroTargetWatched ? "Mark as unwatched" : "Mark as watched"}
-                aria-label={heroTargetWatched ? "Mark as unwatched" : "Mark as watched"}
+                aria-label={heroTargetWatched ? t("details.markUnwatched") : t("details.markWatched")}
                 aria-pressed={heroTargetWatched}
                 onClick={() =>
                   onSetWatched(meta, heroPlayback.video, !heroTargetWatched)
@@ -1197,8 +1198,8 @@ export function Details({
             {sectionEnabled("TRAILERS") && meta.trailers.length > 0 && (
               <button
                 className="icon-pill desktop-video-action"
-                title="Trailers and extras"
-                aria-label="Open trailers and extras"
+                title={t("details.trailers")}
+                aria-label={t("details.trailers")}
                 aria-expanded={trailerOpen}
                 onClick={() => setTrailerOpen(true)}
               >
@@ -1214,19 +1215,19 @@ export function Details({
               <div className="mobile-hero-credits">
                 {sectionEnabled("PRODUCTION") && meta.director.length > 0 && (
                   <p className="mobile-credit-wide">
-                    <strong>Director:</strong> {meta.director.join(", ")}
+                    <strong>{t("details.director")}</strong> {meta.director.join(", ")}
                   </p>
                 )}
                 {sectionEnabled("PRODUCTION") && meta.writer.length > 0 && (
                   <p className="mobile-credit-wide">
-                    <strong>Writer:</strong> {meta.writer.join(", ")}
+                    <strong>{t("details.writer")}</strong> {meta.writer.join(", ")}
                   </p>
                 )}
                 {sectionEnabled("DETAILS") && meta.language && (
-                  <p><strong>Language:</strong> {languageName(meta.language)}</p>
+                  <p><strong>{t("details.language")}</strong> {languageName(meta.language)}</p>
                 )}
                 {sectionEnabled("DETAILS") && meta.status && (
-                  <p><strong>Status:</strong> {meta.status}</p>
+                  <p><strong>{t("details.status")}</strong> {meta.status}</p>
                 )}
               </div>
             )}
@@ -1343,7 +1344,7 @@ export function Details({
               itself. The season rides along here so a changed list is still
               accounted for. */}
           <span className="eyebrow">
-            {seasonCast ? `CAST · SEASON ${season}` : "CAST"}
+            {seasonCast ? t("details.castSeason", { season: season ?? "" }) : t("details.cast")}
           </span>
           <div ref={castRef}>
             {visibleCast.map((person, index) => {
@@ -1391,7 +1392,7 @@ export function Details({
         {trailerOpen && (
           <button
             className="detail-trailer-backdrop"
-            aria-label="Close trailers"
+            aria-label={t("details.closeTrailers")}
             onClick={() => setTrailerOpen(false)}
           />
         )}
@@ -1403,7 +1404,7 @@ export function Details({
             <span className="eyebrow">VIDEOS</span>
             <button
               className="circle-button trailer-panel-close"
-              aria-label="Close trailers"
+              aria-label={t("details.closeTrailers")}
               onClick={() => setTrailerOpen(false)}
             ><X /></button>
           </div>
@@ -1573,12 +1574,12 @@ export function Details({
                 </label>}
                 {sourceAddons.length > 1 && (
                   <label className="source-player">
-                    <span>Addon</span>
+                    <span>{t("sources.addon")}</span>
                     <select
                       value={activeAddon}
                       onChange={(event) => setSourceAddon(event.target.value)}
                     >
-                      <option value="">All addons</option>
+                      <option value="">{t("sources.allAddons")}</option>
                       {sourceAddons.map((name) => (
                         <option key={name} value={name}>
                           {name}
@@ -1606,7 +1607,7 @@ export function Details({
             {sourceBusy ? (
               <div className="sheet-loading" role="status">
                 <i className="mini-spinner" aria-hidden="true" />
-                <span>Fetching addon sources…</span>
+                <span>{t("sources.fetching")}</span>
               </div>
             ) : visibleStreams.length ? (
               <div className="source-list">
@@ -1699,7 +1700,7 @@ export function Details({
                     onClose={() => setSourceMenu(null)}
                     items={[
                       {
-                        label: "Copy link",
+                        label: t("sources.copyLink"),
                         icon: <Copy size={16} />,
                         onSelect: () =>
                           void navigator.clipboard.writeText(
@@ -1716,7 +1717,7 @@ export function Details({
                               label:
                                 savedSource === sourceMenu.index
                                   ? "Queued"
-                                  : "Download",
+                                  : t("sources.download"),
                               icon: <DownloadIcon size={16} />,
                               onSelect: () => {
                                 const at = sourceMenu.index;
@@ -1748,7 +1749,7 @@ export function Details({
                             sourceVideo?.season != null
                               ? [
                                   {
-                                    label: `Download season ${sourceVideo.season}`,
+                                    label: t("sources.downloadSeason", { season: sourceVideo.season }),
                                     icon: <DownloadIcon size={16} />,
                                     onSelect: () =>
                                       void queueSeason(
@@ -1771,15 +1772,15 @@ export function Details({
                     <i className="mini-spinner" aria-hidden="true" />
                     <span>
                       {pendingAddons.length
-                        ? `Still scraping — ${pendingAddons.join(", ")}`
-                        : "Still checking other addons…"}
+                        ? t("sources.stillScraping", { addons: pendingAddons.join(", ") })
+                        : t("sources.fetching")}
                     </span>
                   </div>
                 )}
               </div>
             ) : (
               <div className="sheet-loading">
-                No sources were returned by the installed addons.
+                {t("sources.none")}
               </div>
             )}
             </div>

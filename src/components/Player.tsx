@@ -1,4 +1,5 @@
 import type Hls from "hls.js";
+import { SolidPause, SolidPlay } from "./PlaybackIcons";
 import { platform } from "../platform/index.ts";
 import type { ResizeMode } from "../platform/types.ts";
 import { safeHttpUrl } from "../lib/security";
@@ -28,8 +29,6 @@ import {
   Captions,
   Maximize,
   Music2,
-  Pause,
-  Play,
   SkipForward,
   Volume2,
   VolumeX,
@@ -1561,7 +1560,7 @@ export function Player({
       )}
       {!error && !waiting && !playing && (
         <button className="player-center" aria-label="Play" onClick={togglePlayback}>
-          <Play />
+          <SolidPlay />
         </button>
       )}
       {status && !waiting && !error && (
@@ -1636,7 +1635,7 @@ export function Player({
               aria-label={playing ? "Pause" : "Play"}
               onClick={togglePlayback}
             >
-              {playing ? <Pause /> : <Play />}
+              {playing ? <SolidPause /> : <SolidPlay />}
             </button>
             {/* Only where there is one to go to — a film, or the last episode
                 of a season, would leave a button that does nothing. */}

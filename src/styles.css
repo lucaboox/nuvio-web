@@ -795,8 +795,8 @@ a {
   width: 46px;
   height: 46px;
   border-width: 4px;
-  border-color: #ffffff24;
-  border-top-color: #f4f6f7;
+  border-color: color-mix(in srgb, var(--accent) 18%, transparent);
+  border-top-color: var(--accent);
 }
 .home-hero-meta {
   gap: 0;
@@ -2367,8 +2367,10 @@ a {
 .splash img {
   width: 76px;
 }
-.spin {
+.spin,
+.crate-spinner {
   animation: spin 1s linear infinite;
+  color: var(--accent);
 }
 @keyframes spin {
   to {
@@ -2879,7 +2881,7 @@ html.native-player-active .player-view.native-player.native-player-loading {
   transform: translate(-50%, -50%);
   border: 0;
   background: none;
-  color: #fff;
+  color: var(--accent);
   filter: drop-shadow(0 2px 14px #000c);
   display: grid;
   place-items: center;
@@ -2947,7 +2949,7 @@ html.native-player-active .player-view.native-player.native-player-loading {
   border-radius: 4px;
   background: linear-gradient(
     90deg,
-    #ef3340 0 var(--played, 0%),
+    var(--accent) 0 var(--played, 0%),
     #ffffff45 var(--played, 0%) 100%
   );
 }
@@ -2958,7 +2960,7 @@ html.native-player-active .player-view.native-player.native-player-loading {
   margin-top: -5px;
   border: 0;
   border-radius: 50%;
-  background: #fff;
+  background: var(--accent);
   box-shadow: 0 1px 5px #0008;
 }
 .player-view input[type="range"]::-moz-range-track {
@@ -2969,14 +2971,14 @@ html.native-player-active .player-view.native-player.native-player-loading {
 .player-view input[type="range"]::-moz-range-progress {
   height: 4px;
   border-radius: 4px;
-  background: #ef3340;
+  background: var(--accent);
 }
 .player-view input[type="range"]::-moz-range-thumb {
   width: 14px;
   height: 14px;
   border: 0;
   border-radius: 50%;
-  background: #fff;
+  background: var(--accent);
 }
 .player-control-row {
   display: flex;
@@ -3005,9 +3007,12 @@ html.native-player-active .player-view.native-player.native-player-loading {
   gap: 7px;
   cursor: pointer;
 }
-.player-control-group button:hover,
-.player-control-group button.active {
+.player-control-group button:hover {
   background: #ffffff1f;
+}
+.player-control-group button.active {
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: var(--accent);
 }
 .player-control-group button svg {
   width: 21px;
@@ -3017,11 +3022,11 @@ html.native-player-active .player-view.native-player.native-player-loading {
   width: 54px;
   height: 54px;
   border-radius: 50%;
-  background: #f4f6f7;
-  color: #090b0d;
+  background: var(--accent);
+  color: var(--accent-ink);
 }
 .player-control-group .player-play:hover {
-  background: #fff;
+  background: color-mix(in srgb, var(--accent) 86%, white);
 }
 .player-control-group .player-play svg {
   width: 25px;
@@ -3033,7 +3038,7 @@ html.native-player-active .player-view.native-player.native-player-loading {
 .volume-slider::-webkit-slider-runnable-track {
   background: linear-gradient(
     90deg,
-    #fff 0 var(--played, 100%),
+    var(--accent) 0 var(--played, 100%),
     #ffffff45 var(--played, 100%) 100%
   ) !important;
 }
@@ -3076,8 +3081,8 @@ html.native-player-active .player-view.native-player.native-player-loading {
   border-radius: 9px;
 }
 .audio-menu > button.selected {
-  background: #eef2f4;
-  color: #080a0c;
+  background: var(--accent);
+  color: var(--accent-ink);
 }
 /* Both menus, so the two do not behave differently side by side. Hover only:
    a touch device has none, and the selected row keeps its own fill. */
@@ -4106,7 +4111,7 @@ body.is-locked {
   width: 28px;
   height: 28px;
   margin-top: 10px;
-  border: 3px solid color-mix(in srgb, currentColor 18%, transparent);
+  border: 3px solid color-mix(in srgb, var(--accent) 18%, transparent);
   border-top-color: var(--accent, #eef2f5);
   border-radius: 50%;
   animation: spin 0.85s linear infinite;
@@ -4624,8 +4629,8 @@ body.is-locked {
 .mini-spinner {
   width: 17px;
   height: 17px;
-  border: 2px solid rgba(255, 255, 255, 0.16);
-  border-top-color: #dfe4e9;
+  border: 2px solid color-mix(in srgb, var(--accent) 18%, transparent);
+  border-top-color: var(--accent);
   border-radius: 50%;
   animation: spin 0.75s linear infinite;
 }
@@ -4870,6 +4875,7 @@ body.is-locked {
   margin-top: 4px;
 }
 .spin-icon {
+  color: var(--accent);
   animation: spin 0.8s linear infinite;
 }
 @media (max-width: 520px) {
@@ -6435,7 +6441,7 @@ body.is-locked {
 .calendar-page-title h1 { margin: 7px 0 5px; font-size: 34px; letter-spacing: -.04em; }
 .calendar-page-title p { margin: 0; color: #7f8993; font-size: 13px; }
 .calendar-sync { display: flex; align-items: center; gap: 9px; color: #949da6; font-size: 12px; }
-.calendar-sync i { width: 16px; height: 16px; border: 2px solid #ffffff28; border-top-color: var(--accent); border-radius: 50%; animation: spin .8s linear infinite; }
+.calendar-sync i { width: 16px; height: 16px; border: 2px solid color-mix(in srgb, var(--accent) 18%, transparent); border-top-color: var(--accent); border-radius: 50%; animation: spin .8s linear infinite; }
 /* The calendar sizes to the viewport instead of scrolling it.
    Stremio shrinks the month to fit the window; ours kept a fixed row height and
    pushed the page past the bottom edge. Scoped with :has() so only the calendar
@@ -6496,7 +6502,7 @@ body.is-locked {
 .calendar-month-loading i {
   width: 32px;
   height: 32px;
-  border: 3px solid #ffffff1a;
+  border: 3px solid color-mix(in srgb, var(--accent) 18%, transparent);
   border-top-color: var(--accent);
   border-radius: 50%;
   animation: spin .75s linear infinite;
@@ -7710,8 +7716,8 @@ body.is-locked {
   display: flex;
   align-items: center;
   gap: 7px;
-  background: #f4f6f7;
-  color: #090b0d;
+  background: var(--accent);
+  color: var(--accent-ink);
   font-weight: 600;
 }
 .player-next button svg {

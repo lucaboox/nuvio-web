@@ -21,6 +21,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 import { loadStreams, resolveMeta, supports } from "../lib/addons";
 import { assessPlayback, shouldUseRemuxFallback } from "../lib/playback";
 import { safeHttpUrl } from "../lib/security";
+import { useDescriptionOverflow } from "../lib/useDescriptionOverflow";
 import { DetailsTrace, detailsDebugEnabled, timed, type TimingStatus } from "../lib/detailsDebug";
 import { DetailsDebugPanel } from "./DetailsDebug";
 import {
@@ -420,6 +421,7 @@ export function Details({
   const [compactHeader, setCompactHeader] = useState(false);
   const [descriptionExpanded, setDescriptionExpanded] = useState(false);
   const [meta, setMeta] = useState(seed);
+  const description = useDescriptionOverflow(meta.description, descriptionExpanded);
   const [dominantColor, setDominantColor] = useState(DEFAULT_DETAIL_COLOR);
   const [selectedTrailerCategory, setSelectedTrailerCategory] = useState("");
   const [trailerOpen, setTrailerOpen] = useState(false);
@@ -1140,12 +1142,13 @@ export function Details({
             )}
           </div>
           <div className="detail-description">
-            <p className={descriptionExpanded ? "is-expanded" : undefined}>
+            <p ref={description.ref} className={descriptionExpanded ? "is-expanded" : undefined}>
               {meta.description}
             </p>
-            {meta.description && (
+            {description.overflows && (
               <button
                 type="button"
+                aria-expanded={descriptionExpanded}
                 onClick={() => setDescriptionExpanded((expanded) => !expanded)}
               >
                 {descriptionExpanded ? "Show Less ▴" : "Show More ▾"}

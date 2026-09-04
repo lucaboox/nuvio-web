@@ -342,10 +342,11 @@ a {
   line-height: 1.6;
   color: #c7ccd2;
   display: -webkit-box;
-  -webkit-line-clamp: 3;
+  -webkit-line-clamp: var(--description-lines, 3);
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+.detail-description p { --description-lines: 3; }
 .detail-description button,
 .mobile-hero-credits,
 .action-label-mobile {
@@ -978,22 +979,35 @@ a {
     overflow: visible;
     -webkit-line-clamp: unset;
   }
+  .detail-description button {
+    display: block;
+    padding: 3px 0 0;
+    border: 0;
+    color: #aeb3b8;
+    background: transparent;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+  }
   .detail-actions {
     order: 5;
-    width: min(770px, 68vw);
+    width: fit-content;
+    max-width: 100%;
     margin-top: 28px;
     flex-wrap: nowrap;
   }
   .detail-actions > .primary {
-    min-height: 66px;
-    flex: 1 1 auto;
+    min-height: 46px;
+    flex: 0 1 auto;
+    padding: 12px 22px;
     border-radius: 999px;
-    font-size: 20px;
+    font-size: 14px;
   }
   .detail-actions > .icon-pill {
-    flex: 0 0 66px;
-    width: 66px;
-    height: 66px;
+    flex: 0 0 46px;
+    width: 46px;
+    height: 46px;
     border-radius: 50%;
   }
 }
@@ -6180,7 +6194,8 @@ body.is-locked {
     margin: 0;
     font-size: 16px;
     line-height: 1.52;
-    -webkit-line-clamp: 4;
+    --description-lines: 4;
+    -webkit-line-clamp: var(--description-lines);
   }
   .detail-description p.is-expanded {
     display: block;
@@ -6792,7 +6807,8 @@ body.is-locked {
   .detail-view.has-episode-panel .detail-description p {
     font-size: 13px;
     line-height: 1.6;
-    -webkit-line-clamp: 4;
+    --description-lines: 4;
+    -webkit-line-clamp: var(--description-lines);
   }
   .detail-view.has-episode-panel .detail-description p.is-expanded {
     display: block;
@@ -6818,8 +6834,8 @@ body.is-locked {
     min-height: 46px;
     flex: 0 0 auto;
     padding: 13px 21px;
-    border-radius: 18px;
-    font-size: 13px;
+    border-radius: 999px;
+    font-size: 14px;
   }
   .detail-view.has-episode-panel .detail-actions > .icon-pill {
     width: 46px;

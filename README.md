@@ -13,6 +13,16 @@ The official backend is read from `NUVIO_SUPABASE_URL` and
 `NUVIO_SUPABASE_ANON_KEY` in `.env.local`. You can also select **Self-hosted**
 on the sign-in screen and enter a URL and publishable key on the device.
 
+## Translations
+
+Interface text lives in `src/locales/`, one JSON file per language — never in a
+component. Correcting a word is a one-line change and a pull request, with no
+TypeScript involved. See [TRANSLATING.md](TRANSLATING.md).
+
+The translations were written by an AI rather than by native speakers, so
+corrections from people who actually speak the language are welcome and
+expected.
+
 ## Current scope
 
 - Persistent sign-in and session refresh. Account creation is delegated to

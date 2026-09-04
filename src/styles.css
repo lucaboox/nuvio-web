@@ -99,7 +99,7 @@ a {
   display: flex;
   align-items: center;
   gap: 12px;
-  background: #191d22;
+  background: var(--panel-soft);
   border: 1px solid #292f36;
   border-radius: 16px;
   padding: 0 14px;
@@ -237,7 +237,7 @@ a {
 }
 .profile-switch select {
   max-width: 100px;
-  background: #191d22;
+  background: var(--panel-soft);
   color: white;
   border: 1px solid #2a3037;
   border-radius: 10px;
@@ -2038,7 +2038,7 @@ a {
   margin-top: 8px;
 }
 .setting-card {
-  background: #111519;
+  background: var(--panel-bg);
   border: 1px solid #292f36;
   border-radius: 20px;
   padding: 22px;
@@ -2086,7 +2086,7 @@ a {
   padding: 16px 18px;
   border: 1px solid #262c32;
   border-radius: 18px;
-  background: #10141a;
+  background: var(--panel-bg);
 }
 .addon-card.is-disabled {
   background: #0c1014;
@@ -2694,9 +2694,12 @@ a {
 :root {
   --app-bg: #080a0d;
   --rail-bg: #080a0d;
-  --panel-bg: #111519;
-  --panel-soft: #191d22;
-  --panel-border: #292f36;
+  /* Close to the page rather than a grey block on it. Cards read by their
+     border and their content; lifting the fill as well made a settings page of
+     stacked panels look like a stack of grey boxes. */
+  --panel-bg: #0c0f13;
+  --panel-soft: #12161b;
+  --panel-border: #232930;
 }
 :root[data-theme="amoled"] {
   --app-bg: #000;
@@ -4478,7 +4481,7 @@ body.is-locked {
   padding: 34px 26px;
   border: 1px solid #232931;
   border-radius: 16px;
-  background: #10141a;
+  background: var(--panel-bg);
   text-align: center;
 }
 .empty-state strong {
@@ -5164,7 +5167,7 @@ body.is-locked {
   padding: 7px 13px;
   border: 1px solid #2e353d;
   border-radius: 12px;
-  background: #191d22;
+  background: var(--panel-soft);
   color: #fff;
   font: inherit;
   font-size: 17px;
@@ -5185,7 +5188,7 @@ body.is-locked {
   height: 52px;
   border: 1px solid #2e353d;
   border-radius: 12px;
-  background: #191d22;
+  background: var(--panel-soft);
   color: #fff;
   display: flex;
   align-items: center;
@@ -5645,7 +5648,7 @@ body.is-locked {
   padding: 7px 13px;
   border: 1px solid #2e353d;
   border-radius: 12px;
-  background: #191d22;
+  background: var(--panel-soft);
   color: #fff;
   font: inherit;
 }
@@ -7607,7 +7610,7 @@ body.is-locked {
   padding: 30px 26px 24px;
   border: 1px solid #262c32;
   border-radius: 22px;
-  background: #10141a;
+  background: var(--panel-bg);
   text-align: center;
 }
 .pin-avatar {
@@ -7729,7 +7732,7 @@ body.is-locked {
   padding: 12px 18px;
   border: 1px solid #262c32;
   border-radius: 999px;
-  background: #10141a;
+  background: var(--panel-bg);
   color: #d6dbe1;
   font-size: 14px;
   cursor: pointer;

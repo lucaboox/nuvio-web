@@ -5259,10 +5259,17 @@ body.is-locked {
   align-items: center;
   gap: 10px;
 }
-.detail-section-setting input {
-  width: 17px;
-  height: 17px;
-  accent-color: var(--accent);
+/* The switch supplies its own sizing; this rule sized the bare checkbox that
+   used to be here. */
+.detail-section-setting label {
+  flex: 1 1 auto;
+  justify-content: space-between;
+  min-width: 0;
+}
+.detail-section-setting label > span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .detail-section-setting .detail-reorder-buttons {
   flex: 0 0 auto;
@@ -6711,6 +6718,12 @@ body.is-locked {
   .content:has(.settings-page) {
     height: 100dvh;
     overflow: hidden;
+    /* Tighter than a scrolling page needs. This one does not scroll itself —
+       the panel inside it does — so the page padding only shortened the
+       readable area at both ends: a gap under the search bar, and a list that
+       stopped well above the bottom of the window. */
+    padding-top: 74px;
+    padding-bottom: 20px;
   }
   .settings-page {
     display: flex;
@@ -6731,7 +6744,7 @@ body.is-locked {
     align-items: stretch;
     justify-content: center;
     gap: 24px;
-    margin-top: 26px;
+    margin-top: 14px;
     overflow: hidden;
   }
   .settings-desktop-layout .settings-category-nav {
@@ -8719,4 +8732,48 @@ body.is-locked {
   background: var(--panel-soft);
   color: #c8d1db;
   font-size: 13px;
+}
+
+/*
+ * Shown over the outgoing page while the incoming one commits.
+ *
+ * The blur is on the page beneath rather than a scrim over it, so what you were
+ * looking at stays recognisable and the switch reads as the same app moving
+ * rather than a flash to black. Only during a switch: on first load there is
+ * nothing underneath worth blurring, and doing it there made the app look slow
+ * to start.
+ */
+.content.is-switching > :not(.view-switching) {
+  filter: blur(7px) saturate(0.9);
+  opacity: 0.55;
+  transition: filter 120ms ease, opacity 120ms ease;
+  pointer-events: none;
+}
+.view-switching {
+  position: fixed;
+  z-index: 60;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: grid;
+  place-items: center;
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--app-bg) 78%, transparent);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  pointer-events: none;
+}
+.view-switching .mini-spinner {
+  width: 24px;
+  height: 24px;
+  border-width: 3px;
+}
+@media (prefers-reduced-motion: reduce) {
+  /* The spinner still turns — it is the only thing saying work is happening —
+     but the page beneath does not animate into blur. */
+  .content.is-switching > :not(.view-switching) {
+    transition: none;
+  }
 }

@@ -565,6 +565,18 @@ export function App() {
   useEffect(() => {
     window.scrollTo({ top: 0 });
   }, [deferredCatalog, deferredFolder, deferredActive]);
+  /**
+   * True while a tab change has been made but its view has not committed.
+   *
+   * `useDeferredValue` keeps the old page interactive while the new one
+   * renders, which is right — but with nothing to show for it the tap looked
+   * ignored. Comparing the live value against the deferred one is exactly the
+   * window where something should be said.
+   */
+  const viewSwitching =
+    active !== deferredActive ||
+    catalog !== deferredCatalog ||
+    folder !== deferredFolder;
   const [playback, setPlayback] = useState<{
     stream: Stream;
     meta: Meta;
@@ -2237,7 +2249,17 @@ export function App() {
           }}
         />
       )}
-      <main className="content">
+      <main className={`content${viewSwitching ? " is-switching" : ""}`}>
+        {/* The tab changes at once and the heavy list commits behind this.
+            Without it a switch simply sat on the old page for a second or two,
+            which reads as the tap not having registered. Only while the
+            deferred view is catching up — never on first load, where there is
+            nothing underneath to blur. */}
+        {viewSwitching && (
+          <div className="view-switching" role="status" aria-label="Loading">
+            <i className="mini-spinner" aria-hidden="true" />
+          </div>
+        )}
         {message && (
           <div className="notice">
             <span>{message}</span>
@@ -4943,15 +4965,21 @@ function SettingsPage({
           {detailSections.map((item, index) => (
             <div className="detail-section-setting" key={item.key}>
               <label>
-                <input
-                  type="checkbox"
-                  checked={item.enabled}
-                  disabled={!settingsReady}
-                  onChange={(event) =>
-                    onMetaScreenSection(item.key, event.target.checked)
-                  }
-                />
                 <span>{DETAIL_SECTION_LABELS[item.key]}</span>
+                {/* The same switch every other setting uses. A bare checkbox
+                    here was the odd one out, and on a phone it is a far
+                    smaller target than the switches beside it. */}
+                <span className="switch">
+                  <input
+                    type="checkbox"
+                    checked={item.enabled}
+                    disabled={!settingsReady}
+                    onChange={(event) =>
+                      onMetaScreenSection(item.key, event.target.checked)
+                    }
+                  />
+                  <i />
+                </span>
               </label>
               <div className="detail-reorder-buttons">
                 <button

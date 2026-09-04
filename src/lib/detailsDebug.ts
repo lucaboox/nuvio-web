@@ -47,6 +47,30 @@ export class DetailsTrace {
   }
 }
 
+/**
+ * The same span for work that does not await.
+ *
+ * Parsing and reshaping a large TMDB payload is real time on a phone, and
+ * without this it was invisible: everything measured here was a request, so a
+ * slow stage with fast requests had nowhere to show up.
+ */
+export function timedSync<T>(
+  trace: DetailsTrace | undefined,
+  label: string,
+  work: () => T,
+  note?: string,
+): T {
+  const finish = trace?.start(label, note);
+  try {
+    const result = work();
+    finish?.();
+    return result;
+  } catch (error) {
+    finish?.("error");
+    throw error;
+  }
+}
+
 export async function timed<T>(trace: DetailsTrace | undefined, label: string, work: () => Promise<T>, note?: string): Promise<T> {
   const finish = trace?.start(label, note);
   try { const result = await work(); finish?.(); return result; }

@@ -1,5 +1,5 @@
 import { platform } from "../platform/index.ts";
-import { timed, type DetailsTrace } from "./detailsDebug.ts";
+import { timed, timedSync, type DetailsTrace } from "./detailsDebug.ts";
 import type { ExternalRating, Meta, MetaTrailer, Person, Video } from "../types";
 
 export type MetadataEnrichmentConfig = {
@@ -451,16 +451,25 @@ async function enrichEpisodes(
   )
     return meta;
   const seasons = [...new Set(meta.videos.map((item) => item.season).filter((item): item is number => item != null))];
-  const results = await Promise.allSettled(
-    seasons.map(async (season) => ({
-      season,
-      payload: json(
-        await cachedJson(
-          tmdbUrl(`tv/${tmdbId}/season/${season}`, config.apiKey, config.language),
-          trace,
-        ),
+  // One request per season, all at once. Named with the count because that is
+  // the number that explains the wait: a twelve-season show asks TMDB twelve
+  // times here, and this stage is usually the longest in enrichment.
+  const results = await timed(
+    trace,
+    "Enrich: episodes",
+    () =>
+      Promise.allSettled(
+        seasons.map(async (season) => ({
+          season,
+          payload: json(
+            await cachedJson(
+              tmdbUrl(`tv/${tmdbId}/season/${season}`, config.apiKey, config.language),
+              trace,
+            ),
+          ),
+        })),
       ),
-    })),
+    `${seasons.length} season${seasons.length === 1 ? "" : "s"}, in parallel`,
   );
   const episodeMap = new Map<string, Json>();
   for (const result of results) {
@@ -645,34 +654,48 @@ export async function enrichMetadata(
   let resolvedImdb = imdbId(meta.id);
   if (config.tmdb.enabled && config.tmdb.apiKey) {
     try {
-      const id = await resolveTmdbId(meta, config.tmdb, trace);
+      // Phases, not just requests. Every HTTP call inside enrichment is timed
+      // individually already, but a list of twenty of them does not say which
+      // stage owns the wait — and for a long-running series most of them are
+      // one stage, fanned out per season.
+      const id = await timed(trace, "Enrich: resolve TMDB id", () =>
+        resolveTmdbId(meta, config.tmdb, trace),
+      );
       if (id) {
         const media = isSeries(meta.type) ? "tv" : "movie";
         const language = normalizeLanguage(config.tmdb.language);
         const languageCode = language.split("-")[0];
-        const [payload, imagePayload] = await Promise.all([
-          cachedJson(
-            tmdbUrl(`${media}/${id}`, config.tmdb.apiKey, language, {
-              append_to_response:
-                media === "tv"
-                  ? // Both: `aggregate_credits` bills the cast across every
-                    // season, while the crew this screen reads (director,
-                    // writer) is only on `credits`.
-                    "aggregate_credits,credits,videos,content_ratings,external_ids"
-                  : "credits,videos,release_dates,external_ids",
-            }),
-            trace,
-          ),
-          cachedJson(
-            tmdbUrl(`${media}/${id}/images`, config.tmdb.apiKey, language, {
-              include_image_language: `${languageCode},${language},en,null`,
-            }),
-            trace,
-          ).catch(() => null),
-        ]);
+        const [payload, imagePayload] = await timed(
+          trace,
+          "Enrich: details and images",
+          () =>
+            Promise.all([
+              cachedJson(
+                tmdbUrl(`${media}/${id}`, config.tmdb.apiKey, language, {
+                  append_to_response:
+                    media === "tv"
+                      ? // Both: `aggregate_credits` bills the cast across every
+                        // season, while the crew this screen reads (director,
+                        // writer) is only on `credits`.
+                        "aggregate_credits,credits,videos,content_ratings,external_ids"
+                      : "credits,videos,release_dates,external_ids",
+                }),
+                trace,
+              ),
+              cachedJson(
+                tmdbUrl(`${media}/${id}/images`, config.tmdb.apiKey, language, {
+                  include_image_language: `${languageCode},${language},en,null`,
+                }),
+                trace,
+              ).catch(() => null),
+            ]),
+          media === "tv" ? "one call, aggregate_credits appended" : "one call",
+        );
         const details = json(payload);
         if (details) {
-          next = applyTmdbPayload(next, details, json(imagePayload), config.tmdb);
+          next = timedSync(trace, "Enrich: apply payload", () =>
+            applyTmdbPayload(next, details, json(imagePayload), config.tmdb),
+          );
           resolvedImdb =
             text(json(details.external_ids)?.imdb_id) || resolvedImdb;
           next = await enrichEpisodes(next, id, config.tmdb, trace);
@@ -682,5 +705,7 @@ export async function enrichMetadata(
       // Enrichment is optional; addon metadata remains the authoritative fallback.
     }
   }
-  return enrichMdbList(next, resolvedImdb, config.mdbList, trace).catch(() => next);
+  return timed(trace, "Enrich: MDBList ratings", () =>
+    enrichMdbList(next, resolvedImdb, config.mdbList, trace).catch(() => next),
+  );
 }

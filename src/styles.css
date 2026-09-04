@@ -477,7 +477,7 @@ a {
   border-radius: 50%;
   display: grid;
   place-items: center;
-  background: var(--accent);
+  background: var(--accent-gradient, var(--accent));
   color: var(--accent-ink);
   box-shadow: 0 2px 8px #0009;
 }
@@ -2273,7 +2273,7 @@ a {
 }
 .settings-category-nav button.active {
   color: var(--accent-ink);
-  background: var(--accent);
+  background: var(--accent-gradient, var(--accent));
 }
 .mobile-settings-index,
 .mobile-settings-panel-header {
@@ -3018,7 +3018,7 @@ html.native-player-active .player-view.native-player.native-player-loading {
   margin-top: -5px;
   border: 0;
   border-radius: 50%;
-  background: var(--accent);
+  background: var(--accent-gradient, var(--accent));
   box-shadow: 0 1px 5px #0008;
 }
 .player-view input[type="range"]::-moz-range-track {
@@ -3029,14 +3029,14 @@ html.native-player-active .player-view.native-player.native-player-loading {
 .player-view input[type="range"]::-moz-range-progress {
   height: 4px;
   border-radius: 4px;
-  background: var(--accent);
+  background: var(--accent-gradient, var(--accent));
 }
 .player-view input[type="range"]::-moz-range-thumb {
   width: 14px;
   height: 14px;
   border: 0;
   border-radius: 50%;
-  background: var(--accent);
+  background: var(--accent-gradient, var(--accent));
 }
 .player-control-row {
   display: flex;
@@ -3080,7 +3080,7 @@ html.native-player-active .player-view.native-player.native-player-loading {
   width: 54px;
   height: 54px;
   border-radius: 50%;
-  background: var(--accent);
+  background: var(--accent-gradient, var(--accent));
   color: var(--accent-ink);
 }
 .player-control-group .player-play:hover {
@@ -3139,7 +3139,7 @@ html.native-player-active .player-view.native-player.native-player-loading {
   border-radius: 9px;
 }
 .audio-menu > button.selected {
-  background: var(--accent);
+  background: var(--accent-gradient, var(--accent));
   color: var(--accent-ink);
 }
 /* Both menus, so the two do not behave differently side by side. Hover only:
@@ -3449,7 +3449,7 @@ html.native-player-active .player-view.native-player.native-player-loading {
 .continue-progress b {
   display: block;
   height: 100%;
-  background: var(--accent);
+  background: var(--accent-gradient, var(--accent));
 }
 .continue-card.style-wide {
   flex-basis: 470px;
@@ -3815,7 +3815,7 @@ html.native-player-active .player-view.native-player.native-player-loading {
   height: 21px;
   border-radius: 50%;
   color: var(--accent-ink);
-  background: var(--accent);
+  background: var(--accent-gradient, var(--accent));
   box-shadow: 0 2px 8px #0009;
 }
 /* The corner the watched mark uses, in the same shape — the two never appear
@@ -3845,7 +3845,7 @@ html.native-player-active .player-view.native-player.native-player-loading {
   left: 6px;
   height: 3px;
   border-radius: 99px;
-  background: var(--accent);
+  background: var(--accent-gradient, var(--accent));
 }
 /* Bottom left of the artwork, opposite the watched mark.
    `bottom` is derived from the bar rather than guessed at: here the bar sits
@@ -5560,11 +5560,11 @@ body.is-locked {
   --poster-aspect: 126 / 189;
   --poster-radius: 12px;
 }
-:root[data-nuvio-accent="gold"] { --accent: #e0ac3f; --accent-ink: #171004; }
-:root[data-nuvio-accent="jade"] { --accent: #2fcf9a; --accent-ink: #04140e; }
-:root[data-nuvio-accent="rose_gold"] { --accent: #e39ba6; --accent-ink: #1a0a0d; }
-:root[data-nuvio-accent="arctic_blue"] { --accent: #3f9df3; --accent-ink: #04101c; }
-:root[data-nuvio-accent="graphite"] { --accent: #b7bfc8; --accent-ink: #0b0e11; }
+:root[data-nuvio-accent="gold"] { --accent: #e0ac3f; --accent-ink: #171004; --accent-gradient: linear-gradient(145deg, #f6d979, #c8901f); }
+:root[data-nuvio-accent="jade"] { --accent: #2fcf9a; --accent-ink: #04140e; --accent-gradient: linear-gradient(145deg, #4ee0ac, #1aa877); }
+:root[data-nuvio-accent="rose_gold"] { --accent: #e39ba6; --accent-ink: #1a0a0d; --accent-gradient: linear-gradient(145deg, #d98ad1, #f0a98c); }
+:root[data-nuvio-accent="arctic_blue"] { --accent: #3f9df3; --accent-ink: #04101c; --accent-gradient: linear-gradient(145deg, #5fc0ff, #1f74e0); }
+:root[data-nuvio-accent="graphite"] { --accent: #b7bfc8; --accent-ink: #0b0e11; --accent-gradient: linear-gradient(145deg, #d5dbe1, #9aa3ac); }
 :root[data-nuvio-accent="crimson"] { --accent: #ef3340; --accent-ink: #fff; }
 :root[data-nuvio-accent="ocean"] { --accent: #3da7e8; --accent-ink: #061016; }
 :root[data-nuvio-accent="violet"] { --accent: #a886f7; --accent-ink: #0e0919; }
@@ -5573,7 +5573,7 @@ body.is-locked {
 :root[data-nuvio-accent="rose"] { --accent: #ee7fa8; --accent-ink: #190812; }
 .switch input:checked + i,
 .poster-progress i {
-  background: var(--accent);
+  background: var(--accent-gradient, var(--accent));
 }
 .rail button.active,
 .bottom-nav button.active {
@@ -6681,7 +6681,7 @@ body.is-locked {
 .calendar-cell.empty { cursor: default; opacity: .52; background: var(--app-bg); }
 .calendar-cell:not(.empty):hover { background: var(--panel-soft); }
 .calendar-cell.selected { z-index: 1; outline: 2px solid color-mix(in srgb,var(--accent) 72%,transparent); outline-offset: -2px; background: color-mix(in srgb,var(--accent) 8%,var(--panel-soft)); }
-.calendar-cell.today .calendar-day-number { color: var(--accent-ink); background: var(--accent); }
+.calendar-cell.today .calendar-day-number { color: var(--accent-ink); background: var(--accent-gradient, var(--accent)); }
 .calendar-day-number { display: grid; width: 31px; height: 31px; place-items: center; border-radius: 50%; color: #c4cbd1; font-size: 13px; font-weight: 700; }
 
 /* Posters, not names — the same treatment as the phone. A title is recognised
@@ -6697,7 +6697,7 @@ body.is-locked {
    is what read as squished. */
 .calendar-cell-thumbnails img { height: 100%; max-height: 88px; width: auto; flex: 0 0 auto; object-fit: cover; border: 1px solid color-mix(in srgb,var(--panel-border) 74%,#fff 10%); border-radius: 8px; background: var(--panel-soft); box-shadow: 0 5px 13px #0009; }
 
-.calendar-dot { display: none; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 9px color-mix(in srgb,var(--accent) 70%,transparent); }
+.calendar-dot { display: none; width: 6px; height: 6px; border-radius: 50%; background: var(--accent-gradient, var(--accent)); box-shadow: 0 0 9px color-mix(in srgb,var(--accent) 70%,transparent); }
 .calendar-agenda { position: sticky; top: 12px; }
 .calendar-agenda > header { padding: 21px 21px 17px; border-bottom: 1px solid var(--panel-border); background: var(--panel-soft); }
 .calendar-agenda h2 { margin: 6px 0 4px; font-size: 19px; line-height: 1.25; }
@@ -7702,7 +7702,7 @@ body.is-locked {
   border-radius: 50%;
   transition: background 0.12s, border-color 0.12s;
 }
-.pin-dots i.is-filled { border-color: var(--accent); background: var(--accent); }
+.pin-dots i.is-filled { border-color: var(--accent); background: var(--accent-gradient, var(--accent)); }
 /* Covers the dots so a tap anywhere on them focuses it. */
 .pin-input {
   position: absolute;
@@ -7894,7 +7894,7 @@ body.is-locked {
   display: flex;
   align-items: center;
   gap: 7px;
-  background: var(--accent);
+  background: var(--accent-gradient, var(--accent));
   color: var(--accent-ink);
   font-weight: 600;
 }
@@ -8096,7 +8096,7 @@ body.is-locked {
   cursor: pointer;
 }
 .downloads-tabs button.active {
-  background: var(--accent);
+  background: var(--accent-gradient, var(--accent));
   border-color: var(--accent);
   color: var(--accent-ink);
 }
@@ -8206,7 +8206,7 @@ body.is-locked {
   display: block;
   height: 100%;
   border-radius: 999px;
-  background: var(--accent);
+  background: var(--accent-gradient, var(--accent));
   transition: width 0.4s ease;
 }
 .download-progress span {
@@ -8240,7 +8240,7 @@ body.is-locked {
 }
 /* Play is the one thing on a finished row worth reaching for. */
 .download-actions button:first-child:has(svg) {
-  background: var(--accent);
+  background: var(--accent-gradient, var(--accent));
   border-color: var(--accent);
   color: var(--accent-ink);
 }

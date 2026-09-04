@@ -84,6 +84,7 @@ export default defineConfig(({ mode }) => {
         includeAssets: [
           "app-icon-1024.png",
           "Nuvio-icon.png",
+          "theme-bootstrap.js",
           "nuvio-wordmark.png",
         ],
         manifest: {

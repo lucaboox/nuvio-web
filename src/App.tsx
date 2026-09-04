@@ -41,6 +41,7 @@ import {
   useCallback,
   useDeferredValue,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -61,6 +62,7 @@ import {
 import { Hero, MediaRow, PosterCard } from "./components/Media";
 import { Player } from "./components/Player";
 import { LoadingScreen } from "./components/LoadingScreen";
+import { applyResolvedTheme } from "./lib/themeCache";
 import { PersonPage } from "./components/Person";
 import { ProfileSwitcher } from "./components/ProfileSwitcher";
 import {
@@ -350,8 +352,6 @@ const SETTINGS_CATEGORIES: Array<{
   },
 ];
 
-const AMOLED_CACHE_KEY = "nuvio-web-amoled";
-const ACCENT_CACHE_KEY = "nuvio-web-accent";
 const WEB_DETAIL_SECTION_KEYS = [
   "EPISODES",
   "PRODUCTION",
@@ -370,13 +370,6 @@ const DETAIL_SECTION_LABELS: Record<
   TRAILERS: "Trailers & extras",
   DETAILS: "Details",
 };
-
-// The synced value arrives a round trip after boot. Painting the last known
-// theme immediately avoids a flash of the wrong background on every launch.
-document.documentElement.dataset.theme =
-  localStorage.getItem(AMOLED_CACHE_KEY) === "true" ? "amoled" : "default";
-document.documentElement.dataset.nuvioAccent =
-  localStorage.getItem(ACCENT_CACHE_KEY) ?? "white";
 
 export function App() {
   const [booting, setBooting] = useState(true);
@@ -575,6 +568,9 @@ export function App() {
     startAtBeginning?: boolean;
   } | null>(null);
   const [loading, setLoading] = useState(false);
+  // Set with profile selection, not in its later effect: account hydration
+  // finishing must not uncover the navbar before Home starts fetching.
+  const [profileStarting, setProfileStarting] = useState(false);
   const [message, setMessage] = useState("");
   // Status notices are informational, not decisions to act on, so they clear
   // themselves rather than sitting over the page until dismissed.
@@ -602,6 +598,7 @@ export function App() {
     });
   }, []);
   const activateProfile = useCallback((next: Profile | null) => {
+    setProfileStarting(next !== null);
     profileGeneration.current += 1;
     profileLoadGeneration.current += 1;
     activeProfileIndexRef.current = next?.profileIndex ?? null;
@@ -918,12 +915,14 @@ export function App() {
           // The first row on screen is the end of "loading". Everything after
           // this fills in behind a page you can already use.
           setLoading(false);
+          setProfileStarting(false);
         },
         nextLayout,
       );
       if (!isCurrent()) return;
       // No catalog returned anything, so nothing will clear it above.
       setLoading(false);
+      setProfileStarting(false);
 
       // Continue Watching needs all three, so it resolves last — by which
       // point the catalogs are already on screen.
@@ -995,7 +994,10 @@ export function App() {
           error instanceof Error ? error.message : "Profile data failed",
         );
     } finally {
-      if (isCurrent()) setLoading(false);
+      if (isCurrent()) {
+        setLoading(false);
+        setProfileStarting(false);
+      }
     }
   }, [profile]);
   useEffect(() => {
@@ -1152,7 +1154,6 @@ export function App() {
     () => readWebSettings(settingsBlob),
     [settingsBlob],
   );
-  const amoled = webSettings.amoled;
   const metadataEnrichment = useMemo<MetadataEnrichmentConfig>(
     () => ({
       tmdb: {
@@ -1343,15 +1344,13 @@ export function App() {
     [profile],
   );
 
-  useEffect(() => {
-    document.documentElement.dataset.theme = amoled ? "amoled" : "default";
-    localStorage.setItem(AMOLED_CACHE_KEY, String(amoled));
-  }, [amoled]);
+  useLayoutEffect(() => {
+    // Keep the boot cache through auth/profile loading and failed requests.
+    // Never write readWebSettings(null)'s defaults over the last known theme.
+    applyResolvedTheme(settingsBlob === null ? null : webSettings);
+  }, [settingsBlob, webSettings]);
   useEffect(() => {
     const root = document.documentElement;
-    const accent = webSettings.selectedTheme.toLowerCase();
-    root.dataset.nuvioAccent = accent;
-    localStorage.setItem(ACCENT_CACHE_KEY, accent);
     root.dataset.navLayout = webSettings.desktopNavigationLayout.toLowerCase();
     root.dataset.navStyle = webSettings.navBarStyle.toLowerCase();
     root.dataset.posterLandscape = String(
@@ -2121,8 +2120,11 @@ export function App() {
       </>
     );
 
+  const pageLoading = loading || profileStarting ||
+    deferredActive !== active || deferredCatalog !== catalog || deferredFolder !== folder;
   return (
-    <div className={`app-shell${playback ? " player-active" : ""}`}>
+    <div className={`app-shell${playback ? " player-active" : ""}${pageLoading ? " is-loading" : ""}`}>
+      {pageLoading && <LoadingScreen overlay />}
       <aside className="rail">
         <img src={`${import.meta.env.BASE_URL}Nuvio-icon.png`} alt="Nuvio" />
         {nav.map((item) => (
@@ -2241,12 +2243,6 @@ export function App() {
               <X size={18} />
             </button>
           </div>
-        )}
-        {(loading ||
-          deferredActive !== active ||
-          deferredCatalog !== catalog ||
-          deferredFolder !== folder) && (
-          <LoadingScreen overlay />
         )}
         {deferredFolder ? (
           <CollectionFolderView

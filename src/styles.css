@@ -4023,6 +4023,12 @@ body.is-locked {
 
 /* ---- Loading indicator ------------------------------------------------ */
 /* Shared boot and page loading screen: no backdrop blur or layout peeking. */
+.app-shell.is-loading > .bottom-nav,
+.app-shell.is-loading > .rail,
+.app-shell.is-loading > .topbar {
+  visibility: hidden;
+  pointer-events: none;
+}
 .nuvio-loading-screen {
   min-height: 100vh;
   min-height: 100dvh;

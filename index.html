@@ -26,6 +26,9 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black" />
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https: http://localhost:* http://127.0.0.1:*; img-src 'self' https: data: blob:; media-src 'self' https: http: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'wasm-unsafe-eval'; script-src-attr 'none'; worker-src 'self' blob:; frame-src 'self' https://www.youtube-nocookie.com; object-src 'none'; base-uri 'self'; form-action 'self'; manifest-src 'self'" />
     <title>Nuvio Web</title>
+    <!-- Blocking, same-origin script: apply cached appearance before first paint
+         without allowing inline scripts in the Content Security Policy. -->
+    <script src="%BASE_URL%theme-bootstrap.js"></script>
   </head>
   <body>
     <div id="root">

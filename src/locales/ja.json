@@ -15,6 +15,7 @@
   "addons.installed": "インストール済みのアドオン",
   "addons.placeholder": "https://addon.example/manifest.json",
   "addons.title": "アドオン",
+  "boot.loading": "Nuvio を読み込んでいます…",
   "boot.restoring": "Nuvio を復元しています…",
   "calendar.noReleases": "この日のリリースはありません",
   "common.backToSettings": "設定に戻る",

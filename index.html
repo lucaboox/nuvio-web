@@ -31,18 +31,33 @@
     <script src="%BASE_URL%theme-bootstrap.js"></script>
   </head>
   <body>
-    <div id="root">
-      <!-- Visible while the JS bundle starts; React replaces it with the same
-           branded loading component for session/profile/catalog loading. -->
-      <div class="nuvio-loading-screen" role="status" aria-label="Loading Nuvio">
-        <div class="nuvio-loading-brand">
-          <img src="%BASE_URL%Nuvio-icon.png" width="96" height="96" alt="" />
-          <span class="nuvio-loading-name">Nuvio</span>
-          <i class="nuvio-loading-spinner" aria-hidden="true"></i>
-          <span class="nuvio-loading-label">Loading Nuvio…</span>
-        </div>
+    <!--
+      The loading screen, and the only one shown while the app starts.
+
+      Deliberately outside #root, so React never owns it. Rendered inside, it
+      was torn down and rebuilt the moment React mounted: a new <img> that had
+      to decode again (the logo flashed), a new spinner whose animation
+      restarted, and a new label. Every one of those was visible in what is
+      supposed to be one uninterrupted wait. React now fades this same element
+      out instead of replacing it — see lib/bootSplash.ts.
+    -->
+    <div
+      id="boot-splash"
+      class="nuvio-loading-screen is-overlay"
+      role="status"
+      aria-label="Loading Nuvio"
+    >
+      <div class="nuvio-loading-brand">
+        <img src="%BASE_URL%Nuvio-icon.png" width="96" height="96" alt="" />
+        <span class="nuvio-loading-name">Nuvio</span>
+        <i class="nuvio-loading-spinner" aria-hidden="true"></i>
+        <span class="nuvio-loading-label" id="boot-splash-label">Loading Nuvio…</span>
       </div>
     </div>
+    <!-- Translates the label above before the first paint. Any later than
+         this and the text visibly changes, which is the swap it avoids. -->
+    <script src="%BASE_URL%boot-label.js"></script>
+    <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

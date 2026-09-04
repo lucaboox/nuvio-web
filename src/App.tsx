@@ -63,6 +63,7 @@ import { Hero, MediaRow, PosterCard } from "./components/Media";
 import { Player } from "./components/Player";
 import { LoadingScreen } from "./components/LoadingScreen";
 import { useFadeOut } from "./lib/useFadeOut.ts";
+import { bootSplashPresent, dismissBootSplash } from "./lib/bootSplash.ts";
 import { PlaybackPolicySettings } from "./components/PlaybackPolicySettings";
 import { FusionBadgeSettings } from "./components/FusionBadgeSettings";
 import { resolveAutoStream, selectAutoStream } from "./lib/playbackPolicy";
@@ -618,7 +619,21 @@ export function App() {
    * every branch keeps React on the same node, so the app paints underneath
    * and the screen leaves over it.
    */
-  const loadingFade = useFadeOut(booting || profileStarting, 420);
+  const starting = booting || profileStarting;
+  /*
+   * The static screen from index.html covers boot and the profile start that
+   * follows it, and React only ends it. Rendering its own copy meant tearing
+   * that element down and building another: the logo flashed as a fresh <img>
+   * decoded, and the spinner's rotation restarted. React takes over only for a
+   * profile switch later in the session, where there is no element to disturb.
+   */
+  const [splashGone, setSplashGone] = useState(() => !bootSplashPresent());
+  useEffect(() => {
+    if (starting || splashGone) return;
+    dismissBootSplash(420);
+    setSplashGone(true);
+  }, [starting, splashGone]);
+  const loadingFade = useFadeOut(starting && splashGone, 420);
   const loadingScreen = loadingFade.mounted ? (
     <LoadingScreen
       overlay

@@ -15,6 +15,7 @@
   "addons.installed": "Complementos instalados",
   "addons.placeholder": "https://addon.example/manifest.json",
   "addons.title": "Complementos",
+  "boot.loading": "Cargando Nuvio…",
   "boot.restoring": "Restaurando Nuvio…",
   "calendar.noReleases": "Sin estrenos este día",
   "common.backToSettings": "Volver a ajustes",

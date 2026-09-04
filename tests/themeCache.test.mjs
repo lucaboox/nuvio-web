@@ -54,7 +54,12 @@ test("profile startup keeps the navigation covered through the hydration handoff
   // Restoring the session and starting the profile are one wait to the reader,
   // so they drive one screen. Rendered as two, the second element replaced the
   // first and the spinner restarted its rotation partway through.
-  assert.match(app, /useFadeOut\(booting \|\| profileStarting/);
+  assert.match(app, /const starting = booting \|\| profileStarting;/);
+  // Boot and the profile start that follows it are covered by the static
+  // screen from index.html; React's own overlay is for a later switch, once
+  // that element is gone.
+  assert.match(app, /useFadeOut\(starting && splashGone/);
+  assert.match(app, /dismissBootSplash\(/);
   assert.match(css, /\.app-shell\.is-loading > \.bottom-nav,[^}]*visibility: hidden/);
 });
 

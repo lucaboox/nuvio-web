@@ -5737,19 +5737,19 @@ body.is-locked {
    unreachable. Out of the card's flow, so the card keeps the hub's height and
    leaves no empty box behind. */
 @media (max-width: 760px) {
-  .integrations-card.has-page > .integration-page {
+  .integrations-card.has-page .integration-page {
     position: fixed;
-    /* Under the panel header, which sits at 2 and carries the one back arrow.
-       Raising the header instead lost to a later rule; going below it is the
-       same result and does not depend on winning a cascade fight. Still above
-       the card, which has no z-index of its own. */
-    z-index: 1;
+    /* Above the settings panel header, not under it. Below it, a swipe slid
+       this layer while the header stayed where it was — the one panel in the
+       app that came apart under the gesture instead of travelling as a piece.
+       Over the header it carries its own back arrow and moves whole, like
+       every other screen you swipe away. */
+    z-index: 3;
     inset: 0;
     overflow-y: auto;
     overscroll-behavior: contain;
-    /* Clear of the panel header, which stays above this and keeps the one
-       back arrow reachable. Matches its height. */
-    padding: 90px 16px calc(24px + env(safe-area-inset-bottom));
+    padding: max(14px, env(safe-area-inset-top)) 16px
+      calc(24px + env(safe-area-inset-bottom));
     background: var(--app-bg);
   }
 }
@@ -5849,11 +5849,6 @@ body.is-locked {
   border-radius: 20px;
   background: var(--panel-bg);
 }
-/* Closed, it must take no room and catch nothing. The `hidden` attribute says
-   so, but the swipe leaves inline styles behind, so the state says it too. */
-.integrations-card:not(.has-page) > .integration-page {
-  display: none;
-}
 /* One row per provider, carrying its own mark — the same shape the official
    clients use, where each of these is a page rather than a section of one. */
 .integration-row {
@@ -5914,19 +5909,23 @@ body.is-locked {
   flex: none;
   width: 18px;
   color: #6c757f;
+  transition: transform 160ms ease;
+}
+/* Pointing at what it opened. A chevron that never moves reads as "go
+   somewhere else", which is what this row used to do. */
+.integration-row.is-open > svg:last-child {
+  transform: rotate(90deg);
+  color: var(--accent);
+}
+@media (prefers-reduced-motion: reduce) {
+  .integration-row > svg:last-child {
+    transition: none;
+  }
 }
 .integration-page-header {
   display: flex;
   align-items: center;
   gap: 12px;
-}
-/* The panel header above already carries a back arrow on a phone, and it
-   steps out of this page before closing the panel. A second arrow beneath it
-   pointed at the same place without saying so. */
-@media (max-width: 760px) {
-  .integration-page-header > .circle-button {
-    display: none;
-  }
 }
 .integration-page-header > div {
   display: grid;

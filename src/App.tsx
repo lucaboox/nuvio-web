@@ -35,17 +35,7 @@ import {
   Volume2,
   VolumeX,
 } from "lucide-react";
-import {
-  type CSSProperties,
-  type ReactNode,
-  useCallback,
-  useDeferredValue,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { Fragment, type CSSProperties, type ReactNode, useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { AuthScreen } from "./components/AuthScreen";
 import { ContinueWatching } from "./components/ContinueWatching";
 import { ContextMenu } from "./components/ContextMenu";
@@ -4607,11 +4597,18 @@ function SettingsPage({
               into the profile settings blob.
             </p>
             {INTEGRATION_PAGES.map((page) => (
+              <Fragment key={page.key}>
               <button
-                key={page.key}
                 type="button"
-                className="integration-row"
-                onClick={() => setIntegrationPage(page.key)}
+                className={`integration-row${
+                  integrationPage === page.key ? " is-open" : ""
+                }`}
+                aria-expanded={integrationPage === page.key}
+                onClick={() =>
+                  setIntegrationPage(
+                    integrationPage === page.key ? null : page.key,
+                  )
+                }
               >
                 <span className="integration-row-logo">
                   {page.logo ? (
@@ -4626,26 +4623,20 @@ function SettingsPage({
                 </span>
                 <ChevronRight />
               </button>
-            ))}
-        </div>
-        {/* The gesture moves this and nothing else, so the hub stays put and
-            is what you see behind it. As a fixed layer it starts at x=0, so
-            it reaches the edge zone the gesture arms in without help. */}
-        <div
-          ref={integrationSwipeRef}
-          className="integration-page"
-          hidden={integrationPage === null}
-        >
-        {/* The card the rest of settings is written in. The fixed layer is the
-            backdrop behind it, not the surface itself. */}
-        <div className="integration-page-card">
-        {integrationPage && (
-          <IntegrationPageHeader
-            page={INTEGRATION_PAGES.find((item) => item.key === integrationPage)!}
-            onBack={() => setIntegrationPage(null)}
-          />
-        )}
-        <div hidden={integrationPage !== "tmdb"}>
+              {/* Opened under the row it belongs to, which is what the arrow
+                  on that row promises. It used to be one panel below the whole
+                  list, so on a desktop the chevrons pointed at something that
+                  appeared somewhere else. On a phone this same element is the
+                  full-screen layer the swipe moves. */}
+              {integrationPage === page.key && (
+                <div ref={integrationSwipeRef} className="integration-page">
+                  <div className="integration-page-card">
+                    <IntegrationPageHeader
+                      page={page}
+                      onBack={() => setIntegrationPage(null)}
+                    />
+                    {page.key === "tmdb" && (
+                      <>
         <IntegrationCredentialField
           label="TMDB API key"
           description="Used for the TMDB enrichment settings shared with Nuvio."
@@ -4714,8 +4705,10 @@ function SettingsPage({
             }
           />
         ))}
-        </div>
-        <div hidden={integrationPage !== "mdblist"}>
+                      </>
+                    )}
+                    {page.key === "mdblist" && (
+                      <>
         <IntegrationCredentialField
           label="MDBList API key"
           description="Adds MDBList rating providers after metadata enrichment."
@@ -4762,8 +4755,10 @@ function SettingsPage({
             }
           />
         ))}
-        </div>
-        <div hidden={integrationPage !== "connected"}>
+                      </>
+                    )}
+                    {page.key === "connected" && (
+                      <>
           {/* Real controls where the shell can reach these services, and an
               explanation where it cannot. The keys are the account's own and
               sync either way; what differs is whether anything can be done
@@ -4802,8 +4797,13 @@ function SettingsPage({
             </p>
           </div>
           )}
-        </div>
-        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
+              </Fragment>
+            ))}
         </div>
       </div>
       <div

@@ -45,6 +45,7 @@ import {
   watchKey,
   type WatchIndex,
 } from "../lib/progress";
+import { languageName } from "../lib/languageName.ts";
 import { seriesPlaybackTarget } from "../lib/seriesPlayback";
 import {
   cachedStreamToSource,
@@ -1222,7 +1223,7 @@ export function Details({
                   </p>
                 )}
                 {sectionEnabled("DETAILS") && meta.language && (
-                  <p><strong>Language:</strong> {meta.language}</p>
+                  <p><strong>Language:</strong> {languageName(meta.language)}</p>
                 )}
                 {sectionEnabled("DETAILS") && meta.status && (
                   <p><strong>Status:</strong> {meta.status}</p>

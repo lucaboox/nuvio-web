@@ -560,10 +560,14 @@ a {
 .settings-page > p {
   color: #8d97a2;
 }
+/* The section labels — CAST, PERSON, the card kickers — take the accent.
+   #86aaac was a fixed grey-teal that belonged to no theme: it did not move
+   when the accent did, so on any accent but the default it read as a colour
+   left over from somewhere else. */
 .eyebrow {
   font-size: 11px;
   letter-spacing: 0.18em;
-  color: #86aaac;
+  color: var(--accent);
   font-weight: 700;
 }
 .poster-grid {
@@ -3506,9 +3510,13 @@ html.native-player-active .player-view.native-player.native-player-loading {
   gap: 7px;
   max-width: 520px;
 }
+/* Director / Writer / Language / Status. The label takes the accent and the
+   value stays plain, so the pair reads as a caption and its answer rather than
+   one grey run of text. */
 .detail-credits strong {
   font-size: 14px;
   line-height: 1.5;
+  color: var(--accent);
 }
 .detail-overview-meta {
   align-items: start;
@@ -5587,11 +5595,11 @@ body.is-locked {
   color: #87919b;
 }
 .web-only-card > header > span {
-  color: #86aaac;
+  color: var(--accent);
   font-size: 12px;
 }
 .integrations-card > header > span {
-  color: #86aaac;
+  color: var(--accent);
   font-size: 12px;
 }
 .integrations-card > p {

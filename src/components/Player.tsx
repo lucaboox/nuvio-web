@@ -3,6 +3,7 @@ import { SolidPause, SolidPlay } from "./PlaybackIcons";
 import { automaticSkipSegment, nextEpisodeDue, shouldBlurEpisode } from "../lib/playbackPolicy";
 import { nativePlayerPreferences } from "../lib/nativePlayerPreferences";
 import { platform } from "../platform/index.ts";
+import { languageName } from "../lib/languageName.ts";
 import type { ResizeMode } from "../platform/types.ts";
 import { safeHttpUrl } from "../lib/security";
 import {
@@ -751,7 +752,7 @@ export function Player({
           .filter((track) => track.kind === "audio")
           .map((track) => ({
             id: track.id,
-            label: track.title || track.lang || `Audio ${track.id}`,
+            label: track.title || languageName(track.lang) || `Audio ${track.id}`,
           }));
         setAudioTracks(tracks);
         setSelectedAudio(next.audioTrack);
@@ -763,7 +764,7 @@ export function Player({
             .map((track) => ({
               id: track.id,
               lang: track.lang ?? "",
-              label: track.title || track.lang || `Subtitle ${track.id}`,
+              label: track.title || languageName(track.lang) || `Subtitle ${track.id}`,
             })),
         );
         setSelectedSubtitle(next.subtitleTrack);

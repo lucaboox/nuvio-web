@@ -5553,8 +5553,9 @@ body.is-locked {
 .accent-picker:disabled .accent-choice { cursor: default; opacity: .5; }
 
 :root {
-  --accent: #e9eef2;
-  --accent-ink: #090b0d;
+  /* White, and the default. Nuvio's own value, from ThemeColors.kt. */
+  --accent: #f5f5f5;
+  --accent-ink: #0d0d0d;
   --poster-width: 126px;
   --poster-height: 189px;
   --poster-aspect: 126 / 189;
@@ -5565,12 +5566,12 @@ body.is-locked {
 :root[data-nuvio-accent="rose_gold"] { --accent: #e39ba6; --accent-ink: #1a0a0d; --accent-gradient: linear-gradient(145deg, #d98ad1, #f0a98c); }
 :root[data-nuvio-accent="arctic_blue"] { --accent: #3f9df3; --accent-ink: #04101c; --accent-gradient: linear-gradient(145deg, #5fc0ff, #1f74e0); }
 :root[data-nuvio-accent="graphite"] { --accent: #b7bfc8; --accent-ink: #0b0e11; --accent-gradient: linear-gradient(145deg, #d5dbe1, #9aa3ac); }
-:root[data-nuvio-accent="crimson"] { --accent: #ef3340; --accent-ink: #fff; }
-:root[data-nuvio-accent="ocean"] { --accent: #3da7e8; --accent-ink: #061016; }
-:root[data-nuvio-accent="violet"] { --accent: #a886f7; --accent-ink: #0e0919; }
-:root[data-nuvio-accent="emerald"] { --accent: #53bda6; --accent-ink: #07120f; }
-:root[data-nuvio-accent="amber"] { --accent: #edb84d; --accent-ink: #171004; }
-:root[data-nuvio-accent="rose"] { --accent: #ee7fa8; --accent-ink: #190812; }
+:root[data-nuvio-accent="crimson"] { --accent: #e53935; --accent-ink: #fff; }
+:root[data-nuvio-accent="ocean"] { --accent: #1e88e5; --accent-ink: #fff; }
+:root[data-nuvio-accent="violet"] { --accent: #8e24aa; --accent-ink: #fff; }
+:root[data-nuvio-accent="emerald"] { --accent: #43a047; --accent-ink: #fff; }
+:root[data-nuvio-accent="amber"] { --accent: #fb8c00; --accent-ink: #1a0f00; }
+:root[data-nuvio-accent="rose"] { --accent: #d81b60; --accent-ink: #fff; }
 .switch input:checked + i,
 .poster-progress i {
   background: var(--accent-gradient, var(--accent));

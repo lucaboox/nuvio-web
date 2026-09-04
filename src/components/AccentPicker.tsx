@@ -23,13 +23,13 @@ export const ACCENT_OPTIONS = [
     swatch: "linear-gradient(145deg, #5fc0ff, #1f74e0)" },
   { value: "GRAPHITE", label: "Graphite", color: "#b7bfc8", ink: "#0b0e11",
     swatch: "linear-gradient(145deg, #d5dbe1, #9aa3ac)" },
-  { value: "WHITE", label: "White", color: "#e9eef2", ink: "#090b0d" },
-  { value: "CRIMSON", label: "Crimson", color: "#ef3340", ink: "#fff" },
-  { value: "OCEAN", label: "Ocean", color: "#3da7e8", ink: "#061016" },
-  { value: "VIOLET", label: "Violet", color: "#a886f7", ink: "#0e0919" },
-  { value: "EMERALD", label: "Emerald", color: "#53bda6", ink: "#07120f" },
-  { value: "AMBER", label: "Amber", color: "#edb84d", ink: "#171004" },
-  { value: "ROSE", label: "Rose", color: "#ee7fa8", ink: "#190812" },
+  { value: "WHITE", label: "White", color: "#f5f5f5", ink: "#0d0d0d" },
+  { value: "CRIMSON", label: "Crimson", color: "#e53935", ink: "#fff" },
+  { value: "OCEAN", label: "Ocean", color: "#1e88e5", ink: "#fff" },
+  { value: "VIOLET", label: "Violet", color: "#8e24aa", ink: "#fff" },
+  { value: "EMERALD", label: "Emerald", color: "#43a047", ink: "#fff" },
+  { value: "AMBER", label: "Amber", color: "#fb8c00", ink: "#1a0f00" },
+  { value: "ROSE", label: "Rose", color: "#d81b60", ink: "#fff" },
 ] as const;
 
 export function AccentPicker({ value, disabled, onChange }: {

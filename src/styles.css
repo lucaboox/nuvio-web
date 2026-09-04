@@ -998,11 +998,11 @@ a {
     flex-wrap: nowrap;
   }
   .detail-actions > .primary {
-    min-height: 46px;
+    min-height: 56px;
     flex: 0 1 auto;
-    padding: 12px 22px;
+    padding: 14px 27px;
     border-radius: 999px;
-    font-size: 14px;
+    font-size: 17px;
   }
   .detail-actions > .icon-pill {
     flex: 0 0 46px;
@@ -2687,7 +2687,7 @@ a {
     flex: 1 1 auto;
   }
   .detail-actions > .icon-pill {
-    flex: 0 0 54px;
+    flex: 0 0 58px;
   }
 }
 
@@ -5048,11 +5048,13 @@ body.is-locked {
 /* ---- Detail action glyphs ---------------------------------------------- */
 /* Library and watched are single-purpose toggles, so they read better as
    circular glyphs beside the Play pill than as labelled buttons. */
+/* About a fifth larger, with the Play pill beside them. These are the primary
+   actions on the page and were sized like secondary chrome. */
 .icon-pill {
   display: grid;
   place-items: center;
-  width: 48px;
-  height: 48px;
+  width: 58px;
+  height: 58px;
   flex-shrink: 0;
   padding: 0;
   border: 1px solid #343b43;

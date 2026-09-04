@@ -1168,7 +1168,7 @@ export function Details({
               className="primary"
               onClick={() => sources(heroPlayback.video)}
             >
-              <Play size={18} fill="currentColor" />{" "}
+              <Play size={22} fill="currentColor" />{" "}
               <span>{heroPlayback.label}</span>
             </button>
             <button
@@ -1178,7 +1178,7 @@ export function Details({
               aria-pressed={inLibrary}
               onClick={() => onLibrary(meta)}
             >
-              {inLibrary ? <Check size={22} /> : <Plus size={22} />}
+              {inLibrary ? <Check size={26} /> : <Plus size={26} />}
             </button>
             {meta.type !== "series" && (
               <button
@@ -1190,7 +1190,7 @@ export function Details({
                   onSetWatched(meta, heroPlayback.video, !heroTargetWatched)
                 }
               >
-                {heroTargetWatched ? <EyeOff size={22} /> : <Eye size={22} />}
+                {heroTargetWatched ? <EyeOff size={26} /> : <Eye size={26} />}
               </button>
             )}
             {sectionEnabled("TRAILERS") && meta.trailers.length > 0 && (
@@ -1201,7 +1201,7 @@ export function Details({
                 aria-expanded={trailerOpen}
                 onClick={() => setTrailerOpen(true)}
               >
-                <VideoGlyph size={19} />
+                <VideoGlyph size={23} />
               </button>
             )}
           </div>

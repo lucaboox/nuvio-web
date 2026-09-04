@@ -529,10 +529,36 @@ async function enrichEpisodes(
  * that were never going to arrive. One failure is bad luck; after that it is
  * worth not asking for a while.
  */
-const MDBLIST_BACKOFF_MS = 5 * 60 * 1000;
+const MDBLIST_BACKOFF_MS = 2 * 60 * 1000;
 /** Optional decoration, so it gets a fraction of the budget a real fetch does. */
 const MDBLIST_TIMEOUT_MS = 3_000;
+/**
+ * How long a title's ratings are kept.
+ *
+ * A day, because these barely move — an IMDb score shifts by a tenth over
+ * weeks, and nobody reopening a film in the evening needs it re-fetched. The
+ * in-memory cache above dies with the page, so without this every launch spent
+ * quota re-asking for numbers it already had.
+ */
+const MDBLIST_TTL_MS = 24 * 60 * 60 * 1000;
+/** One timeout is bad luck. Two in a row is a provider that is not answering. */
+const MDBLIST_FAILURES_BEFORE_BACKOFF = 2;
+let mdbListFailures = 0;
 let mdbListFailedUntil = 0;
+
+type CachedRatings = { at: number; ratings: ExternalRating[] };
+
+const ratingsKey = (media: string, imdb: string) => `mdblist:${media}:${imdb}`;
+
+async function storedRatings(key: string): Promise<ExternalRating[] | null> {
+  try {
+    const entry = await platform.storage.get<CachedRatings>(key);
+    if (!entry || Date.now() - entry.at > MDBLIST_TTL_MS) return null;
+    return entry.ratings;
+  } catch {
+    return null;
+  }
+}
 
 async function enrichMdbList(
   meta: Meta,
@@ -541,11 +567,21 @@ async function enrichMdbList(
   trace?: DetailsTrace,
 ): Promise<Meta> {
   if (!config.enabled || !config.apiKey || !imdb) return meta;
+  const media = isSeries(meta.type) ? "show" : "movie";
+  const key = ratingsKey(media, imdb);
+
+  // Kept across launches, so reopening a title costs nothing. Checked before
+  // the backoff as well as before the network: a provider that is failing now
+  // is no reason to withhold numbers already in hand.
+  const kept = await storedRatings(key);
+  if (kept) {
+    trace?.start("Enrich: MDBList ratings", "stored, within the day")();
+    return mergeRatings(meta, kept, config.providers);
+  }
   if (Date.now() < mdbListFailedUntil) {
     trace?.start("Enrich: MDBList ratings", "skipped, recent failure")("cancelled");
     return meta;
   }
-  const media = isSeries(meta.type) ? "show" : "movie";
   // The native clients use MDBList's older per-provider POST route. In a web
   // page that request is preflighted because it has a JSON body, and MDBList's
   // OPTIONS response is currently 405. The current single-title endpoint is a
@@ -556,13 +592,37 @@ async function enrichMdbList(
   let payload: unknown;
   try {
     payload = await cachedJson(url.toString(), trace, MDBLIST_TIMEOUT_MS);
+    mdbListFailures = 0;
   } catch (error) {
-    mdbListFailedUntil = Date.now() + MDBLIST_BACKOFF_MS;
+    mdbListFailures += 1;
+    if (mdbListFailures >= MDBLIST_FAILURES_BEFORE_BACKOFF)
+      mdbListFailedUntil = Date.now() + MDBLIST_BACKOFF_MS;
     throw error;
   }
   const fetched = mdbListRatings(payload, config.providers);
   if (!fetched.length) return meta;
+  // Stored before merging, so what is kept is the provider's answer rather
+  // than this title's blend of it with whatever the addon supplied.
+  try {
+    await platform.storage.set<CachedRatings>(key, { at: Date.now(), ratings: fetched });
+  } catch {
+    // A cache that cannot be written is a slower app, not a broken one.
+  }
+  return mergeRatings(meta, fetched, config.providers);
+}
 
+/**
+ * MDBList's numbers over the addon's, without losing the addon's extras.
+ *
+ * Split out because it is now reached from two directions — a fresh response
+ * and a stored one — and they must agree on precedence or a reopened title
+ * would show a different set of scores than it did the first time.
+ */
+function mergeRatings(
+  meta: Meta,
+  fetched: ExternalRating[],
+  _providers: string[],
+): Meta {
   // Preserve any addon-supplied providers that MDBList did not return while
   // allowing the explicitly enabled MDBList providers to be authoritative.
   const merged = new Map(

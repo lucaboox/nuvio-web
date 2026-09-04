@@ -94,6 +94,8 @@ export type AuthApi = {
 export type ResizeMode = "Fit" | "Fill" | "Zoom" | "Stretch";
 
 export type PlayerSource = {
+  /** Latest UI playback preferences; read-only launch overrides, never a sync write. */
+  preferences?: Record<string, { type: string; value: unknown }>;
   url: string;
   /** A resolver-provided fallback when the primary stream has no direct URL. */
   externalUrl?: string;
@@ -169,6 +171,7 @@ export type PlayerApi = {
   setResizeMode?(mode: ResizeMode): Promise<void>;
   setAudioTrack(id: number): Promise<void>;
   setSubtitleTrack(id: number): Promise<void>;
+  skipSegments?(options: { contentId: string; videoId: string; season?: number; episode?: number; animeSkipEnabled: boolean; animeSkipClientId: string }): Promise<Array<{ startMs: number; endMs: number; type: string; provider: string }>>;
   /** Expands the native window, rather than a transparent webview element. */
   setFullscreen?(fullscreen: boolean): Promise<void>;
   stop(): Promise<void>;

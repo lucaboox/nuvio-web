@@ -1,3 +1,6 @@
+import { selectAutoStream } from "../lib/playbackPolicy";
+import { bingeGroupFor } from "../lib/bingeCache";
+import { matchBadges } from "../lib/badgeMatcher";
 import {
   formatRating,
   loadEpisodeRatings,
@@ -61,7 +64,7 @@ import { useSwipeBack } from "../lib/useSwipeBack";
 import {
   browserColor,
   readableFileSize,
-  streamBadgesFor,
+  type StreamBadgeFilter,
   type StreamBadgeSettings,
   type WebPlayerSettings,
 } from "../lib/webSettings";
@@ -312,7 +315,13 @@ function SourceBadges({
   stream: Stream;
   settings: StreamBadgeSettings;
 }) {
-  const imported = streamBadgesFor(stream, settings);
+  const [imported, setImported] = useState<StreamBadgeFilter[]>([]);
+  useEffect(() => {
+    let live = true;
+    setImported([]);
+    void matchBadges(stream, settings).then((badges) => { if (live) setImported(badges); });
+    return () => { live = false; };
+  }, [stream, settings]);
   const size = settings.showFileSizeBadges
     ? readableFileSize(stream.behaviorHints?.videoSize)
     : null;
@@ -321,7 +330,7 @@ function SourceBadges({
     <div className="stream-badges">
       {imported.map((badge, index) => {
         const style = {
-          "--badge-bg": browserColor(badge.tagColor || "", "#2a3037"),
+          "--badge-bg": badge.tagStyle?.toLowerCase() === "filled" ? browserColor(badge.tagColor || "", "transparent") : "transparent",
           "--badge-color": browserColor(badge.textColor || "", "#f4f6f7"),
           "--badge-border": browserColor(
             badge.borderColor || "",
@@ -336,7 +345,7 @@ function SourceBadges({
             title={badge.name}
           >
             {badge.imageURL ? (
-              <img src={badge.imageURL} alt={badge.name || ""} />
+              <img src={safeHttpUrl(badge.imageURL) || undefined} alt={badge.name || ""} />
             ) : (
               badge.name
             )}
@@ -951,44 +960,27 @@ export function Details({
     setSourcesPending(true);
     setAnswered([]);
     setStreams([]);
-    const scheduleAutoPlay = (available: Stream[]) => {
-      if (forceManual || autoPlayTimer.current !== undefined) return;
-      let selected: Stream | undefined;
-      if (playerSettings.autoPlayMode === "FIRST_STREAM") {
-        selected = available.find((item) => item.url || item.externalUrl);
-      } else if (
-        playerSettings.autoPlayMode === "REGEX_MATCH" &&
-        playerSettings.autoPlayRegex
-      ) {
-        try {
-          const matcher = new RegExp(playerSettings.autoPlayRegex);
-          selected = available.find(
-            (item) =>
-              (item.url || item.externalUrl) &&
-              matcher.test(
-                [
-                  item.name,
-                  item.title,
-                  item.description,
-                  item.behaviorHints?.filename,
-                  item.addonName,
-                ]
-                  .filter(Boolean)
-                  .join("\n"),
-              ),
-          );
-        } catch {
-          // Nuvio falls back to manual choice for an invalid expression.
-        }
-      }
-      if (!selected) return;
-      const choice = selected;
+    let latestAutoStreams: Stream[] = [];
+    let autoWaitExpired = playerSettings.autoPlayTimeoutSeconds === 0;
+    let autoSelected = false;
+    const scheduleAutoPlay = (available: Stream[], complete = false) => {
+      latestAutoStreams = available;
+      if (forceManual || autoSelected || controller.signal.aborted || request !== sourceRequest.current || (!complete && !autoWaitExpired)) return;
+      const choice = selectAutoStream(available, playerSettings,
+        addons.map((addon) => addon.manifest?.name || addon.name || ""), bingeGroupFor(meta.id));
+      if (!choice) return;
+      autoSelected = true;
+      window.clearTimeout(autoPlayTimer.current);
+      setSourceOpen(false);
+      playFresh(choice, video);
+    };
+    if (!forceManual && playerSettings.autoPlayMode !== "MANUAL" && playerSettings.autoPlayTimeoutSeconds < 2147483647) {
       autoPlayTimer.current = window.setTimeout(() => {
         if (!sourceOpenRef.current) return;
-        setSourceOpen(false);
-        playFresh(choice, video);
-      }, playerSettings.autoPlayTimeoutSeconds * 1_000);
-    };
+        autoWaitExpired = true;
+        scheduleAutoPlay(latestAutoStreams);
+      }, playerSettings.autoPlayTimeoutSeconds * 1000);
+    }
 
     // Start plugins concurrently, but never make ordinary addon results wait
     // for them. Browser-only providers commonly hit CORS or host timeouts.
@@ -1013,6 +1005,7 @@ export function Details({
                 : ordered,
             );
             setSourceBusy(false);
+            scheduleAutoPlay(platform.debrid && debridRules ? applyDebridStreamSettings(ordered, debridRules) : ordered);
           },
         ).catch(() => []);
       if (request !== sourceRequest.current || controller.signal.aborted) return;
@@ -1026,7 +1019,7 @@ export function Details({
           ? applyDebridStreamSettings(addonStreams, debridRules)
           : addonStreams;
       setStreams(addonStreams);
-      scheduleAutoPlay(addonStreams);
+      scheduleAutoPlay(addonStreams, true);
     } finally {
       if (request === sourceRequest.current) {
         setSourceBusy(false);

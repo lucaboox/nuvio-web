@@ -1,5 +1,7 @@
 import type Hls from "hls.js";
 import { SolidPause, SolidPlay } from "./PlaybackIcons";
+import { automaticSkipSegment, nextEpisodeDue, shouldBlurEpisode } from "../lib/playbackPolicy";
+import { nativePlayerPreferences } from "../lib/nativePlayerPreferences";
 import { platform } from "../platform/index.ts";
 import type { ResizeMode } from "../platform/types.ts";
 import { safeHttpUrl } from "../lib/security";
@@ -45,7 +47,6 @@ import {
 import {
   hasEpisodeAired,
   resolveNextEpisode,
-  shouldShowNextEpisode,
 } from "../lib/nextEpisode";
 import {
   episodePercent,
@@ -56,8 +57,8 @@ import {
 import { EpisodeRow } from "./Details";
 import {
   activeSkipSegment,
-  creditsStart,
   loadSkipSegments,
+  parseNativeSkipSegments,
   skipLabel,
   type SkipSegment,
 } from "../lib/skipSegments";
@@ -158,6 +159,8 @@ export function Player({
   episodes,
   watchIndex,
   onPlayEpisode,
+  blurUnwatchedEpisodes = false,
+  animeSkipClientId = "",
 }: {
   stream: Stream;
   meta: Meta;
@@ -180,6 +183,8 @@ export function Player({
    * let another be chosen without leaving playback.
    */
   episodes?: Video[];
+  blurUnwatchedEpisodes?: boolean;
+  animeSkipClientId?: string;
   watchIndex?: WatchIndex;
   /** Resolves a source for another episode and switches to it. */
   onPlayEpisode?(next: Video): void;
@@ -269,6 +274,9 @@ export function Player({
   /** Dismissed by hand, so it does not come back for the rest of the episode. */
   const [nextDismissed, setNextDismissed] = useState(false);
   const [skipSegments, setSkipSegments] = useState<SkipSegment[]>([]);
+  const autoSkipped = useRef(new Set<string>());
+  const [nextCountdown, setNextCountdown] = useState<number | null>(null);
+  const autoNextTriggered = useRef(false);
   /** True from choosing an episode until its stream arrives. */
   const [switching, setSwitching] = useState(false);
   /**
@@ -776,6 +784,7 @@ export function Player({
       localStorage.getItem("nuvio-web-muted") === "true";
     void nativePlayer
       .open({
+        preferences: nativePlayerPreferences(settings),
         url: sourceUrl,
         externalUrl,
         title: video?.title || meta.name,
@@ -1396,7 +1405,14 @@ export function Player({
   useEffect(() => {
     let live = true;
     setSkipSegments([]);
-    void loadSkipSegments(meta.id, video?.season, video?.episode).then(
+    autoSkipped.current.clear();
+    autoNextTriggered.current = false;
+    if (!settings.skipIntroEnabled) return;
+    const task = nativePlayer?.skipSegments
+      ? nativePlayer.skipSegments({ contentId: meta.id, videoId: video?.id || meta.id, season: video?.season, episode: video?.episode,
+          animeSkipEnabled: settings.animeSkipEnabled, animeSkipClientId }).then(parseNativeSkipSegments).catch(() => [])
+      : loadSkipSegments(meta.id, video?.season, video?.episode);
+    void task.then(
       (segments) => {
         if (live) setSkipSegments(segments);
       },
@@ -1404,8 +1420,19 @@ export function Player({
     return () => {
       live = false;
     };
-  }, [meta.id, video?.season, video?.episode]);
-  const skippable = activeSkipSegment(skipSegments, currentTime);
+  }, [meta.id, video?.id, video?.season, video?.episode, settings.skipIntroEnabled, settings.animeSkipEnabled, animeSkipClientId]);
+  const skippable = settings.skipIntroEnabled ? activeSkipSegment(skipSegments, currentTime) : null;
+  useEffect(() => {
+    if (!settings.skipIntroEnabled || !playing || waiting || error || switching || seekPreview != null) return;
+    const segment = automaticSkipSegment(skipSegments, currentTime, duration, settings);
+    if (!segment) return;
+    const key = `${segment.kind}:${segment.start}:${segment.end}`;
+    if (autoSkipped.current.has(key)) return;
+    autoSkipped.current.add(key);
+    void seekTo(Math.min(segment.end, duration)).catch(() => {
+      setWarning("Could not skip this segment. You can still seek manually.");
+    });
+  }, [currentTime, duration, playing, waiting, error, switching, seekPreview, skipSegments, settings.skipIntroEnabled, settings.autoSkipSegmentTypes, seekTo]);
 
   const nextEpisode = useMemo(() => {
     if (!episodes?.length || !onPlayEpisode) return null;
@@ -1483,12 +1510,32 @@ export function Player({
     !!nextEpisode &&
     !nextDismissed &&
     !error &&
-    shouldShowNextEpisode(
-      currentTime * 1000,
-      duration * 1000,
-      undefined,
-      creditsStart(skipSegments),
+    nextEpisodeDue(
+      currentTime,
+      duration,
+      settings,
+      skipSegments,
     );
+  const startEpisodeRef = useRef(startEpisode);
+  startEpisodeRef.current = startEpisode;
+  const canAutoContinue = showNextEpisode && settings.autoPlayNextEpisode && !switching
+    && ((playing && !waiting) || (duration > 0 && currentTime >= duration));
+  useEffect(() => {
+    setNextCountdown(null);
+    if (!canAutoContinue || !nextEpisode || autoNextTriggered.current) return;
+    let remaining = 3;
+    setNextCountdown(remaining);
+    const timer = window.setInterval(() => {
+      remaining -= 1;
+      setNextCountdown(remaining);
+      if (remaining <= 0) {
+        window.clearInterval(timer);
+        autoNextTriggered.current = true;
+        startEpisodeRef.current(nextEpisode);
+      }
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [canAutoContinue, nextEpisode]);
 
   const seekLimit = duration || 0;
   const displayedTime = seekPreview ?? currentTime;
@@ -1835,7 +1882,7 @@ export function Player({
       {showNextEpisode && nextEpisode && (
         <div className="player-next">
           <div>
-            <small>Up next</small>
+            <small>{nextCountdown != null ? `Playing in ${nextCountdown}…` : "Up next"}</small>
             <strong>
               {nextEpisode.season != null && nextEpisode.episode != null
                 ? `S${nextEpisode.season}·E${nextEpisode.episode} `
@@ -1911,7 +1958,7 @@ export function Player({
                     watched={watchIndex?.watched.has(key) ?? false}
                     percent={watchIndex ? episodePercent(watchIndex, key) : 0}
                     remaining={watchIndex ? remainingShort(watchIndex, key) : ""}
-                    blurred={false}
+                    blurred={shouldBlurEpisode(blurUnwatchedEpisodes, watchIndex?.watched.has(key) ?? false, item.id === video?.id)}
                     onPlay={() => startEpisode(item)}
                     onMenu={() => undefined}
                   />

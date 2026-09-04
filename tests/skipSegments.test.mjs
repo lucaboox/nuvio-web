@@ -1,5 +1,14 @@
 import assert from "node:assert/strict";
+import { parseNativeSkipSegments } from "../src/lib/skipSegments.ts";
 import test from "node:test";
+
+test("native provider aliases become the same skip categories as browser timings", () => {
+  assert.deepEqual(parseNativeSkipSegments([
+    { startMs: 10000, endMs: 60000, type: "op" },
+    { startMs: 900000, endMs: 1000000, type: "mixed-ed" },
+    { startMs: -1, endMs: 5, type: "intro" },
+  ]), [{ kind: "intro", start: 10, end: 60 }, { kind: "credits", start: 900, end: 1000 }]);
+});
 import {
   activeSkipSegment,
   creditsStart,

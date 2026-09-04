@@ -28,6 +28,17 @@ type Response = Partial<Record<SkipKind, Interval[]>>;
 
 const KINDS: SkipKind[] = ["intro", "recap", "credits", "preview"];
 
+export function parseNativeSkipSegments(rows: Array<{ startMs: number; endMs: number; type: string }>): SkipSegment[] {
+  return rows.flatMap((row) => {
+    const name = row.type.trim().toLowerCase();
+    const kind: SkipKind | undefined = ["intro", "op", "opening", "mixed-op"].includes(name) ? "intro"
+      : ["outro", "credits", "ed", "ending", "mixed-ed"].includes(name) ? "credits"
+      : name === "recap" ? "recap" : undefined;
+    return kind && Number.isFinite(row.startMs) && row.startMs >= 0 && Number.isFinite(row.endMs) && row.endMs > row.startMs
+      ? [{ kind, start: row.startMs / 1000, end: row.endMs / 1000 }] : [];
+  });
+}
+
 const cache = new Map<string, { at: number; segments: SkipSegment[] }>();
 const inFlight = new Map<string, Promise<SkipSegment[]>>();
 
@@ -122,7 +133,7 @@ export async function loadSkipSegments(
     }
     let segments: SkipSegment[] = [];
     try {
-      const response = await platform.request(`${BASE}?${query.toString()}`);
+      const response = await platform.request(`${BASE}?${query.toString()}`, { timeoutMs: 10000, maxBytes: 256 * 1024 });
       // Anything it does not know answers with an error status, which is not
       // worth distinguishing from having no timings.
       if (response.ok) segments = parseSkipSegments(JSON.parse(response.body));

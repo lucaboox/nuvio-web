@@ -62,6 +62,9 @@ import {
 import { Hero, MediaRow, PosterCard } from "./components/Media";
 import { Player } from "./components/Player";
 import { LoadingScreen } from "./components/LoadingScreen";
+import { PlaybackPolicySettings } from "./components/PlaybackPolicySettings";
+import { FusionBadgeSettings } from "./components/FusionBadgeSettings";
+import { resolveAutoStream, selectAutoStream } from "./lib/playbackPolicy";
 import { AccentPicker } from "./components/AccentPicker";
 import { DetailsDebugToggle } from "./components/DetailsDebug";
 import { applyResolvedTheme } from "./lib/themeCache";
@@ -158,7 +161,6 @@ import {
   resetDeviceRegistration,
 } from "./lib/deviceSession";
 import { bingeGroupFor, rememberBingeGroup } from "./lib/bingeCache";
-import { pickBingeStream } from "./lib/nextEpisode";
 import { syncProgress, syncWatched } from "./lib/watchSync";
 import {
   buildContinueWatching,
@@ -1926,7 +1928,7 @@ export function App() {
       // its sources open, which is what this always did.
       const group = bingeGroupFor(card.item.id);
       const target = card.video;
-      if (!group || !target) {
+      if (!group || !target || !webSettings.player.reuseBingeGroup) {
         openTitle();
         return;
       }
@@ -1949,7 +1951,7 @@ export function App() {
           const orderedStreams = platform.debrid
             ? applyDebridStreamSettings(streams, debridRules)
             : streams;
-          const chosen = pickBingeStream(orderedStreams, group);
+          const chosen = orderedStreams.find((stream) => (stream.url || stream.externalUrl) && stream.behaviorHints?.bingeGroup === group);
           finish();
           if (!chosen) {
             openTitle();
@@ -1968,7 +1970,7 @@ export function App() {
           openTitle();
         });
     },
-    [addons, debridRules],
+    [addons, debridRules, webSettings.player.reuseBingeGroup],
   );
 
   const dismissContinueCard = useCallback(
@@ -2435,6 +2437,8 @@ export function App() {
         <Player
           {...playback}
           settings={webSettings.player}
+          blurUnwatchedEpisodes={webSettings.metaScreen.blurUnwatchedEpisodes}
+          animeSkipClientId={providerCredential(providerCredentials, "animeskip", "client_id")}
           startPositionMs={
             playback.startAtBeginning
               ? 0
@@ -2453,17 +2457,19 @@ export function App() {
             // episode already left behind.
             const generation = ++episodeSwitch.current;
             setMessage("");
-            void loadStreams(current.meta.type, next.id, addons)
-              .then((streams) => {
+            const orderStreams = (streams: Stream[]) => platform.debrid ? applyDebridStreamSettings(streams, debridRules) : streams;
+            void resolveAutoStream(
+              (onBatch) => loadStreams(current.meta.type, next.id, addons, undefined,
+                (_name, _batch, ordered) => onBatch(orderStreams(ordered))).then(orderStreams),
+              (streams) => selectAutoStream(streams, webSettings.player,
+                addons.map((addon) => addon.manifest?.name || addon.name || ""), bingeGroup, true),
+              webSettings.player.autoPlayTimeoutSeconds,
+            ).then((chosen) => {
                 if (generation !== episodeSwitch.current) return;
-                const orderedStreams = platform.debrid
-                  ? applyDebridStreamSettings(streams, debridRules)
-                  : streams;
-                const chosen = pickBingeStream(orderedStreams, bingeGroup);
                 if (!chosen) {
-                  setMessage(
-                    "No playable source was found for that episode. Open it from the title page to choose one.",
-                  );
+                  setPlayback(null);
+                  setDetailLaunch({ video: next, videoId: next.id, openSources: true, startAtBeginning: true });
+                  setSelected({ ...current.meta, selectedVideoId: next.id });
                   return;
                 }
                 rememberBingeGroup(
@@ -2479,7 +2485,10 @@ export function App() {
               })
               .catch(() => {
                 if (generation !== episodeSwitch.current) return;
-                setMessage("That episode's sources could not be loaded.");
+                setPlayback(null);
+                setDetailLaunch({ video: next, videoId: next.id, openSources: true, startAtBeginning: true });
+                setSelected({ ...current.meta, selectedVideoId: next.id });
+                setMessage("Could not auto-select a source. Please choose one manually.");
               });
           }}
           onClose={() => {
@@ -4864,8 +4873,8 @@ function SettingsPage({
           }
         />
         <SettingToggle
-          title="Blur unaired Next Up artwork"
-          description="Blur future episode thumbnails until they are released."
+          title="Blur unwatched in Continue Watching"
+          description="Hide Next Up episode thumbnails to avoid spoilers, including episodes that have already aired. Enable episode thumbnails to use this option."
           checked={settings.continueWatching.blurNextUp}
           disabled={
             !settingsReady ||
@@ -5126,6 +5135,9 @@ function SettingsPage({
             <option value="Stretch">Stretch</option>
           </select>
         </label>
+      </div>
+      <div className="setting-card settings-category-card" hidden={category !== "playback"}>
+        <header><h2>Stream auto-play</h2></header>
         <label className="setting-select-row">
           <span>
             <strong>Automatic source selection</strong>
@@ -5169,6 +5181,7 @@ function SettingsPage({
             />
           </label>
         )}
+        <PlaybackPolicySettings section="scope" settings={settings.player} ready={settingsReady} addonNames={addonNames} onChange={onTypedSetting} />
         <SettingToggle
           title="Reuse last source"
           description="Plays the link an episode was last watched with instead of asking the addon again. The source list is still one tap away."
@@ -5206,9 +5219,16 @@ function SettingsPage({
             />
           </label>
         )}
+      </div>
+      <div className="setting-card settings-category-card" hidden={category !== "playback"}>
+        <header><h2>Next episode</h2></header>
+        <PlaybackPolicySettings section="next" settings={settings.player} ready={settingsReady} onChange={onTypedSetting} />
+      </div>
+      <div className="setting-card settings-category-card" hidden={category !== "playback"}>
+        <header><h2>Skipping</h2></header>
         <SettingToggle
-          title="Skip intro"
-          description="Syncs Nuvio's skip preference. Web skip-segment fetching is not available yet."
+          title="Skip intro & recap"
+          description="Show skip buttons and allow automatic skipping when segment timings are available."
           checked={settings.player.skipIntroEnabled}
           disabled={!settingsReady}
           onChange={(next) =>
@@ -5220,6 +5240,7 @@ function SettingsPage({
             )
           }
         />
+        <PlaybackPolicySettings section="skipping" settings={settings.player} ready={settingsReady} onChange={onTypedSetting} />
         <IntegrationCredentialField
           label="AnimeSkip client ID"
           description="Optional provider credential synced through Nuvio's separate credential row."
@@ -5353,6 +5374,10 @@ function SettingsPage({
             )
           }
         />
+      </div>
+      <div className="setting-card settings-category-card" hidden={category !== "playback"}>
+        <header><h2>Subtitle rendering</h2></header>
+        <PlaybackPolicySettings section="render" settings={settings.player} ready={settingsReady} onChange={onTypedSetting} />
         <div className="setting-grid subtitle-grid">
           <label>
             <span>Font size</span>
@@ -5455,8 +5480,10 @@ function SettingsPage({
         hidden={category !== "playback"}
       >
         <header>
-          <h2>Sources</h2>
+          <h2>Fusion style badges</h2>
         </header>
+        <FusionBadgeSettings serialized={settings.streamBadges.serializedRules || ""} disabled={!settingsReady}
+          onSave={(value) => onTypedSetting("stream_badge_settings", "stream_badge_rules", "string", value)} />
         <SettingToggle
           title="File-size badges"
           description="Show the stream's reported size beside imported badges."

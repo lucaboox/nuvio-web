@@ -3,14 +3,15 @@ import type { DebridRules } from "./debridStreams";
 import {
   readMetaScreenSettings,
   type MetaScreenSettings,
-} from "./metaScreenSettings";
-import { DEFAULT_REUSE_CACHE_HOURS } from "./streamLinkCache";
+} from "./metaScreenSettings.ts";
+import { DEFAULT_REUSE_CACHE_HOURS } from "./streamLinkCache.ts";
+import { readBadgeRules } from "./fusionBadges.ts";
 import {
   blobRawValue,
   blobStringPayload,
   blobTypedValue,
   type SettingsBlob,
-} from "./settingsBlob";
+} from "./settingsBlob.ts";
 
 export type PosterSettings = {
   widthDp: number;
@@ -67,12 +68,26 @@ export type WebPlayerSettings = {
   autoPlayMode: AutoPlayMode;
   autoPlayRegex: string;
   autoPlayTimeoutSeconds: number;
+  autoPlaySource: "ALL_SOURCES" | "INSTALLED_ADDONS_ONLY" | "ENABLED_PLUGINS_ONLY";
+  autoPlaySelectedAddons: string[];
+  autoPlaySelectedPlugins: string[];
+  autoPlayNextEpisode: boolean;
+  autoPlayNextEpisodeFallback: boolean;
+  preferBingeGroup: boolean;
+  reuseBingeGroup: boolean;
+  nextEpisodeThresholdMode: "PERCENTAGE" | "MINUTES_BEFORE_END";
+  nextEpisodeThresholdPercent: number;
+  nextEpisodeThresholdMinutes: number;
+  autoSkipSegmentTypes: string[];
+  useLibass: boolean;
   skipIntroEnabled: boolean;
+  animeSkipEnabled: boolean;
   reuseLastStream: boolean;
   reuseLastStreamHours: number;
 };
 
 export type StreamBadgeFilter = {
+  groupId?: string;
   id?: string;
   name?: string;
   pattern?: string;
@@ -85,6 +100,7 @@ export type StreamBadgeFilter = {
 };
 
 export type StreamBadgeSettings = {
+  serializedRules?: string;
   showFileSizeBadges: boolean;
   placement: "TOP" | "BOTTOM";
   filters: StreamBadgeFilter[];
@@ -253,6 +269,10 @@ function playerSettings(blob: SettingsBlob | null): WebPlayerSettings {
     blobTypedValue(blob, "player_settings", key, "boolean", fallback);
   const intValue = (key: string, fallback: number) =>
     blobTypedValue(blob, "player_settings", key, "int", fallback);
+  const floatValue = (key: string, fallback: number) =>
+    blobTypedValue(blob, "player_settings", key, "float", fallback);
+  const stringSet = (key: string) =>
+    blobTypedValue(blob, "player_settings", key, "string_set", []);
   return {
     showLoadingOverlay: booleanValue("show_loading_overlay", true),
     showParentalGuide: booleanValue("show_parental_guide", true),
@@ -323,9 +343,24 @@ function playerSettings(blob: SettingsBlob | null): WebPlayerSettings {
       intValue("stream_auto_play_timeout_seconds", 3),
       3,
       0,
-      30,
+      2147483647,
     ),
+    autoPlaySource: enumValue(stringValue("stream_auto_play_source", "ALL_SOURCES"),
+      ["ALL_SOURCES", "INSTALLED_ADDONS_ONLY", "ENABLED_PLUGINS_ONLY"] as const, "ALL_SOURCES"),
+    autoPlaySelectedAddons: stringSet("stream_auto_play_selected_addons"),
+    autoPlaySelectedPlugins: stringSet("stream_auto_play_selected_plugins"),
+    autoPlayNextEpisode: booleanValue("stream_auto_play_next_episode_enabled", false),
+    autoPlayNextEpisodeFallback: booleanValue("stream_auto_play_next_episode_fallback_enabled", true),
+    preferBingeGroup: booleanValue("stream_auto_play_prefer_binge_group", true),
+    reuseBingeGroup: booleanValue("stream_auto_play_reuse_binge_group", true),
+    nextEpisodeThresholdMode: enumValue(stringValue("next_episode_threshold_mode", "PERCENTAGE"),
+      ["PERCENTAGE", "MINUTES_BEFORE_END"] as const, "PERCENTAGE"),
+    nextEpisodeThresholdPercent: numberIn(floatValue("next_episode_threshold_percent_v2", 99), 99, 97, 100),
+    nextEpisodeThresholdMinutes: numberIn(floatValue("next_episode_threshold_minutes_before_end_v2", 2), 2, 0, 3.5),
+    autoSkipSegmentTypes: stringSet("auto_skip_segment_types").filter((kind) => ["intro", "recap", "outro"].includes(kind)),
+    useLibass: booleanValue("use_libass", false),
     skipIntroEnabled: booleanValue("skip_intro_enabled", true),
+    animeSkipEnabled: booleanValue("animeskip_enabled", false),
     // Off by default, matching the desktop client: skipping the stream picker
     // is a shortcut you opt into, not something that should start happening.
     reuseLastStream: booleanValue("stream_reuse_last_link_enabled", false),
@@ -350,7 +385,7 @@ function badgeFilters(blob: SettingsBlob | null): StreamBadgeFilter[] {
   );
   if (!serialized) return [];
   try {
-    const parsed = JSON.parse(serialized) as { imports?: unknown };
+    const parsed = readBadgeRules(serialized);
     if (!Array.isArray(parsed.imports)) return [];
     const result: StreamBadgeFilter[] = [];
     for (const item of parsed.imports.slice(0, 3)) {
@@ -459,6 +494,7 @@ export function readWebSettings(blob: SettingsBlob | null): WebSettings {
     poster: posterSettings(blob),
     player: playerSettings(blob),
     streamBadges: {
+      serializedRules: blobTypedValue(blob, "stream_badge_settings", "stream_badge_rules", "string", ""),
       showFileSizeBadges: blobTypedValue(
         blob,
         "stream_badge_settings",
@@ -585,13 +621,16 @@ export function streamBadgesFor(
     stream.description,
     stream.addonName,
   ].filter((value): value is string => Boolean(value));
-  const combined = candidates.join("\n");
+  const combined = candidates.join(" ");
   const matches: StreamBadgeFilter[] = [];
   const seen = new Set<string>();
   for (const filter of settings.filters) {
     if (!filter.pattern) continue;
     try {
-      const regex = new RegExp(filter.pattern);
+      // Kotlin accepts leading inline flags; JavaScript requires them as the
+      // RegExp flags argument. Unsupported patterns remain safely ignored.
+      const flags = /^\(\?([ims]+)\)/.exec(filter.pattern);
+      const regex = new RegExp(flags ? filter.pattern.slice(flags[0].length) : filter.pattern, flags?.[1]);
       if (!candidates.some((candidate) => regex.test(candidate)) && !regex.test(combined))
         continue;
     } catch {

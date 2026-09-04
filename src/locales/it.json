@@ -15,6 +15,7 @@
   "addons.installed": "Componenti installati",
   "addons.placeholder": "https://addon.example/manifest.json",
   "addons.title": "Componenti aggiuntivi",
+  "boot.restoring": "Ripristino di Nuvio…",
   "calendar.noReleases": "Nessuna uscita in questo giorno",
   "common.backToSettings": "Torna alle impostazioni",
   "common.default": "Predefinito",

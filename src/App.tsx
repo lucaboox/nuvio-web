@@ -62,6 +62,7 @@ import {
 import { Hero, MediaRow, PosterCard } from "./components/Media";
 import { Player } from "./components/Player";
 import { LoadingScreen } from "./components/LoadingScreen";
+import { useFadeOut } from "./lib/useFadeOut.ts";
 import { PlaybackPolicySettings } from "./components/PlaybackPolicySettings";
 import { FusionBadgeSettings } from "./components/FusionBadgeSettings";
 import { resolveAutoStream, selectAutoStream } from "./lib/playbackPolicy";
@@ -387,6 +388,15 @@ const DETAIL_SECTION_LABELS: Record<
 
 export function App() {
   const [booting, setBooting] = useState(true);
+  /**
+   * Holds the boot screen on top of the app for its fade.
+   *
+   * `booting` gates an early return, so when it flips the whole tree is
+   * replaced and the loading screen is simply gone. Keeping it mounted here as
+   * an overlay means the app paints underneath and the screen leaves over it,
+   * rather than the two swapping between frames.
+   */
+  const bootFade = useFadeOut(booting, 420);
   const [session, setSession] = useState<Session | null>(null);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -2036,7 +2046,7 @@ export function App() {
   if (booting)
     return (
       <>
-        <LoadingScreen label="Restoring Nuvio…" />
+        <LoadingScreen label={t("boot.restoring")} />
         {updatePrompt}
       </>
     );
@@ -2151,6 +2161,16 @@ export function App() {
 
   return (
     <div className={`app-shell${playback ? " player-active" : ""}${profileStarting ? " is-loading" : ""}`}>
+      {/* The boot screen, still on top while it fades. The app below is
+          already painted, so this reveals a finished page rather than cutting
+          to one. */}
+      {bootFade.mounted && (
+        <LoadingScreen
+          overlay
+          leaving={bootFade.leaving}
+          label={t("boot.restoring")}
+        />
+      )}
       {profileStarting && <LoadingScreen overlay />}
       {loading && !profileStarting && (
         <div className="app-loading-status" role="status">

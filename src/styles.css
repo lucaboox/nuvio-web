@@ -4185,6 +4185,35 @@ body.is-locked {
   /* Opaque immediately: no blurred artwork or half-loaded layout can peek
      through. Update prompts (z 1000) remain available above this screen. */
 }
+/*
+ * Gives way rather than vanishing.
+ *
+ * The app underneath is painted before this leaves, so the fade reveals a
+ * finished page instead of cutting to one. `useFadeOut` keeps it mounted and
+ * waits a frame before adding `is-leaving`, because a transition needs its
+ * starting state painted first — applied on mount, this would jump straight to
+ * the end and show nothing.
+ *
+ * The brand lifts very slightly as it goes, which reads as the screen stepping
+ * back rather than the lights going out.
+ */
+.nuvio-loading-screen.is-overlay.is-leaving {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 420ms ease;
+}
+.nuvio-loading-screen.is-overlay.is-leaving .nuvio-loading-brand {
+  transform: scale(1.03);
+  transition: transform 420ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  /* Decoration only — the app is usable the moment it is behind this — so it
+     is dropped rather than shortened. */
+  .nuvio-loading-screen.is-overlay.is-leaving,
+  .nuvio-loading-screen.is-overlay.is-leaving .nuvio-loading-brand {
+    transition: none;
+  }
+}
 .nuvio-loading-brand {
   display: grid;
   justify-items: center;
@@ -5518,6 +5547,15 @@ body.is-locked {
   grid-template-columns: repeat(auto-fit, minmax(64px, 1fr));
   gap: 12px 8px;
   max-width: 520px;
+  /* Centred rather than left-hugging. Twelve swatches rarely divide evenly
+     into the columns available, so the last row was left stranded against one
+     edge with a gap beside it on every width. */
+  margin-inline: auto;
+  justify-items: center;
+}
+.accent-picker legend,
+.accent-picker > p {
+  text-align: center;
 }
 .accent-choice {
   position: relative;

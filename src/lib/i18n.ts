@@ -32,7 +32,16 @@ export const LOCALES: Array<{ tag: string; label: string }> = [
 ];
 
 const STORAGE_KEY = "nuvio-web-language";
-const fallback = en as Messages;
+/**
+ * English, whatever shape the bundler hands it over in.
+ *
+ * A JSON import is normally the parsed object, but under some interop settings
+ * it arrives wrapped as `{ default: … }`. Read wrongly it is an object with no
+ * keys, `t()` finds nothing, and every string in the app renders as its own
+ * key — which is a spectacular failure for a one-character difference, so it
+ * is worth accepting both.
+ */
+const fallback = ((en as { default?: Messages }).default ?? en) as Messages;
 
 let messages: Messages = fallback;
 let tag = "en";
@@ -87,13 +96,14 @@ export async function setLanguage(choice: string): Promise<void> {
   try {
     // Vite needs the shape of the path to be static so it can find every file
     // at build time; only the name inside it varies.
-    const loaded = (await import(`../locales/${next}.json`)) as {
-      default: Messages;
+    const module = (await import(`../locales/${next}.json`)) as {
+      default?: Messages;
     };
+    const loaded = module.default ?? (module as Messages);
     // English underneath, so a locale that is missing a key shows the English
     // rather than the key itself. A partly translated screen is worth having;
     // a screen of identifiers is not.
-    messages = { ...fallback, ...loaded.default };
+    messages = { ...fallback, ...loaded };
     tag = next;
   } catch {
     messages = fallback;

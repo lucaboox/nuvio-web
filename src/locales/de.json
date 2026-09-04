@@ -15,6 +15,7 @@
   "addons.installed": "Installierte Addons",
   "addons.placeholder": "https://addon.example/manifest.json",
   "addons.title": "Addons",
+  "boot.restoring": "Nuvio wird wiederhergestellt …",
   "calendar.noReleases": "An diesem Tag keine Veröffentlichungen",
   "common.backToSettings": "Zurück zu den Einstellungen",
   "common.default": "Standard",

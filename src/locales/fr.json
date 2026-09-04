@@ -15,6 +15,7 @@
   "addons.installed": "Extensions installées",
   "addons.placeholder": "https://addon.example/manifest.json",
   "addons.title": "Extensions",
+  "boot.restoring": "Restauration de Nuvio…",
   "calendar.noReleases": "Aucune sortie ce jour",
   "common.backToSettings": "Retour aux réglages",
   "common.default": "Par défaut",

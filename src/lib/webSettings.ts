@@ -1,3 +1,4 @@
+import { ACCENT_VALUES } from "./accents.ts";
 import type { Stream } from "../types";
 import type { DebridRules } from "./debridStreams";
 import {
@@ -470,7 +471,11 @@ export function readWebSettings(blob: SettingsBlob | null): WebSettings {
         "string",
         "WHITE",
       ).trim().toUpperCase(),
-      ["CRIMSON", "OCEAN", "VIOLET", "EMERALD", "AMBER", "ROSE", "WHITE"] as const,
+      // Derived from the picker rather than listed again. Written out here it
+      // was a second, silent source of truth: adding Gold to the picker left
+      // this rejecting it, so choosing it fell straight back to White with no
+      // sign of why.
+      ACCENT_VALUES,
       "WHITE",
     ),
     desktopNavigationLayout: enumValue(

@@ -415,10 +415,43 @@ export type RatingsApi = {
   readonly seasonRatingsBase: string;
 };
 
+/**
+ * Replacing the running application, which only a shell can do.
+ *
+ * The browser's update is the service worker's: fetch a new bundle and reload.
+ * A desktop build has to download a signed installer, verify it and restart
+ * into it. Both answer "is there a newer version and will you take it", which
+ * is why they share one control in Settings rather than two — but nothing about
+ * the mechanism is shared, so it lives here.
+ */
+export type AppUpdate = {
+  version: string;
+  /** Release notes, where the feed carries them. */
+  notes?: string;
+  date?: string;
+};
+
+export type UpdatesApi = {
+  /** The running build's version, for display. */
+  currentVersion(): Promise<string>;
+  /** Null when already current. */
+  check(): Promise<AppUpdate | null>;
+  /**
+   * Downloads and installs, reporting 0..1 as it goes.
+   *
+   * A desktop update is tens of megabytes, so unlike the browser's there is a
+   * real wait here and it has to be shown.
+   */
+  install(onProgress?: (fraction: number) => void): Promise<void>;
+  /** Restarts into the installed version. */
+  relaunch(): Promise<void>;
+};
+
 export type Platform = {
   downloads?: DownloadsApi;
   debrid?: DebridApi;
   ratings?: RatingsApi;
+  updates?: UpdatesApi;
   auth: AuthApi;
   player?: PlayerApi;
   externalPlayer: ExternalPlayerApi;

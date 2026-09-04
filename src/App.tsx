@@ -3797,40 +3797,104 @@ function UpdateModal({ onLater }: { onLater(): void }) {
   );
 }
 
+/**
+ * One control, two mechanisms.
+ *
+ * A browser update is the service worker's: fetch the new bundle, reload. A
+ * desktop update downloads a signed installer, verifies it and restarts into
+ * it. The question — "is there a newer version, and will you take it" — is the
+ * same, so the row is the same and only the engine differs.
+ */
 function UpdateRow() {
-  const [state, setState] = useState<"idle" | "checking" | "current" | "pending">(
-    updateReady() ? "pending" : "idle",
-  );
+  const shell = platform.updates;
+  const [state, setState] = useState<
+    "idle" | "checking" | "current" | "pending" | "installing" | "restart"
+  >(!shell && updateReady() ? "pending" : "idle");
+  const [version, setVersion] = useState("");
+  const [available, setAvailable] = useState("");
+  /** 0..1, or -1 where the feed declared no length. */
+  const [progress, setProgress] = useState(-1);
+
+  useEffect(() => {
+    if (!shell) return;
+    void shell.currentVersion().then(setVersion).catch(() => undefined);
+  }, [shell]);
+
+  const detail = () => {
+    if (state === "checking") return "Checking…";
+    if (state === "current") return "You are on the latest version.";
+    if (state === "installing")
+      return progress >= 0
+        ? `Downloading… ${Math.round(progress * 100)}%`
+        : "Downloading…";
+    if (state === "restart") return "Installed. Restart to finish.";
+    if (state === "pending")
+      return shell
+        ? `Version ${available} is available.`
+        : "An update is downloaded and ready to install.";
+    // The shell knows its own version; the web build has only its build stamp.
+    return shell && version
+      ? `Version ${version}`
+      : `Build ${new Date(__APP_BUILD__).toLocaleString()}`;
+  };
+
+  const label = () => {
+    if (state === "checking") return "Checking…";
+    if (state === "installing") return "Downloading…";
+    if (state === "restart") return "Restart";
+    if (state === "pending") return shell ? "Download" : "Update";
+    return "Check";
+  };
+
+  async function act() {
+    if (!shell) {
+      if (state === "pending") {
+        await applyUpdate();
+        return;
+      }
+      setState("checking");
+      const result = await checkForUpdate({ prompt: false });
+      setState(result === "pending" ? "pending" : "current");
+      return;
+    }
+    try {
+      if (state === "restart") {
+        await shell.relaunch();
+        return;
+      }
+      if (state === "pending") {
+        setState("installing");
+        setProgress(-1);
+        await shell.install(setProgress);
+        setState("restart");
+        return;
+      }
+      setState("checking");
+      const found = await shell.check();
+      if (!found) {
+        setState("current");
+        return;
+      }
+      setAvailable(found.version);
+      setState("pending");
+    } catch {
+      // An update that cannot be reached is not an error worth a dialog; the
+      // row simply reports where it got to and can be tried again.
+      setState("idle");
+    }
+  }
+
+  const busy = state === "checking" || state === "installing";
   return (
     <>
       <div className="theme-row">
         <span>
           <strong>Check for updates</strong>
-          <small>
-            {state === "checking"
-              ? "Checking…"
-              : state === "current"
-                ? "You are on the latest version."
-                : state === "pending"
-                  ? "An update is downloaded and ready to install."
-                  : `Build ${new Date(__APP_BUILD__).toLocaleString()}`}
-          </small>
+          <small>{detail()}</small>
         </span>
-        <button
-          className="secondary"
-          disabled={state === "checking"}
-          onClick={async () => {
-            if (state === "pending") {
-              await applyUpdate();
-              return;
-            }
-            setState("checking");
-            const result = await checkForUpdate({ prompt: false });
-            setState(result === "pending" ? "pending" : "current");
-          }}
-        >
-          <RefreshCw size={16} className={state === "checking" ? "spin-icon" : ""} />
-          {state === "pending" ? "Update" : state === "checking" ? "Checking…" : "Check"}
+        <button className="secondary" disabled={busy} onClick={act}>
+          <RefreshCw size={16} className={busy ? "spin-icon" : ""} />
+          {label()}
         </button>
       </div>
     </>

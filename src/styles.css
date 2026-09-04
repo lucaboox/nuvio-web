@@ -1424,16 +1424,11 @@ a {
    the same size; when the cast became openable the photo gained a button around
    it, and every `> span` selector aimed at the fallback quietly stopped
    applying — leaving a letter card larger than the photos beside it. */
-/* Round, like the official client's cast row. Square so the circle is a
-   circle, and `object-position: top` because a portrait cropped to a square
-   from its centre cuts the chin off — faces sit in the upper part of the
-   frame. */
 .cast article img,
 .cast .cast-fallback {
   width: 120px;
-  height: 120px;
-  border-radius: 50%;
-  object-position: top center;
+  height: 150px;
+  border-radius: 12px;
   object-fit: cover;
   background: #1b2025;
   display: grid;
@@ -6928,7 +6923,7 @@ body.is-locked {
   .detail-view.has-episode-panel .cast article img,
   .detail-view.has-episode-panel .cast .cast-fallback {
     width: 92px;
-    height: 92px;
+    height: 116px;
   }
   .detail-view.has-episode-panel .cast article strong {
     font-size: 12px;

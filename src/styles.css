@@ -4232,14 +4232,27 @@ body.is-locked {
   height: 96px;
   object-fit: contain;
 }
+/*
+ * Both lines carry an explicit line-height so their boxes do not depend on
+ * font metrics.
+ *
+ * Nuvio is a webfont, so this screen first paints in the fallback and reflows
+ * when it arrives. Measured: the brand block is 238px tall in the fallback and
+ * 231px in Nuvio — the name 37 against 33, the label 19 against 16. It is
+ * centred, so those 7px moved the logo about 3.5px the moment the font
+ * swapped, which is the jump. Fixed line-heights make the height identical in
+ * either font, so the swap changes the letters and nothing else.
+ */
 .nuvio-loading-name {
   font-size: 28px;
   font-weight: 700;
   letter-spacing: -0.6px;
+  line-height: 1.2;
 }
 .nuvio-loading-label {
   color: var(--muted, #8f99a3);
   font-size: 14px;
+  line-height: 1.2;
 }
 .nuvio-loading-spinner {
   width: 28px;

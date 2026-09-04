@@ -115,3 +115,22 @@ test("the spinner's offset is read once, not on every render", () => {
     "calling it in the style object re-applies it on every render",
   );
 });
+
+test("the boot brand's height does not depend on the font", () => {
+  // Nuvio is a webfont, so this screen paints in the fallback first. Without
+  // an explicit line-height the brand block measured 238px in the fallback and
+  // 231px in Nuvio, and being centred, the logo hopped ~3.5px the instant the
+  // font swapped.
+  const css = readFileSync(
+    new URL("../src/styles.css", import.meta.url),
+    "utf8",
+  );
+  for (const rule of ["nuvio-loading-name", "nuvio-loading-label"]) {
+    const block = css.slice(css.indexOf(`.${rule} {`));
+    assert.match(
+      block.slice(0, block.indexOf("}")),
+      /line-height:/,
+      `.${rule} must fix its line box, or a font swap moves the logo`,
+    );
+  }
+});

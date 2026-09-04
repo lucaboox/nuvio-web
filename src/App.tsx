@@ -62,6 +62,7 @@ import {
 import { Hero, MediaRow, PosterCard } from "./components/Media";
 import { Player } from "./components/Player";
 import { LoadingScreen } from "./components/LoadingScreen";
+import { AccentPicker } from "./components/AccentPicker";
 import { DetailsDebugToggle } from "./components/DetailsDebug";
 import { applyResolvedTheme } from "./lib/themeCache";
 import { PersonPage } from "./components/Person";
@@ -4668,38 +4669,11 @@ function SettingsPage({
             )
           }
         />
-        <label className="setting-select-row">
-          <span>
-            <strong>Accent theme</strong>
-            <small>Uses the same theme names and stored value as Nuvio.</small>
-          </span>
-          <select
-            value={settings.selectedTheme}
-            disabled={!settingsReady}
-            onChange={(event) =>
-              onTypedSetting(
-                "theme_settings",
-                "selected_theme",
-                "string",
-                event.target.value,
-              )
-            }
-          >
-            {[
-              "WHITE",
-              "CRIMSON",
-              "OCEAN",
-              "VIOLET",
-              "EMERALD",
-              "AMBER",
-              "ROSE",
-            ].map((theme) => (
-              <option key={theme} value={theme}>
-                {theme[0] + theme.slice(1).toLowerCase()}
-              </option>
-            ))}
-          </select>
-        </label>
+        <AccentPicker
+          value={settings.selectedTheme}
+          disabled={!settingsReady}
+          onChange={(value) => onTypedSetting("theme_settings", "selected_theme", "string", value)}
+        />
         <label className="setting-select-row">
           <span>
             <strong>Desktop navigation</strong>

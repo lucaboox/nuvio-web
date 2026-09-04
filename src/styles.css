@@ -1522,7 +1522,8 @@ a {
   border-radius: 0;
   /* No top padding of its own: that belongs to the sticky header below, which
      has to reach the top of the scrollport to cover what passes under it. */
-  padding: 0 26px max(28px, env(safe-area-inset-bottom));
+  --sheet-inset: 26px;
+  padding: 0 var(--sheet-inset) max(28px, env(safe-area-inset-bottom));
   animation: source-sheet-in 0.16s ease-out;
 }
 /* One column on a phone, two on a desktop: the artwork it belongs to on the
@@ -1677,18 +1678,28 @@ a {
   z-index: 2;
   gap: 12px;
   /*
-   * No fill of its own — only the blur.
+   * A top bar, the same one the settings panel uses.
    *
-   * The sheet behind it is already a 0.82 scrim over blurred artwork, so a
-   * second 0.82 here composited to 0.97: near enough to black, which is
-   * exactly what it looked like. Any scrim at all darkens what is meant to be
-   * the same surface, so the header takes none and blurs instead, which is
-   * what keeps the rows passing beneath it from reading as text.
+   * Two earlier attempts missed the point. Opaque --app-bg read as a black
+   * block; making it transparent let the list scroll through it. Neither was
+   * really about the colour — it was inset from the sides by the sheet's own
+   * padding, so whatever fill it had floated in the middle of the screen
+   * instead of reading as the top of it.
+   *
+   * So it cancels that inset and runs edge to edge, and takes the fill the
+   * app's other top bars take. Something has to be opaque here: the list
+   * scrolls underneath, and rows showing through a header is worse than a
+   * header you can see.
    */
-  background: transparent;
-  backdrop-filter: blur(22px) saturate(118%);
-  -webkit-backdrop-filter: blur(22px) saturate(118%);
-  padding: max(14px, env(safe-area-inset-top)) 0 12px;
+  margin-inline: calc(-1 * var(--sheet-inset));
+  /* The width as well as the offset: the column lays this out as one of its
+     items, so a negative margin alone slid it left without widening it and
+     left the same inset showing on the right. */
+  width: calc(100% + 2 * var(--sheet-inset));
+  background: color-mix(in srgb, var(--app-bg) 94%, transparent);
+  backdrop-filter: blur(18px) saturate(1.1);
+  -webkit-backdrop-filter: blur(18px) saturate(1.1);
+  padding: max(14px, env(safe-area-inset-top)) var(--sheet-inset) 12px;
   border-bottom: 1px solid var(--panel-border);
 }
 /* Beside the artwork, any fill here reads as a black bar laid across it — and
@@ -1699,6 +1710,9 @@ a {
    the same element, so the later one is the one that lands. */
 @media (min-width: 1000px) {
   .source-column > header {
+    margin-inline: 0;
+    width: 100%;
+    padding-inline: 0;
     background: none;
     border-bottom: 0;
   }
@@ -2649,7 +2663,8 @@ a {
     font-size: 10px;
   }
   .source-sheet {
-    padding: 0 14px max(22px, env(safe-area-inset-bottom));
+    --sheet-inset: 14px;
+    padding: 0 var(--sheet-inset) max(22px, env(safe-area-inset-bottom));
   }
   /* The header is pinned now, so its height is spent for the whole scroll.
      At the desktop size the title wrapped beside the picker and cost two

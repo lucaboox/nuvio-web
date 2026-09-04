@@ -1,39 +1,53 @@
 import { runExit } from "./useFadeOut.ts";
 
 /**
- * The loading screen that index.html paints, dismissed rather than replaced.
+ * The one loading screen, painted by index.html and never rebuilt.
  *
- * It lives outside #root so React never owns it. When React rendered its own
- * copy, the swap rebuilt every part of it: the logo was a new <img> and
- * flashed while it decoded, the spinner was a new element so its rotation
- * restarted, and the label changed text. Matching the styles could not fix
- * that, because the fault was the teardown rather than the appearance.
+ * Startup used to show three: "Loading Nuvio" from index.html, "Loading
+ * profiles" while the account loaded, and "Restoring Nuvio" while the profile
+ * hydrated. They looked alike, but each was a different element, so every
+ * handover tore one down and built the next — a fresh <img> that flashed while
+ * it decoded, a fresh spinner whose rotation restarted, and a new line of text
+ * that changed the layout. Three screens in a row, each arriving with a jolt.
  *
- * So React leaves it alone and only ends it. The fade is the same runExit the
- * React overlays use — the element must paint its visible state before the
- * class arrives, and the removal must be timed from the fade rather than from
- * the wait.
+ * So there is one element for the whole of startup, and React only shows and
+ * hides it. It is never removed from the document, because removing it is what
+ * made re-showing it a remount. The label never changes either: a wait is one
+ * wait, whatever the app is doing behind it.
  */
 const ID = "boot-splash";
 
-let dismissing = false;
+let cancel: (() => void) | null = null;
 
-/** True while the static screen is still the one on screen. */
-export function bootSplashPresent(): boolean {
-  return typeof document !== "undefined" && document.getElementById(ID) !== null;
+function node(): HTMLElement | null {
+  return typeof document === "undefined" ? null : document.getElementById(ID);
 }
 
-export function dismissBootSplash(ms: number): void {
-  if (dismissing) return;
-  const node = typeof document === "undefined" ? null : document.getElementById(ID);
-  if (!node) return;
-  dismissing = true;
-  runExit(ms, (phase) => {
+/** True while the static screen exists — false once index.html has changed. */
+export function bootSplashPresent(): boolean {
+  return node() !== null;
+}
+
+export function setBootSplashVisible(visible: boolean, ms: number): void {
+  const element = node();
+  if (!element) return;
+  cancel?.();
+  cancel = null;
+
+  if (visible) {
+    element.hidden = false;
+    element.classList.remove("is-leaving");
+    element.removeAttribute("aria-hidden");
+    return;
+  }
+  if (element.hidden) return;
+
+  cancel = runExit(ms, (phase) => {
     if (phase === "leaving") {
-      node.classList.add("is-leaving");
+      element.classList.add("is-leaving");
       // Announced while it works, silent while it goes.
-      node.setAttribute("aria-hidden", "true");
+      element.setAttribute("aria-hidden", "true");
     }
-    if (phase === "hidden") node.remove();
+    if (phase === "hidden") element.hidden = true;
   });
 }

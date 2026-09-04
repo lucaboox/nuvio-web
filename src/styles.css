@@ -4178,6 +4178,12 @@ body.is-locked {
   background: var(--app-bg, #080a0d);
   color: var(--text, #f5f7f8);
 }
+/* The startup screen is hidden rather than removed: removing it is what made
+   showing it again a remount, and a remount is a flash. The class sets
+   display, so [hidden] needs saying explicitly to win. */
+.nuvio-loading-screen[hidden] {
+  display: none;
+}
 .nuvio-loading-screen.is-overlay {
   position: fixed;
   z-index: 80;

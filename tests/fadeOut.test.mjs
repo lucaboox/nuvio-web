@@ -95,42 +95,25 @@ test("an exit cancelled midway schedules nothing further", () => {
   assert.equal(fake.removal().length, 0);
 });
 
-test("the spinner's offset is read once, not on every render", () => {
-  // A negative animation-delay does not place a running animation at a
-  // position — it shifts it forward by that much. Applied again on a later
-  // render it jumps the spinner ahead, so simply changing the label made it
-  // lurch and appear to speed up: the exact fault the offset exists to fix.
-  const src = readFileSync(
-    new URL("../src/components/LoadingScreen.tsx", import.meta.url),
-    "utf8",
-  );
-  assert.match(
-    src,
-    /useState\(spinnerPhase\)/,
-    "the offset must be lazy initial state, held for the element's life",
-  );
+test("startup has exactly one loading screen", () => {
+  // It used to have three — "Loading Nuvio" from index.html, "Loading
+  // profiles" while the account loaded, "Restoring Nuvio" while the profile
+  // hydrated. They looked alike but were separate elements, so each handover
+  // rebuilt the logo and spinner and changed the label. One element cannot
+  // hand over to itself.
+  const src = readFileSync(new URL("../src/App.tsx", import.meta.url), "utf8");
   assert.doesNotMatch(
     src,
-    /animationDelay:\s*spinnerPhase\(\)/,
-    "calling it in the style object re-applies it on every render",
+    /<LoadingScreen/,
+    "React must not render a second loading screen during startup",
   );
-});
-
-test("the boot brand's height does not depend on the font", () => {
-  // Nuvio is a webfont, so this screen paints in the fallback first. Without
-  // an explicit line-height the brand block measured 238px in the fallback and
-  // 231px in Nuvio, and being centred, the logo hopped ~3.5px the instant the
-  // font swapped.
-  const css = readFileSync(
-    new URL("../src/styles.css", import.meta.url),
+  const html = readFileSync(
+    new URL("../index.html", import.meta.url),
     "utf8",
   );
-  for (const rule of ["nuvio-loading-name", "nuvio-loading-label"]) {
-    const block = css.slice(css.indexOf(`.${rule} {`));
-    assert.match(
-      block.slice(0, block.indexOf("}")),
-      /line-height:/,
-      `.${rule} must fix its line box, or a font swap moves the logo`,
-    );
-  }
+  assert.equal(
+    (html.match(/nuvio-loading-screen/g) || []).length,
+    1,
+    "index.html owns the only loading screen",
+  );
 });

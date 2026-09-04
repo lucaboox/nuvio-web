@@ -61,9 +61,7 @@ import {
 } from "./components/Collections";
 import { Hero, MediaRow, PosterCard } from "./components/Media";
 import { Player } from "./components/Player";
-import { LoadingScreen } from "./components/LoadingScreen";
-import { useFadeOut } from "./lib/useFadeOut.ts";
-import { bootSplashPresent, dismissBootSplash } from "./lib/bootSplash.ts";
+import { setBootSplashVisible } from "./lib/bootSplash.ts";
 import { PlaybackPolicySettings } from "./components/PlaybackPolicySettings";
 import { FusionBadgeSettings } from "./components/FusionBadgeSettings";
 import { resolveAutoStream, selectAutoStream } from "./lib/playbackPolicy";
@@ -619,28 +617,25 @@ export function App() {
    * every branch keeps React on the same node, so the app paints underneath
    * and the screen leaves over it.
    */
-  const starting = booting || profileStarting;
   /*
-   * The static screen from index.html covers boot and the profile start that
-   * follows it, and React only ends it. Rendering its own copy meant tearing
-   * that element down and building another: the logo flashed as a fresh <img>
-   * decoded, and the spinner's rotation restarted. React takes over only for a
-   * profile switch later in the session, where there is no element to disturb.
+   * Startup, as one continuous state.
+   *
+   * Restoring the session, loading the account's profiles and hydrating the
+   * chosen one are three waits in a row, and each used to render its own
+   * loading screen. They looked alike but were different elements, so each
+   * handover rebuilt the logo and the spinner and changed the label — three
+   * screens arriving with a jolt, which is what "it has three splashes" was.
+   *
+   * Treated as one condition, the screen index.html already painted stays up
+   * across all of it and nothing is rebuilt. The gaps between the three are
+   * covered too: they are the same state now, so a moment where one has ended
+   * and the next has not begun cannot uncover the app.
    */
-  const [splashGone, setSplashGone] = useState(() => !bootSplashPresent());
+  const starting =
+    booting || (session !== null && !profilesSettled) || profileStarting;
   useEffect(() => {
-    if (starting || splashGone) return;
-    dismissBootSplash(420);
-    setSplashGone(true);
-  }, [starting, splashGone]);
-  const loadingFade = useFadeOut(starting && splashGone, 420);
-  const loadingScreen = loadingFade.mounted ? (
-    <LoadingScreen
-      overlay
-      leaving={loadingFade.leaving}
-      label={t("boot.restoring")}
-    />
-  ) : null;
+    setBootSplashVisible(starting, 420);
+  }, [starting]);
   const [message, setMessage] = useState("");
   // Status notices are informational, not decisions to act on, so they clear
   // themselves rather than sitting over the page until dismissed.
@@ -2075,14 +2070,12 @@ export function App() {
   if (booting)
     return (
       <>
-        {loadingScreen}
         {updatePrompt}
       </>
     );
   if (!session)
     return (
       <>
-        {loadingScreen}
         <AuthScreen onSession={setSession} />
         {updatePrompt}
       </>
@@ -2092,7 +2085,6 @@ export function App() {
   if (!profile && !pinTarget)
     return (
       <>
-        {loadingScreen}
         {profiles.length > 0 ? (
           <ProfileGate
             profiles={profiles}
@@ -2120,7 +2112,9 @@ export function App() {
             }}
           />
         ) : !profilesSettled ? (
-          <LoadingScreen label="Loading profiles…" />
+          /* Covered by the startup screen; a second one here was a
+             different element, so arriving at it flashed. */
+          null
         ) : !profilesError ? (
           /* Settled and genuinely empty: a brand new account. The gate with
              no profiles in it is exactly the create screen, which is what the
@@ -2192,7 +2186,6 @@ export function App() {
 
   return (
     <>
-      {loadingScreen}
       <div className={`app-shell${playback ? " player-active" : ""}${profileStarting ? " is-loading" : ""}`}>
       {loading && !profileStarting && (
         <div className="app-loading-status" role="status">

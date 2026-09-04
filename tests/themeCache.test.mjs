@@ -51,15 +51,13 @@ test("profile startup keeps the navigation covered through the hydration handoff
   assert.match(app, /const activateProfile[^]*?setProfileStarting\(next !== null\)/);
   const hydrate = app.slice(app.indexOf("const hydrate ="), app.indexOf("const loadProfileData ="));
   assert.doesNotMatch(hydrate, /setProfileStarting\(false\)/);
-  // Restoring the session and starting the profile are one wait to the reader,
-  // so they drive one screen. Rendered as two, the second element replaced the
-  // first and the spinner restarted its rotation partway through.
-  assert.match(app, /const starting = booting \|\| profileStarting;/);
-  // Boot and the profile start that follows it are covered by the static
-  // screen from index.html; React's own overlay is for a later switch, once
-  // that element is gone.
-  assert.match(app, /useFadeOut\(starting && splashGone/);
-  assert.match(app, /dismissBootSplash\(/);
+  // Session restore, profile loading and profile hydration are one condition,
+  // so a gap between any two of them cannot uncover the app mid-startup.
+  assert.match(
+    app,
+    /const starting =\s*booting \|\| \(session !== null && !profilesSettled\) \|\| profileStarting;/,
+  );
+  assert.match(app, /setBootSplashVisible\(starting, \d+\)/);
   assert.match(css, /\.app-shell\.is-loading > \.bottom-nav,[^}]*visibility: hidden/);
 });
 
@@ -68,13 +66,8 @@ test("ordinary navigation and background loading do not show the startup splash"
   assert.doesNotMatch(app, /const pageLoading =/);
   assert.match(app, /profileStarting \? " is-loading" : ""/);
   assert.match(app, /loading && !profileStarting && \([^]*?className="app-loading-status" role="status"/);
-  assert.equal((app.match(/<LoadingScreen\s+overlay/g) || []).length, 1);
-  // That single element is rendered first in every branch App can return, so
-  // React reconciles it as the same node rather than tearing it down when an
-  // early return swaps the tree underneath it. A fade needs the element to
-  // survive the swap; so does an animation that should not restart.
-  assert.ok(
-    (app.match(/\{loadingScreen\}/g) || []).length >= 4,
-    "the loading screen must lead every branch, or it remounts",
-  );
+  // The startup screen is index.html's, hidden rather than removed: removing
+  // it made showing it again a remount, and a remount is the flash.
+  assert.doesNotMatch(app, /<LoadingScreen/);
+  assert.match(app, /setBootSplashVisible/);
 });

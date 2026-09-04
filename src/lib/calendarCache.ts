@@ -51,6 +51,17 @@ type StoredCalendar = {
   savedAt: number;
   scope: string;
   metas: StoredMeta[];
+  /**
+   * True when the library had not finished resolving when this was written.
+   *
+   * Worth storing anyway: leaving the calendar mid-resolve used to save
+   * nothing at all, so the next visit began again from an empty cache and paid
+   * the whole cost a second time. A partial set draws immediately and is
+   * always refreshed behind what it drew, so it can only make the wait
+   * shorter. Absent on records written before this existed, which read as
+   * complete — as they were.
+   */
+  partial?: boolean;
 };
 
 function trim(meta: Meta): StoredMeta {
@@ -114,7 +125,8 @@ export async function readCalendarMetas(
     if (!Array.isArray(stored.metas) || !stored.metas.length) return null;
     return {
       metas: stored.metas.map(restore),
-      stale: Date.now() - stored.savedAt > MAX_AGE_MS,
+      // A partial set is stale by definition: there are titles it never saw.
+      stale: stored.partial === true || Date.now() - stored.savedAt > MAX_AGE_MS,
     };
   } catch {
     // Storage being unavailable costs a slow calendar, not a broken one.
@@ -125,6 +137,7 @@ export async function readCalendarMetas(
 export async function writeCalendarMetas(
   scope: string,
   metas: Meta[],
+  partial = false,
 ): Promise<void> {
   try {
     await platform.storage.set<StoredCalendar>(KEY, {
@@ -132,6 +145,7 @@ export async function writeCalendarMetas(
       savedAt: Date.now(),
       scope,
       metas: metas.map(trim),
+      partial,
     });
   } catch {
     // Same: the calendar still works, it just will not be instant next time.

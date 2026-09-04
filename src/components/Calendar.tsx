@@ -77,10 +77,21 @@ async function resolveLibrary(
   addons: InstalledAddon[],
   enrichment: MetadataEnrichmentConfig,
   cache: Map<string, Meta>,
+  /** Whether this month is still the one on screen — gates publishing only. */
   isCurrent: () => boolean,
   onProgress?: (metas: Meta[]) => void,
   /** Re-resolves titles already cached, for refreshing a stored set. */
   refresh = false,
+  /**
+   * Whether this library is still the one being shown at all.
+   *
+   * Separate from `isCurrent` because they used to be the same check, and the
+   * work stopped whenever the month changed. This metadata is not a property
+   * of the month — the same titles answer every month — so swiping away threw
+   * away requests already in flight and made the next month pay for them
+   * again. Now the resolving continues and only the publishing stops.
+   */
+  isAlive: () => boolean = isCurrent,
 ): Promise<Meta[]> {
   const collect = () =>
     seeds
@@ -102,7 +113,7 @@ async function resolveLibrary(
           const index = cursor;
           cursor += 1;
           if (index >= unresolved.length) return;
-          if (!isCurrent()) return;
+          if (!isAlive()) return;
           const seed = unresolved[index]!;
           const resolved = await resolveMeta(seed, addons).catch(() => seed);
           const enriched = await enrichMetadata(resolved, enrichment).catch(
@@ -112,7 +123,9 @@ async function resolveLibrary(
           // valid for every month, so swiping away while it was in flight must
           // not throw the request away and make the next month pay for it again.
           cache.set(`${seed.type}:${seed.id}`, enriched);
-          if (!isCurrent()) return;
+          // Carry on for the next title even when this month is no longer the
+          // one showing: the cache it fills is what makes that month instant.
+          if (!isCurrent()) continue;
           // Rate limited: publishing per title would re-render the grid once
           // per request for no visible gain.
           const now = Date.now();
@@ -149,11 +162,29 @@ export function CalendarView({
   const [loading, setLoading] = useState(false);
   const [daySheetOpen, setDaySheetOpen] = useState(false);
   const [datasetRevision, setDatasetRevision] = useState(0);
+  const datasetGeneration = useRef(0);
   const [monthDirection, setMonthDirection] = useState<"next" | "previous">(
     "next",
   );
-  const [monthDragX, setMonthDragX] = useState(0);
-  const [monthDragging, setMonthDragging] = useState(false);
+  /*
+   * The drag is written to the element, not held in state.
+   *
+   * A setState per pointermove re-rendered the whole board — six weeks of
+   * cells, each with its releases — for every event the finger produced, which
+   * is why the month lagged behind the drag while the hero, which writes its
+   * transform straight to the node, does not.
+   */
+  const boardRef = useRef<HTMLElement | null>(null);
+  const monthDragging = useRef(false);
+  const [monthDraggingClass, setMonthDraggingClass] = useState(false);
+  const setMonthDragX = (x: number) => {
+    boardRef.current?.style.setProperty("--calendar-drag-x", `${x}px`);
+  };
+  const endMonthDrag = () => {
+    monthDragging.current = false;
+    setMonthDraggingClass(false);
+    boardRef.current?.style.removeProperty("--calendar-drag-x");
+  };
   const [sheetDragY, setSheetDragY] = useState(0);
   const [sheetDragging, setSheetDragging] = useState(false);
   /** Null until storage has been consulted, so nothing resolves before then. */
@@ -186,6 +217,9 @@ export function CalendarView({
     metadataCache.current.clear();
     monthCache.current.clear();
     loadGeneration.current += 1;
+    // Bumped only here, where the library actually changes. Resolving keeps
+    // going across a month change and stops only when this moves.
+    datasetGeneration.current += 1;
     setMonthReleases([]);
     setHydration("pending");
     // Seeded from storage before anything is fetched, so a return visit draws
@@ -210,9 +244,10 @@ export function CalendarView({
     // refetch a library that was already on disk.
     if (hydration !== "done") return;
     const generation = ++loadGeneration.current;
+    const dataset = datasetGeneration.current;
     const cached = monthCache.current.get(prefix);
     setDaySheetOpen(false);
-    setMonthDragX(0);
+    endMonthDrag();
     const forThisMonth = (metas: Meta[]) =>
       buildReleaseCalendar(metas).filter((item) =>
         item.date.startsWith(`${prefix}-`),
@@ -260,16 +295,29 @@ export function CalendarView({
         setMonthReleases(forThisMonth(metas));
       },
       complete && needsRefresh.current,
+      () => dataset === datasetGeneration.current,
     )
       .then((metas) => {
+        // Saved from the cache rather than from `metas`, and before the month
+        // check, because both are empty once this month stopped being the one
+        // on screen. Leaving mid-resolve used to store nothing, so the next
+        // visit started from an empty cache and paid the whole cost again.
+        if (dataset === datasetGeneration.current) {
+          const resolved = items
+            .map((item) => metadataCache.current.get(`${item.type}:${item.id}`))
+            .filter((meta): meta is Meta => !!meta);
+          if (resolved.length)
+            void writeCalendarMetas(
+              scope,
+              resolved,
+              resolved.length < items.length,
+            );
+        }
         if (generation !== loadGeneration.current) return;
         const releases = forThisMonth(metas);
         monthCache.current.set(prefix, releases);
         setMonthReleases(releases);
         needsRefresh.current = false;
-        // Stored only once the library is fully resolved, so a partial set can
-        // never be served as a complete one on the next visit.
-        if (metas.length >= items.length) void writeCalendarMetas(scope, metas);
       })
       .finally(() => {
         if (generation === loadGeneration.current) setLoading(false);
@@ -352,8 +400,7 @@ export function CalendarView({
     gesture.active = false;
     const deltaX = clientX - gesture.x;
     const deltaY = clientY - gesture.y;
-    setMonthDragging(false);
-    setMonthDragX(0);
+    endMonthDrag();
     if (Math.abs(deltaX) >= 52 && Math.abs(deltaX) > Math.abs(deltaY) * 1.12) {
       suppressDayClick.current = true;
       changeMonth(deltaX < 0 ? 1 : -1);
@@ -407,11 +454,9 @@ export function CalendarView({
       <div className="calendar-layout">
         <section
           key={prefix}
-          className={`calendar-board calendar-month-${monthDirection}${monthDragging ? " is-dragging" : ""}`}
+          ref={boardRef}
+          className={`calendar-board calendar-month-${monthDirection}${monthDraggingClass ? " is-dragging" : ""}`}
           aria-label={monthTitle.format(visibleMonth)}
-          style={{
-            "--calendar-drag-x": `${monthDragX}px`,
-          } as CSSProperties}
           onPointerDown={(event) => {
             // Touch only. The board captures the pointer to track a swipe, and
             // a captured pointer delivers its click to the capturing element —
@@ -431,9 +476,14 @@ export function CalendarView({
             if (!gesture.active || gesture.pointerId !== event.pointerId) return;
             const x = event.clientX - gesture.x;
             const y = event.clientY - gesture.y;
-            if (!monthDragging && Math.abs(x) < 7) return;
-            if (!monthDragging && Math.abs(x) <= Math.abs(y)) return;
-            setMonthDragging(true);
+            if (!monthDragging.current && Math.abs(x) < 7) return;
+            if (!monthDragging.current && Math.abs(x) <= Math.abs(y)) return;
+            // One render, at the moment the drag is recognised, for the class
+            // that turns the transition off. The offset itself never renders.
+            if (!monthDragging.current) {
+              monthDragging.current = true;
+              setMonthDraggingClass(true);
+            }
             setMonthDragX(Math.max(-140, Math.min(140, x)));
           }}
           onPointerUp={(event) => {
@@ -441,10 +491,9 @@ export function CalendarView({
               event.currentTarget.releasePointerCapture(event.pointerId);
             finishMonthGesture(event.pointerId, event.clientX, event.clientY);
           }}
-          onPointerCancel={(event) => {
+          onPointerCancel={() => {
             monthGesture.current.active = false;
-            setMonthDragging(false);
-            setMonthDragX(0);
+            endMonthDrag();
           }}
         >
           {loading && !monthReleases.length ? (

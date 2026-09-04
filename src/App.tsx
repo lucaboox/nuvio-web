@@ -3677,7 +3677,7 @@ function AddonSettings({
       </form>
       {error && <div className="notice error">{error}</div>}
       <div className="addon-list-heading">
-        <h2>Installed addons</h2>
+        <h2>{t("settings.card.installedAddons")}</h2>
         <button className="secondary" onClick={onRefresh}>
           Refresh
         </button>
@@ -4513,7 +4513,7 @@ function SettingsPage({
         hidden={category !== "addons"}
       >
         <div className="settings-category-heading">
-          <h2>Content & discovery</h2>
+          <h2>{t("settings.card.contentDiscovery")}</h2>
           <p>
             Manage the Stremio addons used for catalogs, metadata, subtitles,
             and streams. Browser plugin providers are disabled for now.
@@ -4563,7 +4563,7 @@ function SettingsPage({
             means the card is as tall as whichever is showing. */}
         <div className="integration-hub">
             <header>
-              <h2>Integrations</h2>
+              <h2>{t("settings.card.integrations")}</h2>
               <span>Credentials sync separately and securely</span>
             </header>
             <p>
@@ -4633,7 +4633,7 @@ function SettingsPage({
         />
         <label className="setting-select-row">
           <span>
-            <strong>TMDB language</strong>
+            <strong>{t("settings.row.tmdbLanguage")}</strong>
             <small>Language requested for localized metadata.</small>
           </span>
           <select
@@ -4775,7 +4775,7 @@ function SettingsPage({
         hidden={category !== "appearance"}
       >
         <header>
-          <h2>Appearance</h2>
+          <h2>{t("settings.card.appearance")}</h2>
         </header>
         <SettingToggle
           title="AMOLED black"
@@ -4798,7 +4798,7 @@ function SettingsPage({
         />
         <label className="setting-select-row">
           <span>
-            <strong>Desktop navigation</strong>
+            <strong>{t("settings.row.desktopNavigation")}</strong>
             <small>Choose a side rail or a compact navigation row.</small>
           </span>
           <select
@@ -4880,7 +4880,7 @@ function SettingsPage({
         hidden={category !== "home"}
       >
         <header>
-          <h2>Home layout</h2>
+          <h2>{t("settings.card.homeLayout")}</h2>
           <span>{t("common.sharedWithNuvio")}</span>
         </header>
         <p>
@@ -4936,7 +4936,7 @@ function SettingsPage({
         />
         <label className="setting-select-row">
           <span>
-            <strong>Card style</strong>
+            <strong>{t("settings.row.cardStyle")}</strong>
             <small>Use Nuvio's card, wide, or poster layout.</small>
           </span>
           <select
@@ -4953,7 +4953,7 @@ function SettingsPage({
         </label>
         <label className="setting-select-row">
           <span>
-            <strong>Sort mode</strong>
+            <strong>{t("settings.row.sortMode")}</strong>
             <small>
               Streaming keeps upcoming episodes last; split gives them their
               own row.
@@ -5020,13 +5020,13 @@ function SettingsPage({
         hidden={category !== "details"}
       >
         <header>
-          <h2>Details screens</h2>
+          <h2>{t("settings.card.detailScreens")}</h2>
           <span>{t("common.sharedWithNuvio")}</span>
         </header>
         <DetailsDebugToggle />
         <label className="setting-select-row">
           <span>
-            <strong>Background</strong>
+            <strong>{t("settings.row.background")}</strong>
             <small>Choose how artwork continues behind the detail page.</small>
           </span>
           <select
@@ -5043,7 +5043,7 @@ function SettingsPage({
         </label>
         <label className="setting-select-row">
           <span>
-            <strong>Episode cards</strong>
+            <strong>{t("settings.row.episodeCards")}</strong>
             <small>List is denser; horizontal keeps larger artwork and summaries.</small>
           </span>
           <select
@@ -5116,7 +5116,7 @@ function SettingsPage({
         hidden={category !== "playback"}
       >
         <header>
-          <h2>Web-only playback handoff</h2>
+          <h2>{t("settings.card.playbackHandoff")}</h2>
           <span>Stored on this browser only</span>
         </header>
         <label className="setting-select-row">
@@ -5195,11 +5195,11 @@ function SettingsPage({
         hidden={category !== "playback"}
       >
         <header>
-          <h2>Playback</h2>
+          <h2>{t("settings.card.playback")}</h2>
         </header>
         <label className="setting-select-row">
           <span>
-            <strong>Default source addon</strong>
+            <strong>{t("settings.row.defaultSourceAddon")}</strong>
             <small>
               The addon the source list opens filtered to. Kept on this device.
               An addon that returned nothing for a title is skipped, so this can
@@ -5248,7 +5248,7 @@ function SettingsPage({
         />
         <label className="setting-select-row">
           <span>
-            <strong>Resize mode</strong>
+            <strong>{t("settings.row.resizeMode")}</strong>
             <small>Fit preserves the whole frame; Zoom/Fill crop it.</small>
           </span>
           <select
@@ -5271,10 +5271,10 @@ function SettingsPage({
         </label>
       </div>
       <div className="setting-card settings-category-card" hidden={category !== "playback"}>
-        <header><h2>Stream auto-play</h2></header>
+        <header><h2>{t("settings.card.streamAutoPlay")}</h2></header>
         <label className="setting-select-row">
           <span>
-            <strong>Automatic source selection</strong>
+            <strong>{t("settings.row.automaticSource")}</strong>
             <small>Uses Nuvio's MANUAL, FIRST_STREAM, or REGEX_MATCH value.</small>
           </span>
           <select
@@ -5297,7 +5297,7 @@ function SettingsPage({
         {settings.player.autoPlayMode === "REGEX_MATCH" && (
           <label className="setting-text-row">
             <span>
-              <strong>Source regex</strong>
+              <strong>{t("settings.row.sourceRegex")}</strong>
               <small>An invalid expression safely falls back to the source list.</small>
             </span>
             <input
@@ -5333,7 +5333,7 @@ function SettingsPage({
         {settings.player.reuseLastStream && (
           <label className="setting-text-row">
             <span>
-              <strong>Reuse for</strong>
+              <strong>{t("settings.row.reuseFor")}</strong>
               <small>Hours before a remembered link is resolved again. 1 to 720.</small>
             </span>
             <input
@@ -5355,11 +5355,11 @@ function SettingsPage({
         )}
       </div>
       <div className="setting-card settings-category-card" hidden={category !== "playback"}>
-        <header><h2>Next episode</h2></header>
+        <header><h2>{t("settings.card.nextEpisode")}</h2></header>
         <PlaybackPolicySettings section="next" settings={settings.player} ready={settingsReady} onChange={onTypedSetting} />
       </div>
       <div className="setting-card settings-category-card" hidden={category !== "playback"}>
-        <header><h2>Skipping</h2></header>
+        <header><h2>{t("settings.card.skipping")}</h2></header>
         <SettingToggle
           title="Skip intro & recap"
           description="Show skip buttons and allow automatic skipping when segment timings are available."
@@ -5395,11 +5395,11 @@ function SettingsPage({
         hidden={category !== "playback"}
       >
         <header>
-          <h2>Audio & subtitles</h2>
+          <h2>{t("settings.card.audioSubtitles")}</h2>
         </header>
         <label className="setting-select-row">
           <span>
-            <strong>Preferred audio</strong>
+            <strong>{t("settings.row.preferredAudio")}</strong>
             <small>Applied to browser and HLS audio tracks when available.</small>
           </span>
           <select
@@ -5423,7 +5423,7 @@ function SettingsPage({
         </label>
         <label className="setting-select-row">
           <span>
-            <strong>Fallback audio</strong>
+            <strong>{t("settings.row.fallbackAudio")}</strong>
             <small>{t("language.fallbackHint")}</small>
           </span>
           <select
@@ -5447,7 +5447,7 @@ function SettingsPage({
         </label>
         <label className="setting-select-row">
           <span>
-            <strong>Preferred subtitles</strong>
+            <strong>{t("settings.row.preferredSubtitles")}</strong>
             <small>Selects matching embedded browser tracks when present.</small>
           </span>
           <select
@@ -5472,7 +5472,7 @@ function SettingsPage({
         </label>
         <label className="setting-select-row">
           <span>
-            <strong>Fallback subtitles</strong>
+            <strong>{t("settings.row.fallbackSubtitles")}</strong>
             <small>{t("language.fallbackHint")}</small>
           </span>
           <select
@@ -5510,7 +5510,7 @@ function SettingsPage({
         />
       </div>
       <div className="setting-card settings-category-card" hidden={category !== "playback"}>
-        <header><h2>Subtitle rendering</h2></header>
+        <header><h2>{t("settings.card.subtitleRendering")}</h2></header>
         <PlaybackPolicySettings section="render" settings={settings.player} ready={settingsReady} onChange={onTypedSetting} />
         <div className="setting-grid subtitle-grid">
           <label>
@@ -5614,7 +5614,7 @@ function SettingsPage({
         hidden={category !== "playback"}
       >
         <header>
-          <h2>Fusion style badges</h2>
+          <h2>{t("settings.card.fusionBadges")}</h2>
         </header>
         <FusionBadgeSettings serialized={settings.streamBadges.serializedRules || ""} disabled={!settingsReady}
           onSave={(value) => onTypedSetting("stream_badge_settings", "stream_badge_rules", "string", value)} />
@@ -5669,7 +5669,7 @@ function SettingsPage({
         hidden={category !== "app"}
       >
         <header>
-          <h2>Notifications</h2>
+          <h2>{t("settings.card.notifications")}</h2>
         </header>
         <SettingToggle
           title="Episode release alerts"
@@ -5690,7 +5690,7 @@ function SettingsPage({
         hidden={category !== "app"}
       >
         <header>
-          <h2>Account</h2>
+          <h2>{t("settings.card.account")}</h2>
         </header>
         <div className="info-row">
           <UserRound />
@@ -5719,7 +5719,7 @@ function SettingsPage({
         hidden={category !== "app"}
       >
         <header>
-          <h2>App version</h2>
+          <h2>{t("settings.card.appVersion")}</h2>
         </header>
         <UpdateRow />
       </div>
@@ -5728,7 +5728,7 @@ function SettingsPage({
         hidden={category !== "app"}
       >
         <header>
-          <h2>Install as an app</h2>
+          <h2>{t("settings.card.installApp")}</h2>
         </header>
         <p>
           On iPhone or iPad, open Safari’s Share menu and choose{" "}

@@ -20,6 +20,10 @@ test("picker is a named native radio group, fits narrow screens and keeps the ex
   assert.match(picker, /<fieldset[^>]*disabled=\{disabled\}/);
   assert.match(picker, /type="radio" name=\{name\}/);
   assert.match(picker, /checked=\{value === option.value\}/);
+  assert.doesNotMatch(picker, /<Check/);
+  let outline;
+  css.walkRules(".accent-choice input:checked + .accent-swatch", rule => rule.walkDecls("outline", decl => outline = decl.value));
+  assert.equal(outline, "2px solid var(--swatch-color)");
   const app = readFileSync(new URL("../src/App.tsx", import.meta.url), "utf8");
   assert.match(app, /onChange=\{\(value\) => onTypedSetting\("theme_settings", "selected_theme", "string", value\)\}/);
   let columns;

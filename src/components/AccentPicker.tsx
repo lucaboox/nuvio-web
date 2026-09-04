@@ -1,5 +1,4 @@
 import { useId, type CSSProperties } from "react";
-import { Check } from "lucide-react";
 
 export const ACCENT_OPTIONS = [
   { value: "WHITE", label: "White", color: "#e9eef2", ink: "#090b0d" },
@@ -25,7 +24,7 @@ export function AccentPicker({ value, disabled, onChange }: {
         style={{ "--swatch-color": option.color, "--swatch-ink": option.ink } as CSSProperties}>
         <input type="radio" name={name} value={option.value} checked={value === option.value}
           onChange={() => onChange(option.value)} />
-        <span className="accent-swatch" aria-hidden="true"><Check /></span>
+        <span className="accent-swatch" aria-hidden="true" />
         <span className="accent-name">{option.label}</span>
       </label>)}
     </div>

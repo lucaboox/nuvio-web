@@ -3417,14 +3417,14 @@ export function TitleRoulette({
               <div className="library-roulette-actions">
                 <button
                   type="button"
-                  className="secondary-button"
+                  className="secondary"
                   onClick={startRoll}
                 >
                   <Dices /> Roll
                 </button>
                 <button
                   type="button"
-                  className="primary-button"
+                  className="primary"
                   onClick={() => onOpen(winner)}
                 >
                   View details <ChevronRight />
@@ -3443,7 +3443,7 @@ export function TitleRoulette({
               <div className="library-roulette-actions">
                 <button
                   type="button"
-                  className="primary-button"
+                  className="primary"
                   disabled={spinning || !pool.length}
                   onClick={startRoll}
                 >

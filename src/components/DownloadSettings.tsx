@@ -75,7 +75,7 @@ export function DownloadSettings({ downloads }: { downloads: DownloadsApi }) {
           <input readOnly value={chosen || snapshot?.root || "Loading…"} />
           <button
             type="button"
-            className="secondary-button"
+            className="secondary"
             disabled={busy}
             onClick={() => {
               void downloads
@@ -96,7 +96,7 @@ export function DownloadSettings({ downloads }: { downloads: DownloadsApi }) {
       </div>
       <button
         type="button"
-        className="primary-button"
+        className="primary"
         disabled={busy || !moved || active > 0}
         onClick={() => void move()}
       >

@@ -44,14 +44,14 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, State> {
           <div className="crash-actions">
             <button
               type="button"
-              className="primary-button"
+              className="primary"
               onClick={() => window.location.reload()}
             >
               Reload
             </button>
             <button
               type="button"
-              className="secondary-button"
+              className="secondary"
               onClick={() => void navigator.clipboard?.writeText(report)}
             >
               Copy details

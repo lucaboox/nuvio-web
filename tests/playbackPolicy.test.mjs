@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { readFileSync } from "node:fs";
 import { readWebSettings, streamBadgesFor } from "../src/lib/webSettings.ts";
 import { automaticSkipSegment, nextEpisodeDue, selectAutoStream, shouldBlurEpisode, resolveAutoStream } from "../src/lib/playbackPolicy.ts";
 import { nativePlayerPreferences } from "../src/lib/nativePlayerPreferences.ts";
@@ -7,6 +8,13 @@ import { withBlobTypedValue } from "../src/lib/settingsBlob.ts";
 import { parseBadgeImport, readBadgeRules, upsertBadgeImport, normalizeBadgeRules } from "../src/lib/fusionBadges.ts";
 
 const defaults = readWebSettings(null).player;
+test("settings components use the shell-replaced platform entrypoint", () => {
+  for (const file of ["PlaybackPolicySettings", "FusionBadgeSettings"]) {
+    const source = readFileSync(new URL(`../src/components/${file}.tsx`, import.meta.url), "utf8");
+    assert.match(source, /from "\.\.\/platform\/index\.ts"/);
+    assert.doesNotMatch(source, /from "\.\.\/platform"/);
+  }
+});
 const stream = (addonName, title, group) => ({ name: title, title, description: "", addonName, url: "https://example.test/video", behaviorHints: { bingeGroup: group } });
 
 test("skip toggle gates all automatic segment types and safely bounds end credits", () => {

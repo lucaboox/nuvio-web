@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { platform } from "../platform";
+import { platform } from "../platform/index.ts";
 import { safeHttpUrl } from "../lib/security";
 import { normalizeBadgeRules, parseBadgeImport, readBadgeRules, upsertBadgeImport } from "../lib/fusionBadges";
 

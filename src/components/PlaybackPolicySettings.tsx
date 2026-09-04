@@ -1,6 +1,6 @@
 import type { WebPlayerSettings } from "../lib/webSettings";
 import type { SyncPreferenceType } from "../lib/settingsBlob";
-import { platform } from "../platform";
+import { platform } from "../platform/index.ts";
 
 export function PlaybackPolicySettings({ section, settings, ready, addonNames = [], onChange }: {
   section: "next" | "scope" | "skipping" | "render";

@@ -1004,10 +1004,12 @@ a {
     border-radius: 999px;
     font-size: 17px;
   }
+  /* Desktop pinned these to 46 while Play sat at 56, so enlarging one moved
+     them further apart rather than together. Sized with it. */
   .detail-actions > .icon-pill {
-    flex: 0 0 46px;
-    width: 46px;
-    height: 46px;
+    flex: 0 0 58px;
+    width: 58px;
+    height: 58px;
     border-radius: 50%;
   }
 }
@@ -4186,29 +4188,25 @@ body.is-locked {
   justify-content: space-between;
   gap: 14px;
 }
-/* About a fifth larger than it was. This is the primary control on the library
-   page and the scope picker inside Random pick, and at the old size it read as
-   a caption rather than something to press — particularly on a phone, where it
-   was also a small target. */
 .segmented {
   display: inline-flex;
   gap: 3px;
   margin-top: 20px;
-  padding: 5px;
+  padding: 4px;
   border: 1px solid var(--panel-border);
-  border-radius: 16px;
+  border-radius: 14px;
   background: var(--panel-bg);
 }
 .segmented button {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 11px 19px;
+  gap: 7px;
+  padding: 9px 16px;
   border: 0;
-  border-radius: 12px;
+  border-radius: 10px;
   background: none;
   color: #8d97a2;
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   transition: background 0.14s, color 0.14s;
@@ -4218,10 +4216,10 @@ body.is-locked {
   background: #262c34;
 }
 .segmented button i {
-  padding: 2px 8px;
+  padding: 1px 7px;
   border-radius: 20px;
   background: rgba(255, 255, 255, 0.08);
-  font-size: 13px;
+  font-size: 11px;
   font-style: normal;
   font-variant-numeric: tabular-nums;
 }
@@ -6884,16 +6882,21 @@ body.is-locked {
     width: auto;
     margin-top: 14px;
   }
+  /* Kept in step with the movie layout. This row is a couple of pixels
+     tighter because the episode panel takes the width, which is the same
+     relationship it had before either was enlarged — 46 against 48. Scaling
+     one and not the other is what made a series page and a film page look
+     like different apps. */
   .detail-view.has-episode-panel .detail-actions > .primary {
-    min-height: 46px;
+    min-height: 56px;
     flex: 0 0 auto;
-    padding: 13px 21px;
+    padding: 14px 26px;
     border-radius: 999px;
-    font-size: 14px;
+    font-size: 16px;
   }
   .detail-view.has-episode-panel .detail-actions > .icon-pill {
-    width: 46px;
-    height: 46px;
+    width: 56px;
+    height: 56px;
     flex-basis: 46px;
   }
   .detail-view.has-episode-panel .detail-credits {

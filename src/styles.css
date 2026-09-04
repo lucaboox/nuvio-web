@@ -2039,7 +2039,7 @@ a {
 }
 .setting-card {
   background: var(--panel-bg);
-  border: 1px solid #292f36;
+  border: 1px solid var(--panel-border);
   border-radius: 20px;
   padding: 22px;
   margin-top: 18px;
@@ -2084,16 +2084,17 @@ a {
   display: grid;
   gap: 13px;
   padding: 16px 18px;
-  border: 1px solid #262c32;
+  /* The same surface and border as every other settings card. These were a
+     hardcoded pair of their own, so the addons page was the one place in
+     Settings that did not follow the theme. */
+  border: 1px solid var(--panel-border);
   border-radius: 18px;
   background: var(--panel-bg);
 }
+/* Dimmed rather than recoloured. A second background made a disabled addon
+   look like a different kind of card instead of the same card turned off. */
 .addon-card.is-disabled {
-  background: #0c1014;
-}
-.addon-card.is-disabled .addon-card-head > img,
-.addon-card.is-disabled .addon-card-head > div {
-  opacity: 0.5;
+  opacity: 0.55;
 }
 .addon-card-head {
   display: grid;
@@ -8746,12 +8747,16 @@ body.is-locked {
  * nothing underneath worth blurring, and doing it there made the app look slow
  * to start.
  */
+/* The outgoing page goes at once rather than blurring in place. Left visible —
+   even blurred — it reads as "still on the old tab, thinking about it", which
+   is the opposite of what the nav has already said. */
 .content.is-switching > :not(.view-switching) {
-  filter: blur(7px) saturate(0.9);
-  opacity: 0.55;
-  transition: filter 120ms ease, opacity 120ms ease;
+  opacity: 0;
+  transition: opacity 90ms ease;
   pointer-events: none;
 }
+/* Just the spinner. The disc behind it was another shape to notice on a page
+   that is otherwise empty at this moment. */
 .view-switching {
   position: fixed;
   z-index: 60;
@@ -8760,12 +8765,6 @@ body.is-locked {
   transform: translate(-50%, -50%);
   display: grid;
   place-items: center;
-  width: 54px;
-  height: 54px;
-  border-radius: 50%;
-  background: color-mix(in srgb, var(--app-bg) 78%, transparent);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
   pointer-events: none;
 }
 .view-switching .mini-spinner {
@@ -8775,7 +8774,7 @@ body.is-locked {
 }
 @media (prefers-reduced-motion: reduce) {
   /* The spinner still turns — it is the only thing saying work is happening —
-     but the page beneath does not animate into blur. */
+     but the outgoing page does not animate away. */
   .content.is-switching > :not(.view-switching) {
     transition: none;
   }

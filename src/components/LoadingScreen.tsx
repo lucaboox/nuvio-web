@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 /**
  * Where the spinner should be in its rotation right now.
  *
@@ -7,6 +9,14 @@
  * runs — and the restart is the visible jolt in what should be one continuous
  * wait. A negative delay offsets the animation into the position it would have
  * been in had it never stopped.
+ *
+ * Read once per element, at mount, and never on a later render. A negative
+ * delay does not place a running animation at a position; it shifts it forward
+ * by that much. Recomputing on every render therefore jumped the spinner
+ * ahead each time the label changed — which looks like the reset this is meant
+ * to prevent, plus a burst of speed. It also has to run before React commits,
+ * while the element it measures is still the *previous* spinner rather than
+ * this one.
  */
 function spinnerPhase(): string {
   if (typeof document === "undefined") return "0ms";
@@ -37,6 +47,10 @@ export function LoadingScreen({
   leaving?: boolean;
   label?: string;
 }) {
+  // Lazy initial state: evaluated on this element's first render and kept for
+  // its life, so a changing label re-renders the text without touching the
+  // rotation.
+  const [phase] = useState(spinnerPhase);
   return (
     <div
       className={`nuvio-loading-screen${overlay ? " is-overlay" : ""}${leaving ? " is-leaving" : ""}`}
@@ -51,7 +65,7 @@ export function LoadingScreen({
         <span className="nuvio-loading-name">Nuvio</span>
         <i
           className="nuvio-loading-spinner"
-          style={{ animationDelay: spinnerPhase() }}
+          style={{ animationDelay: phase }}
           aria-hidden="true"
         />
         <span className="nuvio-loading-label">{label}</span>

@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { readFileSync } from "node:fs";
 import { runExit } from "../src/lib/useFadeOut.ts";
 
 /** A scheduler that runs nothing until told, so ordering is observable. */
@@ -92,4 +93,25 @@ test("an exit cancelled midway schedules nothing further", () => {
   cancel();
   fake.frames.shift()();
   assert.equal(fake.removal().length, 0);
+});
+
+test("the spinner's offset is read once, not on every render", () => {
+  // A negative animation-delay does not place a running animation at a
+  // position — it shifts it forward by that much. Applied again on a later
+  // render it jumps the spinner ahead, so simply changing the label made it
+  // lurch and appear to speed up: the exact fault the offset exists to fix.
+  const src = readFileSync(
+    new URL("../src/components/LoadingScreen.tsx", import.meta.url),
+    "utf8",
+  );
+  assert.match(
+    src,
+    /useState\(spinnerPhase\)/,
+    "the offset must be lazy initial state, held for the element's life",
+  );
+  assert.doesNotMatch(
+    src,
+    /animationDelay:\s*spinnerPhase\(\)/,
+    "calling it in the style object re-applies it on every render",
+  );
 });

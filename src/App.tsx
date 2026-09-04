@@ -319,50 +319,50 @@ function IntegrationPageHeader({
 
 const SETTINGS_CATEGORIES: Array<{
   key: SettingsCategory;
-  label: string;
-  description: string;
+  labelKey: string;
+  descriptionKey: string;
   icon: typeof Home;
 }> = [
   {
     key: "appearance",
-    label: "settings.appearance",
-    description: "Theme, navigation, and poster cards",
+    labelKey: "settings.appearance",
+    descriptionKey: "settings.desc.appearance",
     icon: Palette,
   },
   {
     key: "home",
-    label: "settings.home",
-    description: "Continue Watching and home presentation",
+    labelKey: "settings.home",
+    descriptionKey: "settings.desc.home",
     icon: Home,
   },
   {
     key: "details",
-    label: "settings.details",
-    description: "Detail page layout and episode cards",
+    labelKey: "settings.details",
+    descriptionKey: "settings.desc.details",
     icon: LayoutGrid,
   },
   {
     key: "addons",
-    label: "settings.contentDiscovery",
-    description: "Manage addons and discovery sources",
+    labelKey: "settings.contentDiscovery",
+    descriptionKey: "settings.desc.addons",
     icon: Puzzle,
   },
   {
     key: "playback",
-    label: "settings.playback",
-    description: "Player, subtitles, sources, and auto-play",
+    labelKey: "settings.playback",
+    descriptionKey: "settings.desc.playback",
     icon: Play,
   },
   {
     key: "integrations",
-    label: "settings.integrations",
-    description: "TMDB, MDBList, and metadata providers",
+    labelKey: "settings.integrations",
+    descriptionKey: "settings.desc.integrations",
     icon: Link2,
   },
   {
     key: "app",
-    label: "settings.account",
-    description: "Profile, notifications, updates, and install",
+    labelKey: "settings.account",
+    descriptionKey: "settings.desc.app",
     icon: UserRound,
   },
 ];
@@ -3629,7 +3629,7 @@ function AddonsPage({
       <div className="page-head">
         <button
           className="circle-button"
-          aria-label="Back to settings"
+          aria-label={t("common.backToSettings")}
           title="Back to settings"
           onClick={onBack}
         >
@@ -4446,21 +4446,21 @@ function SettingsPage({
   );
   return (
     <section className="settings-page" data-settings-category={category}>
-      <h1>Settings</h1>
+      <h1>{t("settings.title")}</h1>
       <div className="settings-desktop-layout">
-      <nav className="settings-category-nav" aria-label="Settings categories">
-        {SETTINGS_CATEGORIES.map(({ key, label, icon: Icon }) => (
+      <nav className="settings-category-nav" aria-label={t("settings.categoriesLabel")}>
+        {SETTINGS_CATEGORIES.map(({ key, labelKey, icon: Icon }) => (
           <button
             key={key}
             type="button"
-            title={t(label)}
-            aria-label={t(label)}
+            title={t(labelKey)}
+            aria-label={t(labelKey)}
             className={category === key ? "active" : ""}
             aria-current={category === key ? "page" : undefined}
             onClick={() => setCategory(key)}
           >
             <Icon />
-            <span>{t(label)}</span>
+            <span>{t(labelKey)}</span>
           </button>
         ))}
       </nav>
@@ -4469,17 +4469,17 @@ function SettingsPage({
           className="mobile-settings-group"
           aria-labelledby="settings-account-group"
         >
-          <span id="settings-account-group">ACCOUNT</span>
+          <span id="settings-account-group">{t("settings.group.account")}</span>
           <div className="mobile-settings-list">
             {SETTINGS_CATEGORIES.filter((item) => item.key === "app").map(
-              ({ key, label, description, icon: Icon }) => (
+              ({ key, labelKey, descriptionKey, icon: Icon }) => (
                 <button
                   key={key}
                   type="button"
                   onClick={() => openMobileCategory(key)}
                 >
                   <i><Icon /></i>
-                  <span><strong>{label}</strong><small>{description}</small></span>
+                  <span><strong>{t(labelKey)}</strong><small>{t(descriptionKey)}</small></span>
                   <ChevronRight />
                 </button>
               ),
@@ -4490,17 +4490,17 @@ function SettingsPage({
           className="mobile-settings-group"
           aria-labelledby="settings-general-group"
         >
-          <span id="settings-general-group">GENERAL</span>
+          <span id="settings-general-group">{t("settings.group.general")}</span>
           <div className="mobile-settings-list">
             {SETTINGS_CATEGORIES.filter((item) => item.key !== "app").map(
-              ({ key, label, description, icon: Icon }) => (
+              ({ key, labelKey, descriptionKey, icon: Icon }) => (
                 <button
                   key={key}
                   type="button"
                   onClick={() => openMobileCategory(key)}
                 >
                   <i><Icon /></i>
-                  <span><strong>{label}</strong><small>{description}</small></span>
+                  <span><strong>{t(labelKey)}</strong><small>{t(descriptionKey)}</small></span>
                   <ChevronRight />
                 </button>
               ),
@@ -4516,14 +4516,14 @@ function SettingsPage({
           <button
             type="button"
             className="circle-button"
-            aria-label="Back to settings"
+            aria-label={t("common.backToSettings")}
             onClick={goBack}
           >
             <ArrowLeft />
           </button>
           <div>
-            <span>SETTINGS</span>
-            <h2>{activeCategory.label}</h2>
+            <span>{t("settings.title").toUpperCase()}</span>
+            <h2>{t(activeCategory.labelKey)}</h2>
           </div>
           <ActiveCategoryIcon aria-hidden="true" />
         </header>

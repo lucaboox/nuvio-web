@@ -1505,9 +1505,11 @@ a {
   width: 100%;
   height: 100%;
   overflow-y: auto;
-  /* Without this, reaching the end of the source list hands the scroll to the
-     detail page behind it. */
-  overscroll-behavior: contain;
+  /* `none`, not `contain`. Contain stops the scroll being handed to the detail
+     page behind, but the sheet still rubber-bands on its own: dragging down at
+     the top pulled the whole sheet away from the top of the screen and showed
+     the page underneath through the gap. `none` refuses both. */
+  overscroll-behavior: none;
   /*
    * The artwork behind, blurred, under a dark scrim — the official client's
    * treatment, at its values: a 22dp blur of the hero with black at 0.82 over
@@ -1642,7 +1644,7 @@ a {
     flex: 1;
     min-height: 0;
     overflow-y: auto;
-    overscroll-behavior: contain;
+    overscroll-behavior: none;
   }
   .source-column > header,
   .source-column > .source-list,
@@ -3148,7 +3150,7 @@ html.native-player-active .player-view.native-player.native-player-loading {
 .subtitle-menu {
   max-height: 344px;
   overflow-y: auto;
-  overscroll-behavior: contain;
+  overscroll-behavior: none;
   scrollbar-width: thin;
 }
 .audio-menu,
@@ -4032,7 +4034,7 @@ img {
 /* The detail overlay scrolls itself, so the page behind it must not: on
    desktop that produced a second scrollbar and let the background move. */
 .detail-view {
-  overscroll-behavior: contain;
+  overscroll-behavior: none;
 }
 /* While a sheet is open this is frozen with `overflow: hidden`, and a frozen
    element has no scroll to contain — but Chromium keeps treating it as a
@@ -4173,7 +4175,7 @@ body.is-locked {
   background: var(--panel-soft); color: inherit; border: 1px solid var(--panel-border);
   border-radius: 8px; padding: 8px 10px; cursor: pointer; flex-shrink: 0;
 }
-.details-debug-resources { overflow-y: auto; overscroll-behavior: contain; min-height: 0; }
+.details-debug-resources { overflow-y: auto; overscroll-behavior: none; min-height: 0; }
 .details-debug-resources > div {
   display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px;
   border-top: 1px solid var(--panel-border); padding: 8px 0;
@@ -5258,7 +5260,7 @@ body.is-locked {
      and a question you cannot reach the buttons of is worse than a scroll. */
   max-height: 100%;
   overflow-y: auto;
-  overscroll-behavior: contain;
+  overscroll-behavior: none;
   margin: auto;
   padding: 26px 26px max(26px, env(safe-area-inset-bottom));
   border: 1px solid #30363d;
@@ -5797,7 +5799,7 @@ body.is-locked {
     z-index: 3;
     inset: 0;
     overflow-y: auto;
-    overscroll-behavior: contain;
+    overscroll-behavior: none;
     /* No padding of its own: the header is the settings panel's, and that one
        runs to the edges and sticks to the top. The card below carries the
        margins instead. */
@@ -6234,7 +6236,7 @@ body.is-locked {
     display: none;
     overflow-x: hidden;
     overflow-y: auto;
-    overscroll-behavior: contain;
+    overscroll-behavior: none;
     background: var(--app-bg);
     -webkit-overflow-scrolling: touch;
   }
@@ -7018,7 +7020,7 @@ body.is-locked {
     padding-right: 8px;
     overflow-x: hidden;
     overflow-y: auto;
-    overscroll-behavior: contain;
+    overscroll-behavior: none;
   }
   .settings-desktop-layout .settings-category-heading {
     margin-top: 0;
@@ -7231,7 +7233,7 @@ body.is-locked {
     min-height: 0;
     flex: 1;
     overflow-y: auto;
-    overscroll-behavior: contain;
+    overscroll-behavior: none;
     gap: 5px;
     padding: 0 5px 12px 0;
     scrollbar-color: #34353a #080809;
@@ -8116,7 +8118,7 @@ body.is-locked {
 .player-episode-list {
   flex: 1;
   overflow-y: auto;
-  overscroll-behavior: contain;
+  overscroll-behavior: none;
   padding: 0 16px max(16px, env(safe-area-inset-bottom));
 }
 

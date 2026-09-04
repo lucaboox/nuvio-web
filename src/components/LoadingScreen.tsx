@@ -9,12 +9,20 @@
  * been in had it never stopped.
  */
 function spinnerPhase(): string {
-  const reduced =
-    typeof matchMedia === "function" &&
-    matchMedia("(prefers-reduced-motion: reduce)").matches;
-  // Must match `animation: spin …` on .nuvio-loading-spinner.
-  const duration = reduced ? 2000 : 850;
-  const elapsed = typeof performance === "undefined" ? 0 : performance.now();
+  if (typeof document === "undefined") return "0ms";
+  // The spinner being replaced, if it is still in the document — during this
+  // render it is, because React has not committed the swap yet.
+  const previous = document.querySelector(".nuvio-loading-spinner");
+  const spin = previous?.getAnimations?.().find((animation) => {
+    const duration = animation.effect?.getComputedTiming().duration;
+    return typeof duration === "number" && duration > 0;
+  });
+  const elapsed = typeof spin?.currentTime === "number" ? spin.currentTime : null;
+  const duration = spin?.effect?.getComputedTiming().duration;
+  if (elapsed === null || typeof duration !== "number") return "0ms";
+  // Asking the animation rather than assuming: the duration doubles under
+  // reduced motion, and the outgoing spinner started whenever its stylesheet
+  // landed rather than at page load, so neither is safe to guess.
   return `-${(elapsed % duration).toFixed(0)}ms`;
 }
 

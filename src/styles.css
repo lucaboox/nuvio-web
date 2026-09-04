@@ -4249,6 +4249,10 @@ body.is-locked {
   border-top-color: var(--accent, #eef2f5);
   border-radius: 50%;
   animation: spin 0.85s linear infinite;
+  /* Promoted so the rotation runs on the compositor. This spins through boot,
+     which is the busiest the main thread ever gets, and an unpromoted
+     transform stutters in exactly that window. */
+  will-change: transform;
 }
 @media (prefers-reduced-motion: reduce) {
   /* This is functional progress feedback, not a decorative transition. Keep

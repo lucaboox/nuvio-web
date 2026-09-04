@@ -4186,25 +4186,29 @@ body.is-locked {
   justify-content: space-between;
   gap: 14px;
 }
+/* About a fifth larger than it was. This is the primary control on the library
+   page and the scope picker inside Random pick, and at the old size it read as
+   a caption rather than something to press — particularly on a phone, where it
+   was also a small target. */
 .segmented {
   display: inline-flex;
   gap: 3px;
   margin-top: 20px;
-  padding: 4px;
-  border: 1px solid #262d35;
-  border-radius: 14px;
-  background: #11151a;
+  padding: 5px;
+  border: 1px solid var(--panel-border);
+  border-radius: 16px;
+  background: var(--panel-bg);
 }
 .segmented button {
   display: flex;
   align-items: center;
-  gap: 7px;
-  padding: 9px 16px;
+  gap: 8px;
+  padding: 11px 19px;
   border: 0;
-  border-radius: 10px;
+  border-radius: 12px;
   background: none;
   color: #8d97a2;
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 600;
   cursor: pointer;
   transition: background 0.14s, color 0.14s;
@@ -4214,10 +4218,10 @@ body.is-locked {
   background: #262c34;
 }
 .segmented button i {
-  padding: 1px 7px;
+  padding: 2px 8px;
   border-radius: 20px;
   background: rgba(255, 255, 255, 0.08);
-  font-size: 11px;
+  font-size: 13px;
   font-style: normal;
   font-variant-numeric: tabular-nums;
 }

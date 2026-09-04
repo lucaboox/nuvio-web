@@ -763,9 +763,19 @@ export function Details({
         // Build the final object while the fixed entry overlay is still up.
         // This prevents addon metadata and integration enrichment from being
         // exposed as two visibly different layouts.
-        completed = await timed(trace, "Stage: metadata enrichment", () => enrichMetadata(next, metadataEnrichment, trace)).catch(
-          () => next,
-        );
+        completed = await timed(trace, "Stage: metadata enrichment", () =>
+          enrichMetadata(next, metadataEnrichment, trace, (withRatings) => {
+            // Ratings that arrived after the page was shown. Merged rather than
+            // replacing, because by now the user may have opened a season and
+            // the rest of this object is the same one they are looking at.
+            if (!live) return;
+            setMeta((current) =>
+              current && current.id === withRatings.id
+                ? { ...current, externalRatings: withRatings.externalRatings }
+                : current,
+            );
+          }),
+        ).catch(() => next);
       } catch {
         // The seed is still a useful details page when an addon is unavailable.
       }

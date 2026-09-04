@@ -38,14 +38,18 @@ const image = (path: unknown, size: string) =>
 const isSeries = (type: string) => /series|show|tv/i.test(type);
 
 const cache = new Map<string, Promise<unknown>>();
-async function fetchJsonWithTimeout(url: string): Promise<unknown> {
-  const response = await platform.request(url, { timeoutMs: 8_000 });
+async function fetchJsonWithTimeout(url: string, timeoutMs = 8_000): Promise<unknown> {
+  const response = await platform.request(url, { timeoutMs });
   if (!response.ok)
     throw new Error(`Metadata provider returned ${response.status}`);
   return JSON.parse(response.body);
 }
 
-async function cachedJson(url: string, trace?: DetailsTrace): Promise<unknown> {
+async function cachedJson(
+  url: string,
+  trace?: DetailsTrace,
+  timeoutMs?: number,
+): Promise<unknown> {
   const cached = cache.has(url);
   // Only known provider routes, never query parameters (which carry API keys).
   const resource = new URL(url);
@@ -54,7 +58,7 @@ async function cachedJson(url: string, trace?: DetailsTrace): Promise<unknown> {
   return timed(trace, label, async () => {
     let request = cache.get(url);
     if (!request) {
-      request = fetchJsonWithTimeout(url);
+      request = fetchJsonWithTimeout(url, timeoutMs);
       cache.set(url, request);
       if (cache.size > 160) cache.delete(cache.keys().next().value as string);
       request.catch(() => cache.delete(url));
@@ -517,6 +521,19 @@ async function enrichEpisodes(
   };
 }
 
+/**
+ * How long MDBList is left alone after it fails.
+ *
+ * A key that has been rate limited fails for every title, and each failure was
+ * costing a full timeout — the same eight seconds, over and over, for ratings
+ * that were never going to arrive. One failure is bad luck; after that it is
+ * worth not asking for a while.
+ */
+const MDBLIST_BACKOFF_MS = 5 * 60 * 1000;
+/** Optional decoration, so it gets a fraction of the budget a real fetch does. */
+const MDBLIST_TIMEOUT_MS = 3_000;
+let mdbListFailedUntil = 0;
+
 async function enrichMdbList(
   meta: Meta,
   imdb: string | undefined,
@@ -524,6 +541,10 @@ async function enrichMdbList(
   trace?: DetailsTrace,
 ): Promise<Meta> {
   if (!config.enabled || !config.apiKey || !imdb) return meta;
+  if (Date.now() < mdbListFailedUntil) {
+    trace?.start("Enrich: MDBList ratings", "skipped, recent failure")("cancelled");
+    return meta;
+  }
   const media = isSeries(meta.type) ? "show" : "movie";
   // The native clients use MDBList's older per-provider POST route. In a web
   // page that request is preflighted because it has a JSON body, and MDBList's
@@ -532,7 +553,13 @@ async function enrichMdbList(
   // browsers and is considerably cheaper than eight separate requests.
   const url = new URL(`https://api.mdblist.com/imdb/${media}/${imdb}/`);
   url.searchParams.set("apikey", config.apiKey);
-  const payload = await cachedJson(url.toString(), trace);
+  let payload: unknown;
+  try {
+    payload = await cachedJson(url.toString(), trace, MDBLIST_TIMEOUT_MS);
+  } catch (error) {
+    mdbListFailedUntil = Date.now() + MDBLIST_BACKOFF_MS;
+    throw error;
+  }
   const fetched = mdbListRatings(payload, config.providers);
   if (!fetched.length) return meta;
 
@@ -649,6 +676,8 @@ export async function enrichMetadata(
   meta: Meta,
   config: MetadataEnrichmentConfig,
   trace?: DetailsTrace,
+  /** Called if ratings arrive after the page has already been shown. */
+  onLateRatings?: (meta: Meta) => void,
 ): Promise<Meta> {
   let next = meta;
   let resolvedImdb = imdbId(meta.id);
@@ -705,7 +734,17 @@ export async function enrichMetadata(
       // Enrichment is optional; addon metadata remains the authoritative fallback.
     }
   }
-  return timed(trace, "Enrich: MDBList ratings", () =>
-    enrichMdbList(next, resolvedImdb, config.mdbList, trace).catch(() => next),
-  );
+  // Not awaited. Ratings are decoration — the page is complete without them —
+  // and waiting cost the whole render: a rate-limited key spent the full
+  // timeout on every title before failing, so the details screen took eight
+  // seconds to show what it already had after one.
+  const settled = next;
+  void timed(trace, "Enrich: MDBList ratings", () =>
+    enrichMdbList(settled, resolvedImdb, config.mdbList, trace),
+  )
+    .then((withRatings) => {
+      if (withRatings !== settled) onLateRatings?.(withRatings);
+    })
+    .catch(() => undefined);
+  return next;
 }

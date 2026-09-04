@@ -5751,6 +5751,12 @@ body.is-locked {
     object-fit: contain;
   }
   .integrations-card.has-page .integration-page {
+    /* Comes in from the right like the panel it opens over. It appeared
+       instantly while everything else slid, which read as a different kind of
+       thing rather than the next screen along — and the swipe that takes it
+       away implies the direction it arrived from. Same keyframes, curve and
+       duration as the settings panel, so the two cannot drift apart. */
+    animation: mobile-settings-panel-in 0.24s cubic-bezier(0.22, 0.8, 0.24, 1);
     position: fixed;
     /* Above the settings panel header, not under it. Below it, a swipe slid
        this layer while the header stayed where it was — the one panel in the
@@ -6703,7 +6709,8 @@ body.is-locked {
   .mobile-detail-header {
     transition: none;
   }
-  .mobile-settings-panel.is-open {
+  .mobile-settings-panel.is-open,
+  .integrations-card.has-page .integration-page {
     animation: none;
   }
 }

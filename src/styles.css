@@ -4069,7 +4069,9 @@ body.is-locked {
   animation: spin 0.85s linear infinite;
 }
 @media (prefers-reduced-motion: reduce) {
-  .nuvio-loading-spinner { animation: none; }
+  /* This is functional progress feedback, not a decorative transition. Keep
+     it visibly active when the OS reduces motion, but rotate more gently. */
+  .nuvio-loading-spinner { animation-duration: 2s; }
 }
 @keyframes veil-in {
   from {

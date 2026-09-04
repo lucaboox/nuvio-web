@@ -51,12 +51,7 @@ test("profile startup keeps the navigation covered through the hydration handoff
   assert.match(app, /const activateProfile[^]*?setProfileStarting\(next !== null\)/);
   const hydrate = app.slice(app.indexOf("const hydrate ="), app.indexOf("const loadProfileData ="));
   assert.doesNotMatch(hydrate, /setProfileStarting\(false\)/);
-  // The overlay is now held past `profileStarting` so it can fade rather than
-  // vanish, so this checks what it is driven by instead of the exact JSX.
-  // `is-loading` still gates the navigation on `profileStarting` itself, so the
-  // nav is not revealed early — it appears behind the overlay as it leaves.
-  assert.match(app, /useFadeOut\(profileStarting,/);
-  assert.match(app, /<LoadingScreen overlay leaving=\{bootOverlay\.leaving\}/);
+  assert.match(app, /\{profileStarting && <LoadingScreen overlay \/>\}/);
   assert.match(css, /\.app-shell\.is-loading > \.bottom-nav,[^}]*visibility: hidden/);
 });
 

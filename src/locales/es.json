@@ -140,6 +140,7 @@
   "settings.title": "Ajustes",
   "sources.addon": "Complemento",
   "sources.allAddons": "Todos los complementos",
+  "sources.back": "Atrás",
   "sources.copyLink": "Copiar enlace",
   "sources.download": "Descargar",
   "sources.downloadSeason": "Descargar temporada {season}",

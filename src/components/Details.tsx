@@ -20,7 +20,7 @@ import {
   Search,
   X,
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { loadStreams, resolveMeta, supports } from "../lib/addons";
 import { assessPlayback, shouldUseRemuxFallback } from "../lib/playback";
 import { safeHttpUrl } from "../lib/security";
@@ -491,7 +491,7 @@ export function Details({
   const [sourceOpen, setSourceOpen] = useState(false);
   // The sources panel is drawn inside this overlay, so the back gesture has to
   // stand down while it is up: a swipe there would otherwise carry both away
-  // at once. The panel closes with its own X.
+  // at once. The panel has its own, below.
   const swipeRef = useSwipeBack<HTMLDivElement>(onClose, !sourceOpen);
   // The cast row pans by drag on desktop, like the catalog rows.
   const castRef = useDragScroll<HTMLDivElement>();
@@ -595,6 +595,22 @@ export function Details({
   const autoPlayTimer = useRef<number | undefined>(undefined);
   const sourceRequest = useRef(0);
   const sourceAbort = useRef<AbortController | null>(null);
+  const closeSource = useCallback(() => {
+    window.clearTimeout(autoPlayTimer.current);
+    sourceAbort.current?.abort();
+    sourceRequest.current += 1;
+    setSourceOpen(false);
+  }, []);
+  /*
+   * The panel leaves the way every other full-screen layer does.
+   *
+   * It used to be the exception: an X in the corner, while the detail page
+   * under it, the person page and the settings panels all closed by swiping
+   * from the edge. The gesture is the same hook, armed only while the panel is
+   * up — the detail page's own is standing down at that point, so the two
+   * cannot both act on one drag.
+   */
+  const sourceSwipeRef = useSwipeBack<HTMLElement>(closeSource, sourceOpen);
   const sourceOpenRef = useRef(sourceOpen);
   sourceOpenRef.current = sourceOpen;
   useEffect(() => () => {
@@ -1514,6 +1530,7 @@ export function Details({
           }}
         >
           <section
+            ref={sourceSwipeRef}
             className="source-sheet"
             onClick={(event) => event.stopPropagation()}
             style={
@@ -1593,14 +1610,10 @@ export function Details({
                   their own row and leave the way out at the top right. */}
               <button
                 className="circle-button"
-                onClick={() => {
-                  window.clearTimeout(autoPlayTimer.current);
-                  sourceAbort.current?.abort();
-                  sourceRequest.current += 1;
-                  setSourceOpen(false);
-                }}
+                aria-label={t("sources.back")}
+                onClick={closeSource}
               >
-                <X />
+                <ArrowLeft />
               </button>
             </header>
             {downloadNote && <div className="sheet-note">{downloadNote}</div>}

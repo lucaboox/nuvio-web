@@ -140,6 +140,7 @@
   "settings.title": "設定",
   "sources.addon": "アドオン",
   "sources.allAddons": "すべてのアドオン",
+  "sources.back": "戻る",
   "sources.copyLink": "リンクをコピー",
   "sources.download": "ダウンロード",
   "sources.downloadSeason": "シーズン {season} をダウンロード",

@@ -140,6 +140,7 @@
   "settings.title": "Impostazioni",
   "sources.addon": "Componente",
   "sources.allAddons": "Tutti i componenti",
+  "sources.back": "Indietro",
   "sources.copyLink": "Copia link",
   "sources.download": "Scarica",
   "sources.downloadSeason": "Scarica la stagione {season}",

@@ -140,6 +140,7 @@
   "settings.title": "Réglages",
   "sources.addon": "Extension",
   "sources.allAddons": "Toutes les extensions",
+  "sources.back": "Retour",
   "sources.copyLink": "Copier le lien",
   "sources.download": "Télécharger",
   "sources.downloadSeason": "Télécharger la saison {season}",

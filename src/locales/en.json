@@ -140,6 +140,7 @@
   "settings.title": "Settings",
   "sources.addon": "Addon",
   "sources.allAddons": "All addons",
+  "sources.back": "Back",
   "sources.copyLink": "Copy link",
   "sources.download": "Download",
   "sources.downloadSeason": "Download season {season}",

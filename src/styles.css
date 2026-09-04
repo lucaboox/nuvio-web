@@ -1676,7 +1676,14 @@ a {
   top: 0;
   z-index: 2;
   gap: 12px;
-  background: var(--app-bg);
+  /* The same scrim and blur as the sheet it sits in, rather than the app's
+     flat background. Opaque --app-bg painted a black bar across the top of a
+     sheet that is otherwise blurred artwork — most obvious on a phone, where
+     there is no side artwork to distract from it. It still has to hide the
+     rows passing beneath, which the scrim does. */
+  background: rgb(6 8 11 / 0.82);
+  backdrop-filter: blur(22px) saturate(118%);
+  -webkit-backdrop-filter: blur(22px) saturate(118%);
   padding: max(14px, env(safe-area-inset-top)) 0 12px;
   border-bottom: 1px solid var(--panel-border);
 }

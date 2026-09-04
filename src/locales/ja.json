@@ -146,6 +146,7 @@
   "sources.downloadSeason": "シーズン {season} をダウンロード",
   "sources.fetching": "アドオンからソースを取得しています…",
   "sources.none": "インストール済みのアドオンからソースは返されませんでした。",
+  "sources.refresh": "ソースを再取得",
   "sources.stillScraping": "検索中 — {addons}",
   "toggle.blurContinueWatching.body": "ネタバレを避けるため、放送済みのものも含めて次のエピソードのサムネイルを隠します。エピソードのサムネイルを有効にしてください。",
   "toggle.blurContinueWatching.title": "「続きを見る」で未視聴をぼかす",

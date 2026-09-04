@@ -146,6 +146,7 @@
   "sources.downloadSeason": "Télécharger la saison {season}",
   "sources.fetching": "Récupération des sources des extensions…",
   "sources.none": "Les extensions installées n’ont renvoyé aucune source.",
+  "sources.refresh": "Actualiser les sources",
   "sources.stillScraping": "Recherche en cours — {addons}",
   "toggle.blurContinueWatching.body": "Masque les vignettes de l’épisode suivant pour éviter les spoilers, y compris pour les épisodes déjà diffusés. Nécessite les vignettes d’épisode.",
   "toggle.blurContinueWatching.title": "Flouter les épisodes non vus dans Reprendre",

@@ -1676,12 +1676,16 @@ a {
   top: 0;
   z-index: 2;
   gap: 12px;
-  /* The same scrim and blur as the sheet it sits in, rather than the app's
-     flat background. Opaque --app-bg painted a black bar across the top of a
-     sheet that is otherwise blurred artwork — most obvious on a phone, where
-     there is no side artwork to distract from it. It still has to hide the
-     rows passing beneath, which the scrim does. */
-  background: rgb(6 8 11 / 0.82);
+  /*
+   * No fill of its own — only the blur.
+   *
+   * The sheet behind it is already a 0.82 scrim over blurred artwork, so a
+   * second 0.82 here composited to 0.97: near enough to black, which is
+   * exactly what it looked like. Any scrim at all darkens what is meant to be
+   * the same surface, so the header takes none and blurs instead, which is
+   * what keeps the rows passing beneath it from reading as text.
+   */
+  background: transparent;
   backdrop-filter: blur(22px) saturate(118%);
   -webkit-backdrop-filter: blur(22px) saturate(118%);
   padding: max(14px, env(safe-area-inset-top)) 0 12px;
@@ -1698,6 +1702,12 @@ a {
     background: none;
     border-bottom: 0;
   }
+}
+/* Dimmed while the addons are being asked, so a second press is plainly not
+   wanted — the button is disabled then, and this is how that reads. */
+.source-sheet-refresh:disabled {
+  opacity: 0.5;
+  cursor: default;
 }
 /* The title takes the slack so the pickers and the way out stay together on
    the right, and both halves may shrink rather than wrapping into height the
@@ -1716,6 +1726,12 @@ a {
   .source-column > header {
     flex-wrap: wrap;
     row-gap: 10px;
+  }
+  /* Leading the row, like the back arrow on every other screen. It sat at the
+     end because it was an X, and an X belongs in the corner it closes from —
+     a back arrow does not. */
+  .source-sheet-back {
+    order: -1;
   }
   .source-sheet-tools {
     order: 1;

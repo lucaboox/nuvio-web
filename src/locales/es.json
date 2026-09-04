@@ -146,6 +146,7 @@
   "sources.downloadSeason": "Descargar temporada {season}",
   "sources.fetching": "Obteniendo fuentes de los complementos…",
   "sources.none": "Los complementos instalados no devolvieron ninguna fuente.",
+  "sources.refresh": "Actualizar fuentes",
   "sources.stillScraping": "Aún buscando — {addons}",
   "toggle.blurContinueWatching.body": "Oculta las miniaturas del siguiente episodio para evitar spoilers, incluidos los episodios ya emitidos. Requiere activar las miniaturas de episodio.",
   "toggle.blurContinueWatching.title": "Difuminar lo no visto en Continuar viendo",

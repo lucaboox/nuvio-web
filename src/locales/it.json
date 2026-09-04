@@ -146,6 +146,7 @@
   "sources.downloadSeason": "Scarica la stagione {season}",
   "sources.fetching": "Recupero delle fonti dai componenti aggiuntivi…",
   "sources.none": "I componenti aggiuntivi installati non hanno restituito fonti.",
+  "sources.refresh": "Aggiorna le fonti",
   "sources.stillScraping": "Ricerca in corso — {addons}",
   "toggle.blurContinueWatching.body": "Nasconde le miniature del prossimo episodio per evitare spoiler, anche per episodi già usciti. Richiede le miniature degli episodi.",
   "toggle.blurContinueWatching.title": "Sfoca i non visti in Continua a guardare",

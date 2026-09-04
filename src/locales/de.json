@@ -146,6 +146,7 @@
   "sources.downloadSeason": "Staffel {season} herunterladen",
   "sources.fetching": "Addon-Quellen werden geladen …",
   "sources.none": "Die installierten Addons haben keine Quellen geliefert.",
+  "sources.refresh": "Quellen aktualisieren",
   "sources.stillScraping": "Wird noch durchsucht — {addons}",
   "toggle.blurContinueWatching.body": "Verbirgt Vorschaubilder der nächsten Episode, um Spoiler zu vermeiden — auch bei bereits gesendeten Episoden. Dafür müssen Episodenbilder aktiviert sein.",
   "toggle.blurContinueWatching.title": "Ungesehene in „Weiterschauen“ unkenntlich machen",

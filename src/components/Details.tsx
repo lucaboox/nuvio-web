@@ -8,6 +8,7 @@ import {
 } from "../lib/episodeRatings";
 import {
   ArrowLeft,
+  RefreshCw,
   Check,
   Copy,
   Download as DownloadIcon,
@@ -1609,11 +1610,25 @@ export function Details({
               {/* Outside the tools group so a phone can wrap the pickers onto
                   their own row and leave the way out at the top right. */}
               <button
-                className="circle-button"
+                className="circle-button source-sheet-back"
                 aria-label={t("sources.back")}
                 onClick={closeSource}
               >
                 <ArrowLeft />
+              </button>
+              {/* Addons are asked again from here. Nothing about a source list
+                  refreshes itself: a debrid cache fills, a release is added,
+                  and the only way to see either was to leave the sheet and
+                  come back. `true` is the same flag the picker uses to mean
+                  "ask, do not reuse what was played last". */}
+              <button
+                className="circle-button source-sheet-refresh"
+                aria-label={t("sources.refresh")}
+                title={t("sources.refresh")}
+                disabled={sourceBusy}
+                onClick={() => void sources(sourceVideo ?? undefined, true)}
+              >
+                <RefreshCw />
               </button>
             </header>
             {downloadNote && <div className="sheet-note">{downloadNote}</div>}

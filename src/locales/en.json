@@ -146,6 +146,7 @@
   "sources.downloadSeason": "Download season {season}",
   "sources.fetching": "Fetching addon sources…",
   "sources.none": "No sources were returned by the installed addons.",
+  "sources.refresh": "Refresh sources",
   "sources.stillScraping": "Still scraping — {addons}",
   "toggle.blurContinueWatching.body": "Hide Next Up episode thumbnails to avoid spoilers, including episodes that have already aired. Enable episode thumbnails to use this option.",
   "toggle.blurContinueWatching.title": "Blur unwatched in Continue Watching",

@@ -60,6 +60,7 @@ import {
 } from "./components/Collections";
 import { Hero, MediaRow, PosterCard } from "./components/Media";
 import { Player } from "./components/Player";
+import { LoadingScreen } from "./components/LoadingScreen";
 import { PersonPage } from "./components/Person";
 import { ProfileSwitcher } from "./components/ProfileSwitcher";
 import {
@@ -2007,10 +2008,7 @@ export function App() {
   if (booting)
     return (
       <>
-        <div className="splash">
-          <img src={`${import.meta.env.BASE_URL}Nuvio-icon.png`} alt="" />
-          <span>Restoring Nuvio…</span>
-        </div>
+        <LoadingScreen label="Restoring Nuvio…" />
         {updatePrompt}
       </>
     );
@@ -2053,9 +2051,7 @@ export function App() {
             }}
           />
         ) : !profilesSettled ? (
-          <div className="splash">
-            <i className="mini-spinner" /> Loading profiles…
-          </div>
+          <LoadingScreen label="Loading profiles…" />
         ) : !profilesError ? (
           /* Settled and genuinely empty: a brand new account. The gate with
              no profiles in it is exactly the create screen, which is what the
@@ -2250,15 +2246,7 @@ export function App() {
           deferredActive !== active ||
           deferredCatalog !== catalog ||
           deferredFolder !== folder) && (
-          <>
-            {/* Veil and spinner are siblings, never nested: iOS rasterises a
-                backdrop-filter element's own children through the same filter,
-                which would blur the spinner along with the page. */}
-            <div className="page-veil" aria-hidden="true" />
-            <div className="page-spinner" role="status" aria-label="Loading">
-              <i />
-            </div>
-          </>
+          <LoadingScreen overlay />
         )}
         {deferredFolder ? (
           <CollectionFolderView

@@ -28,7 +28,18 @@
     <title>Nuvio Web</title>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <!-- Visible while the JS bundle starts; React replaces it with the same
+           branded loading component for session/profile/catalog loading. -->
+      <div class="nuvio-loading-screen" role="status" aria-label="Loading Nuvio">
+        <div class="nuvio-loading-brand">
+          <img src="%BASE_URL%Nuvio-icon.png" width="96" height="96" alt="" />
+          <span class="nuvio-loading-name">Nuvio</span>
+          <i class="nuvio-loading-spinner" aria-hidden="true"></i>
+          <span class="nuvio-loading-label">Loading Nuvio…</span>
+        </div>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

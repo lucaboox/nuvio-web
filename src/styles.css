@@ -4022,26 +4022,54 @@ body.is-locked {
 }
 
 /* ---- Loading indicator ------------------------------------------------ */
-/* Replaces the full-width bar at the top of the window, which read as a
-   browser progress bar rather than part of the app. This sits over the
-   region that is actually loading. */
-/* Sits over the stale panel but under the top bar (z 40) and tab bar (z 60),
-   so the chrome stays sharp and tappable while the body is veiled. */
-.page-veil {
-  position: fixed;
-  z-index: 38;
-  inset: 0;
-  background: rgba(8, 10, 13, 0.55);
-  -webkit-backdrop-filter: blur(17px) saturate(120%);
-  backdrop-filter: blur(17px) saturate(120%);
-  animation: veil-in 0.16s ease-out 0.06s both;
+/* Shared boot and page loading screen: no backdrop blur or layout peeking. */
+.nuvio-loading-screen {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 28px;
+  background: var(--app-bg, #080a0d);
+  color: var(--text, #f5f7f8);
 }
-/* Without the filter the tint alone is too weak to hide the old page, so
-   fall back to a near-opaque background instead. */
-@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  .page-veil {
-    background: rgba(8, 10, 13, 0.93);
-  }
+.nuvio-loading-screen.is-overlay {
+  position: fixed;
+  z-index: 80;
+  inset: 0;
+  /* Opaque immediately: no blurred artwork or half-loaded layout can peek
+     through. Update prompts (z 1000) remain available above this screen. */
+}
+.nuvio-loading-brand {
+  display: grid;
+  justify-items: center;
+  gap: 16px;
+  text-align: center;
+}
+.nuvio-loading-brand img {
+  width: 96px;
+  height: 96px;
+  object-fit: contain;
+}
+.nuvio-loading-name {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.6px;
+}
+.nuvio-loading-label {
+  color: var(--muted, #8f99a3);
+  font-size: 14px;
+}
+.nuvio-loading-spinner {
+  width: 28px;
+  height: 28px;
+  margin-top: 10px;
+  border: 3px solid color-mix(in srgb, currentColor 18%, transparent);
+  border-top-color: var(--accent, #eef2f5);
+  border-radius: 50%;
+  animation: spin 0.85s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .nuvio-loading-spinner { animation: none; }
 }
 @keyframes veil-in {
   from {
@@ -4049,45 +4077,6 @@ body.is-locked {
   }
   to {
     opacity: 1;
-  }
-}
-
-.page-spinner {
-  position: fixed;
-  z-index: 39;
-  top: 50%;
-  left: 50%;
-  display: grid;
-  place-items: center;
-  transform: translate(-50%, -50%);
-  /* Delayed so a switch that resolves in a frame or two never flashes it. */
-  animation: spinner-in 0.18s ease-out 0.1s both;
-  pointer-events: none;
-}
-.page-spinner i {
-  display: block;
-  width: 42px;
-  height: 42px;
-  border: 3px solid rgba(255, 255, 255, 0.16);
-  border-top-color: #eef2f5;
-  border-radius: 50%;
-  animation: spin 0.75s linear infinite;
-}
-@keyframes spinner-in {
-  from {
-    opacity: 0;
-    transform: translate(-50%, -50%) scale(0.85);
-  }
-  to {
-    opacity: 1;
-    transform: translate(-50%, -50%) scale(1);
-  }
-}
-@media (max-width: 760px) {
-  /* Centred in the content area rather than the window, so it is not hidden
-     behind the top bar or the tab bar. */
-  .page-spinner {
-    top: calc(50% + 12px);
   }
 }
 

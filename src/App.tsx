@@ -285,23 +285,35 @@ function IntegrationPageHeader({
   page: (typeof INTEGRATION_PAGES)[number];
   onBack(): void;
 }) {
-  // Kept for desktop, where nothing else offers a way back to the hub. On a
-  // phone the panel header's arrow does that job and CSS hides this one —
-  // two arrows in the same corner said nothing about which went where.
+  /*
+   * The settings panel's own header, worn by an integration.
+   *
+   * This is the only header on a phone — the panel's is behind the layer now —
+   * so it has to be the one the rest of settings uses rather than a title
+   * inside the card. Sharing the class shares the shape: the circle back
+   * button at the left, the eyebrow and title centred, a mark at the right.
+   * Hidden entirely on a desktop, where the row above says all of this and
+   * clicking it again is the way back.
+   */
   return (
-    <header className="integration-page-header">
+    <header className="mobile-settings-panel-header integration-page-header">
       <button
         type="button"
         className="circle-button"
         onClick={onBack}
-        aria-label="Back to integrations"
+        aria-label={t("common.backToSettings")}
       >
         <ArrowLeft />
       </button>
       <div>
+        <span>{t("settings.title").toUpperCase()}</span>
         <h2>{page.label}</h2>
-        <span>{page.description}</span>
       </div>
+      {page.logo ? (
+        <img className="integration-page-mark" src={publicAsset(page.logo)} alt="" />
+      ) : (
+        <HardDrive aria-hidden="true" />
+      )}
     </header>
   );
 }
@@ -4630,11 +4642,11 @@ function SettingsPage({
                   full-screen layer the swipe moves. */}
               {integrationPage === page.key && (
                 <div ref={integrationSwipeRef} className="integration-page">
+                  <IntegrationPageHeader
+                    page={page}
+                    onBack={() => setIntegrationPage(null)}
+                  />
                   <div className="integration-page-card">
-                    <IntegrationPageHeader
-                      page={page}
-                      onBack={() => setIntegrationPage(null)}
-                    />
                     {page.key === "tmdb" && (
                       <>
         <IntegrationCredentialField

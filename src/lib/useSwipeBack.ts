@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 /**
  * iOS-style interactive back gesture for a full-screen overlay.
@@ -40,8 +40,23 @@ export function useSwipeBack<T extends HTMLElement>(
   const gestureEnabled = useRef(enabled);
   gestureEnabled.current = enabled;
 
+  /*
+   * Which node the listeners are on, as state rather than just the ref.
+   *
+   * The effect below used to run once, on the mount of whatever owns the
+   * hook. That works only for an overlay that is always in the document and
+   * merely hidden; for one that is rendered when it opens, the ref is still
+   * empty at that moment, the effect returns early, and the gesture is simply
+   * never attached — silently, because nothing else about the overlay
+   * changes. Reading the ref after every render catches the node whenever it
+   * arrives, and lets go of it when it leaves.
+   */
+  const [node, setNode] = useState<T | null>(null);
+  useLayoutEffect(() => {
+    setNode((current) => (current === ref.current ? current : ref.current));
+  });
+
   useEffect(() => {
-    const node = ref.current;
     if (!node) return;
 
     let active = false;
@@ -151,7 +166,7 @@ export function useSwipeBack<T extends HTMLElement>(
       node.removeEventListener("touchend", onEnd);
       node.removeEventListener("touchcancel", onEnd);
     };
-  }, []);
+  }, [node]);
 
   return ref;
 }

@@ -5737,6 +5737,19 @@ body.is-locked {
    unreachable. Out of the card's flow, so the card keeps the hub's height and
    leaves no empty box behind. */
 @media (max-width: 760px) {
+  /* The card sits under the header, spaced like the rest of the panel's
+     content rather than filling the layer edge to edge. */
+  .integrations-card.has-page .integration-page > .integration-page-card {
+    margin: 12px 16px calc(34px + env(safe-area-inset-bottom));
+  }
+  /* The integration's own mark where a category shows its icon. */
+  .integration-page-header > .integration-page-mark {
+    width: 30px;
+    height: 30px;
+    justify-self: center;
+    border-radius: 8px;
+    object-fit: contain;
+  }
   .integrations-card.has-page .integration-page {
     position: fixed;
     /* Above the settings panel header, not under it. Below it, a swipe slid
@@ -5748,8 +5761,10 @@ body.is-locked {
     inset: 0;
     overflow-y: auto;
     overscroll-behavior: contain;
-    padding: max(14px, env(safe-area-inset-top)) 16px
-      calc(24px + env(safe-area-inset-bottom));
+    /* No padding of its own: the header is the settings panel's, and that one
+       runs to the edges and sticks to the top. The card below carries the
+       margins instead. */
+    padding: 0;
     background: var(--app-bg);
   }
 }

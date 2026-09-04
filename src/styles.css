@@ -4207,10 +4207,17 @@ body.is-locked {
   transition: transform 420ms cubic-bezier(0.22, 0.61, 0.36, 1);
 }
 @media (prefers-reduced-motion: reduce) {
-  /* Decoration only — the app is usable the moment it is behind this — so it
-     is dropped rather than shortened. */
-  .nuvio-loading-screen.is-overlay.is-leaving,
+  /*
+   * The fade stays; only the movement goes.
+   *
+   * "Reduce motion" is about things that travel — that is what provokes
+   * vestibular symptoms — and a cross-fade is the standard substitute for
+   * motion rather than an example of it. Cutting the opacity transition too
+   * would put anyone with the setting on, which is a lot of people on iOS,
+   * back to the hard cut this exists to fix.
+   */
   .nuvio-loading-screen.is-overlay.is-leaving .nuvio-loading-brand {
+    transform: none;
     transition: none;
   }
 }

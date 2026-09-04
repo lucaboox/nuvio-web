@@ -5555,23 +5555,23 @@ body.is-locked {
 :root {
   /* White, and the default. Nuvio's own value, from ThemeColors.kt. */
   --accent: #f5f5f5;
-  --accent-ink: #0d0d0d;
+  --accent-ink: #111111;
   --poster-width: 126px;
   --poster-height: 189px;
   --poster-aspect: 126 / 189;
   --poster-radius: 12px;
 }
-:root[data-nuvio-accent="gold"] { --accent: #e0ac3f; --accent-ink: #171004; --accent-gradient: linear-gradient(145deg, #f6d979, #c8901f); }
-:root[data-nuvio-accent="jade"] { --accent: #2fcf9a; --accent-ink: #04140e; --accent-gradient: linear-gradient(145deg, #4ee0ac, #1aa877); }
-:root[data-nuvio-accent="rose_gold"] { --accent: #e39ba6; --accent-ink: #1a0a0d; --accent-gradient: linear-gradient(145deg, #d98ad1, #f0a98c); }
-:root[data-nuvio-accent="arctic_blue"] { --accent: #3f9df3; --accent-ink: #04101c; --accent-gradient: linear-gradient(145deg, #5fc0ff, #1f74e0); }
-:root[data-nuvio-accent="graphite"] { --accent: #b7bfc8; --accent-ink: #0b0e11; --accent-gradient: linear-gradient(145deg, #d5dbe1, #9aa3ac); }
-:root[data-nuvio-accent="crimson"] { --accent: #e53935; --accent-ink: #fff; }
-:root[data-nuvio-accent="ocean"] { --accent: #1e88e5; --accent-ink: #fff; }
-:root[data-nuvio-accent="violet"] { --accent: #8e24aa; --accent-ink: #fff; }
-:root[data-nuvio-accent="emerald"] { --accent: #43a047; --accent-ink: #fff; }
-:root[data-nuvio-accent="amber"] { --accent: #fb8c00; --accent-ink: #1a0f00; }
-:root[data-nuvio-accent="rose"] { --accent: #d81b60; --accent-ink: #fff; }
+:root[data-nuvio-accent="gold"] { --accent: #ffd45c; --accent-ink: #111111; --accent-gradient: linear-gradient(145deg, #8a5700, #e8a91c, #fff1a8, #ffd45c, #9a6200); }
+:root[data-nuvio-accent="jade"] { --accent: #7bf08d; --accent-ink: #111111; --accent-gradient: linear-gradient(145deg, #7bf08d, #22d37c, #0bbf9a); }
+:root[data-nuvio-accent="rose_gold"] { --accent: #ffb37a; --accent-ink: #111111; --accent-gradient: linear-gradient(145deg, #b75aff, #ec70a9, #ffb37a); }
+:root[data-nuvio-accent="arctic_blue"] { --accent: #4de3ff; --accent-ink: #ffffff; --accent-gradient: linear-gradient(145deg, #4de3ff, #3185f5, #4d55e8); }
+:root[data-nuvio-accent="graphite"] { --accent: #f3f5f7; --accent-ink: #111111; --accent-gradient: linear-gradient(145deg, #f3f5f7, #aab2be, #687381); }
+:root[data-nuvio-accent="crimson"] { --accent: #e53935; --accent-ink: #ffffff; }
+:root[data-nuvio-accent="ocean"] { --accent: #1e88e5; --accent-ink: #ffffff; }
+:root[data-nuvio-accent="violet"] { --accent: #8e24aa; --accent-ink: #ffffff; }
+:root[data-nuvio-accent="emerald"] { --accent: #43a047; --accent-ink: #ffffff; }
+:root[data-nuvio-accent="amber"] { --accent: #fb8c00; --accent-ink: #ffffff; }
+:root[data-nuvio-accent="rose"] { --accent: #d81b60; --accent-ink: #ffffff; }
 .switch input:checked + i,
 .poster-progress i {
   background: var(--accent-gradient, var(--accent));

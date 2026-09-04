@@ -5856,17 +5856,27 @@ body.is-locked {
   align-items: center;
   gap: 14px;
   width: 100%;
-  padding: 14px 4px;
-  border: 0;
-  border-bottom: 1px solid var(--panel-border);
-  background: none;
+  padding: 14px 16px;
+  border: 1px solid var(--panel-border);
+  border-radius: 16px;
+  background: var(--panel-bg);
   color: inherit;
   font: inherit;
   text-align: left;
   cursor: pointer;
 }
-.integration-row:last-of-type {
-  border-bottom: 0;
+/* Each row is its own surface rather than an entry in a ruled list, so an
+   open one and its panel read as a single object you opened. */
+.integration-hub {
+  display: grid;
+  gap: 10px;
+}
+/* Joined to the panel it opened: the seam between them would otherwise draw a
+   line straight through the middle of one thing. */
+.integration-row.is-open {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+  border-bottom-color: transparent;
 }
 .integration-row:hover {
   color: #fff;
@@ -5935,6 +5945,24 @@ body.is-locked {
 .integration-page-header span {
   color: #87919b;
   font-size: 12px;
+}
+@media (min-width: 761px) {
+  /* The row above is the title and the way out — it says which integration
+     this is and clicking it again closes. Repeating both inside the panel put
+     a second heading and a back arrow under the one you just used. */
+  .integration-page-header {
+    display: none;
+  }
+  /* Continues the row rather than floating under it: same width, joined at
+     the seam, so an open integration is one shape instead of a card sitting
+     beneath another card. The negative margin cancels the hub's gap. */
+  .integration-page {
+    margin-top: -10px;
+  }
+  .integration-page-card {
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+  }
 }
 .integration-unavailable p {
   margin: 0 0 12px;
@@ -7030,7 +7058,11 @@ body.is-locked {
   .detail-view.has-episode-panel .detail-actions > .icon-pill {
     width: 56px;
     height: 56px;
-    flex-basis: 46px;
+    /* Basis, not just width: on a flex row the basis decides the main axis,
+       so a stale 46px here drew these 46 wide by 56 tall — ovals beside the
+       round ones on a film's page, which only ever showed on a series
+       because that is the page with the episode panel. */
+    flex-basis: 56px;
   }
   .detail-view.has-episode-panel .detail-credits {
     gap: 28px;

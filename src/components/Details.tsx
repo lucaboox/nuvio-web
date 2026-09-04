@@ -1262,7 +1262,7 @@ export function Details({
             </div>
           )}
           {sectionEnabled("DETAILS") && meta.language && (
-            <div><span className="eyebrow">LANGUAGE</span><strong>{meta.language}</strong></div>
+            <div><span className="eyebrow">{t("details.language")}</span><strong>{languageName(meta.language)}</strong></div>
           )}
           {sectionEnabled("DETAILS") && meta.status && (
             <div><span className="eyebrow">STATUS</span><strong>{meta.status}</strong></div>

@@ -6,8 +6,13 @@ import postcss from "postcss";
 const picker = readFileSync(new URL("../src/components/AccentPicker.tsx", import.meta.url), "utf8");
 const css = postcss.parse(readFileSync(new URL("../src/styles.css", import.meta.url), "utf8"));
 test("swatches match the real theme palette and preserve all seven synced values", () => {
-  const options = [...picker.matchAll(/value: "(\w+)", label: "[^"]+", color: "([^"]+)", ink: "([^"]+)"/g)];
-  assert.equal(options.length, 7);
+  // Multi-line entries too: the gradient accents carry a `swatch` after `ink`,
+  // so the pattern stops at `ink` rather than assuming the object ends there.
+  const options = [...picker.matchAll(/value: "(\w+)", label: "[^"]+",\s*color: "([^"]+)", ink: "([^"]+)"/g)];
+  // Every option must be backed by real tokens; the count itself is not the
+  // point, and pinning it meant adding an accent failed here rather than where
+  // an accent would actually be wrong.
+  assert.ok(options.length >= 7, `only ${options.length} options parsed`);
   for (const [, value, color, ink] of options) {
     const selector = value === "WHITE" ? ":root" : `:root[data-nuvio-accent="${value.toLowerCase()}"]`;
     const tokens = {};

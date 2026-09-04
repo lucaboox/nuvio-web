@@ -3529,9 +3529,27 @@ html.native-player-active .player-view.native-player.native-player-loading {
 /* Director / Writer / Language / Status. The label takes the accent and the
    value stays plain, so the pair reads as a caption and its answer rather than
    one grey run of text. */
+/*
+ * Director / Writer / Language / Status: the label carries the accent, the
+ * answer is plain white.
+ *
+ * Which element is which depends on the layout, and that is the trap. The
+ * stacked one writes `<strong>Language:</strong> English`, so `strong` is the
+ * label. The desktop grid writes `<span class="eyebrow">LANGUAGE</span>
+ * <strong>English</strong>`, so `strong` is the *value* — accenting `strong`
+ * alone therefore coloured the label in one layout and the answer in the
+ * other. The eyebrow is always the label, so it carries the accent, and
+ * `strong` is only accented where no eyebrow precedes it.
+ */
+.detail-credits p,
+.detail-credits strong {
+  color: #f2f5f7;
+}
 .detail-credits strong {
   font-size: 14px;
   line-height: 1.5;
+}
+.detail-credits p > strong {
   color: var(--accent);
 }
 .detail-overview-meta {
@@ -4498,7 +4516,7 @@ body.is-locked {
   border: 1px solid #2a3037;
   border-radius: 12px;
   color: #e3e8ec;
-  background: #171b21;
+  background: #1a1a1a;
   cursor: pointer;
 }
 .discover-filters select:disabled {
@@ -5110,6 +5128,12 @@ body.is-locked {
     width: 44px;
     height: 44px;
   }
+  /* Except the detail actions, which were enlarged deliberately. Left at 44
+     they held a 26px glyph with 9px around it and looked crushed. */
+  .detail-actions > .icon-pill {
+    width: 58px;
+    height: 58px;
+  }
 }
 
 /* The detail view is its own scroller, so body-level locking does not reach
@@ -5519,7 +5543,7 @@ body.is-locked {
   height: 44px;
   border: 1px solid #ffffff30;
   border-radius: 50%;
-  background: var(--swatch-color);
+  background: var(--swatch-fill, var(--swatch-color));
   color: var(--swatch-ink);
 }
 .accent-choice input:checked + .accent-swatch { outline: 2px solid var(--swatch-color); outline-offset: 3px; }
@@ -5536,6 +5560,11 @@ body.is-locked {
   --poster-aspect: 126 / 189;
   --poster-radius: 12px;
 }
+:root[data-nuvio-accent="gold"] { --accent: #e0ac3f; --accent-ink: #171004; }
+:root[data-nuvio-accent="jade"] { --accent: #2fcf9a; --accent-ink: #04140e; }
+:root[data-nuvio-accent="rose_gold"] { --accent: #e39ba6; --accent-ink: #1a0a0d; }
+:root[data-nuvio-accent="arctic_blue"] { --accent: #3f9df3; --accent-ink: #04101c; }
+:root[data-nuvio-accent="graphite"] { --accent: #b7bfc8; --accent-ink: #0b0e11; }
 :root[data-nuvio-accent="crimson"] { --accent: #ef3340; --accent-ink: #fff; }
 :root[data-nuvio-accent="ocean"] { --accent: #3da7e8; --accent-ink: #061016; }
 :root[data-nuvio-accent="violet"] { --accent: #a886f7; --accent-ink: #0e0919; }

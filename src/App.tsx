@@ -123,6 +123,13 @@ import {
   updateReady,
 } from "./lib/appUpdate";
 import {
+  LOCALES,
+  setLanguage,
+  storedLanguage,
+  t,
+  useLanguage,
+} from "./lib/i18n.ts";
+import {
   clearRecentSearches,
   forgetSearch,
   readRecentSearches,
@@ -217,17 +224,19 @@ function currentRoute() {
 
 // Addons is deliberately absent: it is configuration, not a place you browse,
 // so it lives behind Settings rather than taking a slot in the tab bar.
+// `label` is a message key, not the words. It is resolved where it is drawn so
+// the tabs follow the language without this list being rebuilt.
 const nav: Array<{ key: NavKey; label: string; icon: typeof Home }> = [
-  { key: "home", label: "Home", icon: Home },
-  { key: "discover", label: "Discover", icon: Compass },
-  { key: "library", label: "Library", icon: Library },
-  { key: "calendar", label: "Calendar", icon: CalendarDays },
+  { key: "home", label: "nav.home", icon: Home },
+  { key: "discover", label: "nav.discover", icon: Compass },
+  { key: "library", label: "nav.library", icon: Library },
+  { key: "calendar", label: "nav.calendar", icon: CalendarDays },
   // Present only where the shell can save files. Absence removes the tab
   // rather than showing one that explains itself away.
   ...(platform.downloads
-    ? [{ key: "downloads" as NavKey, label: "Downloads", icon: Download }]
+    ? [{ key: "downloads" as NavKey, label: "nav.downloads", icon: Download }]
     : []),
-  { key: "settings", label: "Settings", icon: Settings },
+  { key: "settings", label: "nav.settings", icon: Settings },
 ];
 
 type SettingsCategory =
@@ -484,6 +493,11 @@ export function App() {
    * and `hide_unreleased_content`, so there is no synced field for this and
    * inventing one would be a setting no other Nuvio client would honour.
    */
+  // Re-renders the whole tree when the language changes. `t()` reads a module
+  // variable, so without a subscription the strings would only update when
+  // something else happened to cause a render.
+  useLanguage();
+  const [language, setLanguageChoice] = useState(storedLanguage);
   const [heroEnabled, setHeroEnabled] = useState(
     () => localStorage.getItem("nuvio-web-home-hero") !== "off",
   );
@@ -2149,7 +2163,7 @@ export function App() {
           <button
             key={item.key}
             className={active === item.key ? "active" : ""}
-            title={item.label}
+            title={t(item.label)}
             onClick={() => {
               setActive(item.key);
               setCatalog(null);
@@ -2175,7 +2189,7 @@ export function App() {
             // Deferred by a frame so a click on the list below lands before
             // the list stops existing.
             onBlur={() => window.setTimeout(() => setSearchFocused(false), 120)}
-            placeholder="Search movies and series…"
+            placeholder={t("search.placeholder")}
           />
           <button className="search-submit" data-busy={searching || undefined}>
             {searching ? "…" : "Search"}
@@ -2183,12 +2197,12 @@ export function App() {
           {searchFocused && !query.trim() && recentSearches.length > 0 && (
             <div className="search-history">
               <header>
-                <span>Recent</span>
+                <span>{t("search.recent")}</span>
                 <button
                   type="button"
                   onClick={() => setRecentSearches(clearRecentSearches())}
                 >
-                  Clear
+                  {t("action.clear")}
                 </button>
               </header>
               {recentSearches.map((term) => (
@@ -2371,6 +2385,11 @@ export function App() {
               if (next) localStorage.setItem("nuvio-web-default-source-addon", next);
               else localStorage.removeItem("nuvio-web-default-source-addon");
             }}
+            language={language}
+            onLanguage={(next) => {
+              setLanguageChoice(next);
+              void setLanguage(next);
+            }}
             heroEnabled={heroEnabled}
             onHeroEnabled={(next) => {
               setHeroEnabled(next);
@@ -2424,7 +2443,7 @@ export function App() {
             }}
           >
             <item.icon />
-            <span>{item.label}</span>
+            <span>{t(item.label)}</span>
           </button>
         ))}
       </nav>
@@ -4236,6 +4255,8 @@ function SettingsPage({
   addonNames,
   defaultSourceAddon,
   onDefaultSourceAddon,
+  language,
+  onLanguage,
   heroEnabled,
   onHeroEnabled,
   onTypedSetting,
@@ -4271,6 +4292,9 @@ function SettingsPage({
   addonNames: string[];
   defaultSourceAddon: string;
   onDefaultSourceAddon(next: string): void;
+  /** The interface language, or "system" to follow the browser. */
+  language: string;
+  onLanguage(next: string): void;
   /** Device-local, so it is state here rather than part of the synced blob. */
   heroEnabled: boolean;
   onHeroEnabled(next: boolean): void;
@@ -4861,6 +4885,23 @@ function SettingsPage({
         <p>
           Reorder, rename, show, or hide synced catalogs and collections.
         </p>
+        <label className="setting-select-row">
+          <span>
+            <strong>{t("settings.language.title")}</strong>
+            <small>{t("settings.language.description")}</small>
+          </span>
+          <select
+            value={language}
+            onChange={(event) => onLanguage(event.target.value)}
+          >
+            <option value="system">{t("settings.language.system")}</option>
+            {LOCALES.map((locale) => (
+              <option key={locale.tag} value={locale.tag}>
+                {locale.label}
+              </option>
+            ))}
+          </select>
+        </label>
         <SettingToggle
           title="Show hero section"
           description="The featured carousel at the top of Home. Kept on this device, matching Nuvio — the shared Home layout has no field for it."

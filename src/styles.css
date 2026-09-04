@@ -4185,6 +4185,58 @@ body.is-locked {
   /* Opaque immediately: no blurred artwork or half-loaded layout can peek
      through. Update prompts (z 1000) remain available above this screen. */
 }
+/*
+ * Gives way rather than vanishing.
+ *
+ * The app underneath is already painted by the time this leaves, so fading
+ * reveals a finished page instead of cutting to one. It is held on screen for
+ * the duration by `useFadeOut`; without that React unmounts it on the frame
+ * the profile is ready and there is nothing left to animate.
+ *
+ * The brand lifts slightly as it goes, which reads as the screen stepping back
+ * rather than the lights going out.
+ */
+.nuvio-loading-screen.is-overlay.is-leaving {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 360ms ease;
+}
+.nuvio-loading-screen.is-overlay.is-leaving .nuvio-loading-brand {
+  transform: scale(1.04);
+  transition: transform 360ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+/*
+ * The app arrives rather than appearing.
+ *
+ * The boot screen is an early return, so it cannot fade out — the tree it
+ * belongs to is replaced wholesale. Fading the app in reads as the same
+ * handover from the other side, and costs one animation instead of
+ * restructuring the root.
+ */
+@keyframes app-shell-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.app-shell {
+  animation: app-shell-in 300ms cubic-bezier(0.22, 0.61, 0.36, 1) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  /* Both are pure decoration: the app is usable at once either way, so they
+     are dropped entirely rather than shortened. */
+  .app-shell {
+    animation: none;
+  }
+  .nuvio-loading-screen.is-overlay.is-leaving,
+  .nuvio-loading-screen.is-overlay.is-leaving .nuvio-loading-brand {
+    transition: none;
+  }
+}
 .nuvio-loading-brand {
   display: grid;
   justify-items: center;

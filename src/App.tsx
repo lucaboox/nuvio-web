@@ -122,6 +122,7 @@ import {
   subscribeUpdate,
   updateReady,
 } from "./lib/appUpdate";
+import { useFadeOut } from "./lib/useFadeOut.ts";
 import {
   LOCALES,
   plural,
@@ -602,6 +603,8 @@ export function App() {
   // Set with profile selection, not in its later effect: account hydration
   // finishing must not uncover the navbar before Home starts fetching.
   const [profileStarting, setProfileStarting] = useState(false);
+  // Held for its fade rather than vanishing on the frame the profile is ready.
+  const bootOverlay = useFadeOut(profileStarting, 360);
   const [message, setMessage] = useState("");
   // Status notices are informational, not decisions to act on, so they clear
   // themselves rather than sitting over the page until dismissed.
@@ -2151,7 +2154,9 @@ export function App() {
 
   return (
     <div className={`app-shell${playback ? " player-active" : ""}${profileStarting ? " is-loading" : ""}`}>
-      {profileStarting && <LoadingScreen overlay />}
+      {bootOverlay.mounted && (
+        <LoadingScreen overlay leaving={bootOverlay.leaving} />
+      )}
       {loading && !profileStarting && (
         <div className="app-loading-status" role="status">
           <i className="mini-spinner" aria-hidden="true" />

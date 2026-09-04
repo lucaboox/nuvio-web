@@ -51,6 +51,14 @@ test("profile startup keeps the navigation covered through the hydration handoff
   assert.match(app, /const activateProfile[^]*?setProfileStarting\(next !== null\)/);
   const hydrate = app.slice(app.indexOf("const hydrate ="), app.indexOf("const loadProfileData ="));
   assert.doesNotMatch(hydrate, /setProfileStarting\(false\)/);
-  assert.match(app, /const pageLoading = loading \|\| profileStarting/);
+  assert.match(app, /\{profileStarting && <LoadingScreen overlay \/>\}/);
   assert.match(css, /\.app-shell\.is-loading > \.bottom-nav,[^}]*visibility: hidden/);
+});
+
+test("ordinary navigation and background loading do not show the startup splash", () => {
+  const app = readFileSync(new URL("../src/App.tsx", import.meta.url), "utf8");
+  assert.doesNotMatch(app, /const pageLoading =/);
+  assert.match(app, /profileStarting \? " is-loading" : ""/);
+  assert.match(app, /loading && !profileStarting && \([^]*?className="app-loading-status" role="status"/);
+  assert.equal((app.match(/<LoadingScreen overlay/g) || []).length, 1);
 });

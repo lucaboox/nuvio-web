@@ -1930,10 +1930,8 @@ export function App() {
         openTitle();
         return;
       }
-      // The same veil and spinner every other wait uses. This used to announce
-      // itself in the notice strip, which is where outcomes go — "Added to your
-      // library", "Saved your position" — so a wait arrived looking like
-      // something that had already happened.
+      // Show a small loading status while resolving the source, without
+      // replacing the current page with the app's startup splash.
       setLoading(true);
       // Only the run that still owns the screen puts the spinner away; an
       // overtaken one leaves it to whichever replaced it.
@@ -2122,11 +2120,15 @@ export function App() {
       </>
     );
 
-  const pageLoading = loading || profileStarting ||
-    deferredActive !== active || deferredCatalog !== catalog || deferredFolder !== folder;
   return (
-    <div className={`app-shell${playback ? " player-active" : ""}${pageLoading ? " is-loading" : ""}`}>
-      {pageLoading && <LoadingScreen overlay />}
+    <div className={`app-shell${playback ? " player-active" : ""}${profileStarting ? " is-loading" : ""}`}>
+      {profileStarting && <LoadingScreen overlay />}
+      {loading && !profileStarting && (
+        <div className="app-loading-status" role="status">
+          <i className="mini-spinner" aria-hidden="true" />
+          <span>Loading…</span>
+        </div>
+      )}
       <aside className="rail">
         <img src={`${import.meta.env.BASE_URL}Nuvio-icon.png`} alt="Nuvio" />
         {nav.map((item) => (

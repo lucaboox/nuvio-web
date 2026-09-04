@@ -4079,6 +4079,24 @@ body.is-locked {
 .details-debug-resources [data-status="pending"] > strong { color: var(--accent); }
 .details-debug-resources [data-status="error"] > strong,
 .details-debug-resources [data-status="timeout"] > strong { color: #ff9494; }
+.app-loading-status {
+  position: fixed;
+  top: calc(env(safe-area-inset-top, 0px) + 90px);
+  right: 20px;
+  z-index: 70;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border: 1px solid var(--panel-border);
+  border-radius: 999px;
+  background: var(--app-bg, #080a0d);
+  color: var(--muted);
+  font-size: 13px;
+  pointer-events: none;
+  /* Fast refreshes should not flash even a small indicator. */
+  animation: veil-in 0.15s ease 0.25s both;
+}
 .app-shell.is-loading > .bottom-nav,
 .app-shell.is-loading > .rail,
 .app-shell.is-loading > .topbar {

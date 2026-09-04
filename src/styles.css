@@ -6607,18 +6607,18 @@ body.is-locked {
     font-size: 13px;
   }
 
-  /* Settings uses the same icon language as mobile, but as a compact sticky
-     rail. The actual forms stay readable instead of stretching to 1500px. */
+  /* Desktop categories have visible labels beside the same icons as mobile.
+     The actual forms stay readable instead of stretching to 1500px. */
   .content:has(.settings-page) {
     height: 100dvh;
     overflow: hidden;
   }
   .settings-page {
     display: flex;
-    width: min(100%, 980px);
+    width: min(100%, 1040px);
     height: 100%;
     min-height: 0;
-    max-width: 980px;
+    max-width: 1040px;
     flex-direction: column;
     margin-top: 0;
     margin-bottom: 0;
@@ -6626,7 +6626,7 @@ body.is-locked {
   }
   .settings-desktop-layout {
     display: grid;
-    grid-template-columns: 72px minmax(0, 780px);
+    grid-template-columns: clamp(180px, 19vw, 216px) minmax(0, 780px);
     min-height: 0;
     flex: 1 1 auto;
     align-items: stretch;
@@ -6638,20 +6638,25 @@ body.is-locked {
   .settings-desktop-layout .settings-category-nav {
     position: static;
     display: grid;
-    width: 72px;
+    width: 100%;
     height: fit-content;
+    max-height: 100%;
     align-self: start;
     margin: 0;
     padding: 6px;
-    overflow: visible;
+    overflow-x: hidden;
+    overflow-y: auto;
     border-radius: 22px;
   }
   .settings-desktop-layout .settings-category-nav button {
     display: grid;
-    width: 58px;
+    grid-template-columns: 21px minmax(0, 1fr);
+    gap: 12px;
+    width: 100%;
     min-height: 54px;
-    padding: 0;
-    place-items: center;
+    padding: 10px 12px;
+    align-items: center;
+    text-align: left;
     border-radius: 17px;
   }
   .settings-desktop-layout .settings-category-nav button svg {
@@ -6659,11 +6664,10 @@ body.is-locked {
     height: 21px;
   }
   .settings-desktop-layout .settings-category-nav button span {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip: rect(0 0 0 0);
+    min-width: 0;
+    line-height: 1.35;
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
   .settings-desktop-layout .mobile-settings-panel {
     display: block;

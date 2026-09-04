@@ -1959,19 +1959,36 @@ a {
 .auth-card {
   position: relative;
   width: min(470px, 100%);
-  background: #111519e8;
-  border: 1px solid #2a3138;
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
   border-radius: 26px;
   padding: 38px;
   box-shadow: 0 30px 80px #0008;
+  /* Centred: the wordmark, the line under it and the form all share one axis
+     rather than the logo sitting alone against the left edge. */
+  text-align: center;
 }
 .auth-logo {
   width: 126px;
+  /* An image ignores text-align on its parent unless it is a block. */
+  display: block;
+  margin-inline: auto;
 }
 .auth-card h1 {
-  font-size: 38px;
+  /* One line, always. "anywhere." wrapping on its own read as a mistake, and
+     the headline is short enough that shrinking it slightly on a narrow card
+     is better than breaking it. clamp scales with the card, not the window,
+     so it stops shrinking once it fits. */
+  font-size: clamp(26px, 7.4vw, 38px);
   line-height: 1.06;
   margin: 14px 0;
+  text-wrap: nowrap;
+}
+/* The form controls stay left-aligned inside the centred card: a label above a
+   field belongs at the field's edge, not floating over its middle. */
+.auth-card form,
+.auth-card label {
+  text-align: left;
 }
 .auth-card > p,
 .security-note {
@@ -2008,12 +2025,16 @@ a {
 }
 .check-row {
   display: flex;
-  gap: 11px;
-  align-items: flex-start;
+  gap: 14px;
+  /* Centred against the switch rather than the top of the text: the label runs
+     to two lines and the control sat level with the first one. */
+  align-items: center;
+  justify-content: space-between;
 }
-.check-row input {
-  width: 18px;
-  height: 18px;
+/* The switch brings its own sizing; this rule was for the checkbox it
+   replaced, and would have shrunk the hidden input's stand-in. */
+.check-row > span:first-child {
+  min-width: 0;
 }
 .check-row span,
 .check-row small {

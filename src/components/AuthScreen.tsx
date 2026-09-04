@@ -31,7 +31,23 @@ export function AuthScreen({ onSession }: { onSession(session: Session): void })
       <h1>Your Nuvio, anywhere.</h1>
       <p>Install it from Safari or Chrome and keep your profiles, addons, and library in sync.</p>
       <form onSubmit={submit}>
-        <label className="check-row"><input type="checkbox" checked={selfHosted} onChange={(event) => setSelfHosted(event.target.checked)} /><span><strong>Self-hosted backend</strong><small>Use your own Nuvio server and publishable key.</small></span></label>
+        <label className="check-row">
+          <span>
+            <strong>Self-hosted backend</strong>
+            <small>Use your own Nuvio server and publishable key.</small>
+          </span>
+          {/* The same switch the rest of the app uses. A bare checkbox here was
+              the only one left, and it is a far smaller target than the control
+              it sits above. */}
+          <span className="switch">
+            <input
+              type="checkbox"
+              checked={selfHosted}
+              onChange={(event) => setSelfHosted(event.target.checked)}
+            />
+            <i />
+          </span>
+        </label>
         {selfHosted && <div className="host-fields"><label>Backend URL<input type="url" value={backendUrl} onChange={(event) => setBackendUrl(event.target.value)} placeholder="https://nuvio.example.com" required /></label><label>Publishable key<input type="password" value={key} onChange={(event) => setKey(event.target.value)} required /></label></div>}
         <label>Email<input type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} required /></label>
         <label>Password<div className="password-field"><input type={showPassword ? "text" : "password"} autoComplete="current-password" minLength={6} value={password} onChange={(event) => setPassword(event.target.value)} required /><button type="button" aria-label={showPassword ? "Hide password" : "Show password"} title={showPassword ? "Hide password" : "Show password"} aria-pressed={showPassword} onClick={() => setShowPassword((value) => !value)}>{showPassword ? <EyeOff /> : <Eye />}</button></div></label>

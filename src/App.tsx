@@ -4035,8 +4035,8 @@ function HomeLayoutSettings({
   return (
     <>
       <SettingToggle
-        title="Show catalog type"
-        description="Append Movies, Series, or another media type to catalog names."
+        title={t("toggle.showCatalogType.title")}
+        description={t("toggle.showCatalogType.body")}
         checked={effective.showCatalogType}
         disabled={disabled}
         onChange={(showCatalogType) =>
@@ -4044,8 +4044,8 @@ function HomeLayoutSettings({
         }
       />
       <SettingToggle
-        title="Hide unreleased content"
-        description="Hide catalog titles whose known release date is still in the future."
+        title={t("toggle.hideUnreleased.title")}
+        description={t("toggle.hideUnreleased.body")}
         checked={effective.hideUnreleasedContent}
         disabled={disabled}
         onChange={(hideUnreleasedContent) =>
@@ -4618,8 +4618,8 @@ function SettingsPage({
           onSave={(value) => onProviderCredential("tmdb", value)}
         />
         <SettingToggle
-          title="TMDB enrichment"
-          description="Enable TMDB enrichment when a key is configured."
+          title={t("toggle.tmdbEnrichment.title")}
+          description={t("toggle.tmdbEnrichment.body")}
           checked={settings.integrations.tmdbEnabled}
           disabled={!settingsReady || !tmdbKey}
           onChange={(next) =>
@@ -4688,8 +4688,8 @@ function SettingsPage({
           onSave={(value) => onProviderCredential("mdblist", value)}
         />
         <SettingToggle
-          title="MDBList ratings"
-          description="Enable the synchronized rating enrichment when a key is configured."
+          title={t("toggle.mdbListRatings.title")}
+          description={t("toggle.mdbListRatings.body")}
           checked={settings.integrations.mdbListEnabled}
           disabled={!settingsReady || !mdbListKey}
           onChange={(next) =>
@@ -4859,8 +4859,8 @@ function SettingsPage({
           </label>
         </div>
         <SettingToggle
-          title="Landscape catalog cards"
-          description="Use wide artwork proportions in catalog rows and grids."
+          title={t("toggle.landscapeCards.title")}
+          description={t("toggle.landscapeCards.body")}
           checked={settings.poster.catalogLandscapeModeEnabled}
           disabled={!settingsReady}
           onChange={(next) =>
@@ -4868,8 +4868,8 @@ function SettingsPage({
           }
         />
         <SettingToggle
-          title="Hide poster labels"
-          description="Hide titles and years below poster cards."
+          title={t("toggle.hidePosterLabels.title")}
+          description={t("toggle.hidePosterLabels.body")}
           checked={settings.poster.hideLabelsEnabled}
           disabled={!settingsReady}
           onChange={(next) => onPosterSetting({ hideLabelsEnabled: next })}
@@ -4926,8 +4926,8 @@ function SettingsPage({
           <span>{t("common.sharedWithNuvio")}</span>
         </header>
         <SettingToggle
-          title="Show Continue Watching"
-          description="Show your synced resume and next-up row on Home."
+          title={t("toggle.showContinueWatching.title")}
+          description={t("toggle.showContinueWatching.body")}
           checked={settings.continueWatching.isVisible}
           disabled={!settingsReady}
           onChange={(next) =>
@@ -4972,8 +4972,8 @@ function SettingsPage({
           </select>
         </label>
         <SettingToggle
-          title="Continue from furthest episode"
-          description="Choose Next Up after the furthest watched episode instead of the most recently watched one."
+          title={t("toggle.furthestEpisode.title")}
+          description={t("toggle.furthestEpisode.body")}
           checked={settings.continueWatching.upNextFromFurthestEpisode}
           disabled={!settingsReady}
           onChange={(next) =>
@@ -4981,8 +4981,8 @@ function SettingsPage({
           }
         />
         <SettingToggle
-          title="Use episode thumbnails"
-          description="Use episode artwork for Card and Wide layouts."
+          title={t("toggle.episodeThumbnails.title")}
+          description={t("toggle.episodeThumbnails.body")}
           checked={settings.continueWatching.useEpisodeThumbnails}
           disabled={!settingsReady}
           onChange={(next) =>
@@ -4992,8 +4992,8 @@ function SettingsPage({
           }
         />
         <SettingToggle
-          title="Show unaired Next Up"
-          description="Include a future episode when its release date is known."
+          title={t("toggle.unairedNextUp.title")}
+          description={t("toggle.unairedNextUp.body")}
           checked={settings.continueWatching.showUnairedNextUp}
           disabled={!settingsReady}
           onChange={(next) =>
@@ -5001,8 +5001,8 @@ function SettingsPage({
           }
         />
         <SettingToggle
-          title="Blur unwatched in Continue Watching"
-          description="Hide Next Up episode thumbnails to avoid spoilers, including episodes that have already aired. Enable episode thumbnails to use this option."
+          title={t("toggle.blurContinueWatching.title")}
+          description={t("toggle.blurContinueWatching.body")}
           checked={settings.continueWatching.blurNextUp}
           disabled={
             !settingsReady ||
@@ -5058,8 +5058,8 @@ function SettingsPage({
           </select>
         </label>
         <SettingToggle
-          title="Blur unwatched episodes"
-          description="Hide episode thumbnail spoilers until an episode is marked watched."
+          title={t("toggle.blurUnwatched.title")}
+          description={t("toggle.blurUnwatched.body")}
           checked={settings.metaScreen.blurUnwatchedEpisodes}
           disabled={!settingsReady}
           onChange={(next) =>
@@ -5219,8 +5219,8 @@ function SettingsPage({
           </select>
         </label>
         <SettingToggle
-          title="Loading overlay"
-          description="Show the buffering spinner while the video is waiting."
+          title={t("toggle.loadingOverlay.title")}
+          description={t("toggle.loadingOverlay.body")}
           checked={settings.player.showLoadingOverlay}
           disabled={!settingsReady}
           onChange={(next) =>
@@ -5233,8 +5233,8 @@ function SettingsPage({
           }
         />
         <SettingToggle
-          title="Parental guide"
-          description="Show the title's age rating in the player overlay."
+          title={t("toggle.parentalGuide.title")}
+          description={t("toggle.parentalGuide.body")}
           checked={settings.player.showParentalGuide}
           disabled={!settingsReady}
           onChange={(next) =>
@@ -5317,8 +5317,8 @@ function SettingsPage({
         )}
         <PlaybackPolicySettings section="scope" settings={settings.player} ready={settingsReady} addonNames={addonNames} onChange={onTypedSetting} />
         <SettingToggle
-          title="Reuse last source"
-          description="Plays the link an episode was last watched with instead of asking the addon again. The source list is still one tap away."
+          title={t("toggle.reuseLastSource.title")}
+          description={t("toggle.reuseLastSource.body")}
           checked={settings.player.reuseLastStream}
           disabled={!settingsReady}
           onChange={(next) =>
@@ -5361,8 +5361,8 @@ function SettingsPage({
       <div className="setting-card settings-category-card" hidden={category !== "playback"}>
         <header><h2>{t("settings.card.skipping")}</h2></header>
         <SettingToggle
-          title="Skip intro & recap"
-          description="Show skip buttons and allow automatic skipping when segment timings are available."
+          title={t("toggle.skipIntro.title")}
+          description={t("toggle.skipIntro.body")}
           checked={settings.player.skipIntroEnabled}
           disabled={!settingsReady}
           onChange={(next) =>
@@ -5495,8 +5495,8 @@ function SettingsPage({
           </select>
         </label>
         <SettingToggle
-          title="Use forced subtitles"
-          description="Prefer forced subtitles when the audio already matches the subtitle language; if there is no forced track, show nothing."
+          title={t("toggle.useForcedSubtitles.title")}
+          description={t("toggle.useForcedSubtitles.body")}
           checked={settings.player.subtitleUseForcedSubtitles}
           disabled={!settingsReady}
           onChange={(next) =>
@@ -5581,8 +5581,8 @@ function SettingsPage({
           </label>
         </div>
         <SettingToggle
-          title="Bold subtitles"
-          description="Uses the synchronized subtitle font weight."
+          title={t("toggle.boldSubtitles.title")}
+          description={t("toggle.boldSubtitles.body")}
           checked={settings.player.subtitleBold}
           disabled={!settingsReady}
           onChange={(next) =>
@@ -5595,8 +5595,8 @@ function SettingsPage({
           }
         />
         <SettingToggle
-          title="Subtitle outline"
-          description="Adds a contrast outline around browser-rendered cues."
+          title={t("toggle.subtitleOutline.title")}
+          description={t("toggle.subtitleOutline.body")}
           checked={settings.player.subtitleOutlineEnabled}
           disabled={!settingsReady}
           onChange={(next) =>
@@ -5619,8 +5619,8 @@ function SettingsPage({
         <FusionBadgeSettings serialized={settings.streamBadges.serializedRules || ""} disabled={!settingsReady}
           onSave={(value) => onTypedSetting("stream_badge_settings", "stream_badge_rules", "string", value)} />
         <SettingToggle
-          title="File-size badges"
-          description="Show the stream's reported size beside imported badges."
+          title={t("toggle.fileSizeBadges.title")}
+          description={t("toggle.fileSizeBadges.body")}
           checked={settings.streamBadges.showFileSizeBadges}
           disabled={!settingsReady}
           onChange={(next) =>
@@ -5672,8 +5672,8 @@ function SettingsPage({
           <h2>{t("settings.card.notifications")}</h2>
         </header>
         <SettingToggle
-          title="Episode release alerts"
-          description="Syncs the exact raw notification payload used by Nuvio. Browser delivery still requires notification permission and web push support."
+          title={t("toggle.releaseAlerts.title")}
+          description={t("toggle.releaseAlerts.body")}
           checked={settings.episodeReleaseAlerts}
           disabled={!settingsReady}
           onChange={(next) =>

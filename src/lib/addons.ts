@@ -106,13 +106,20 @@ async function fetchJson<T>(
   url: string,
   timeoutMs = 14_000,
   signal?: AbortSignal,
+  debug?: { trace: import("./detailsDebug").DetailsTrace; label: string },
 ): Promise<T> {
   safeAddonUrl(url);
+  const queued = debug?.trace.start(`${debug.label}: host queue`);
   return limitPerHost(url, async () => {
+    queued?.();
     for (let attempt = 0; ; attempt += 1) {
+      const finish = debug?.trace.start(`${debug.label}: request ${attempt + 1}`, `${timeoutMs / 1000}s timeout`);
       try {
-        return await fetchJsonOnce<T>(url, timeoutMs, signal);
+        const value = await fetchJsonOnce<T>(url, timeoutMs, signal);
+        finish?.();
+        return value;
       } catch (error) {
+        finish?.("error");
         const status = (error as { status?: number }).status;
         if (
           attempt >= MAX_RETRIES ||
@@ -123,10 +130,12 @@ async function fetchJson<T>(
           throw error;
         // The host asked for later, so wait the time it named rather than
         // trying again straight away and earning another 429.
+        const backoff = debug?.trace.start(`${debug.label}: retry wait`);
         await wait(
           retryAfterMs((error as { retryAfter?: string | null }).retryAfter, attempt),
           signal,
         );
+        backoff?.();
       }
     }
   });
@@ -826,6 +835,7 @@ export async function loadCatalog(
 export async function resolveMeta(
   seed: Meta,
   addons: InstalledAddon[],
+  trace?: import("./detailsDebug").DetailsTrace,
 ): Promise<Meta> {
   const ordered = [...addons].sort(
     (left, right) =>
@@ -839,14 +849,20 @@ export async function resolveMeta(
       !supports(addon.manifest, "meta", seed.type)
     )
       continue;
+    const finish = trace?.start(`Addon metadata: ${addon.manifest.name}`);
     try {
       const payload = await fetchJson<{ meta?: Record<string, unknown> }>(
         resourceUrl(addon.url, "meta", seed.type, seed.id),
+        undefined,
+        undefined,
+        trace ? { trace, label: addon.manifest.name } : undefined,
       );
+      finish?.();
       if (payload.meta)
         return mapMeta(payload.meta, addon.url, addon.manifest.name);
     } catch {
       // Continue through metadata providers in installed priority order.
+      finish?.("error");
     }
   }
   return seed;

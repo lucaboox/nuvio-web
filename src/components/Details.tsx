@@ -21,6 +21,8 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 import { loadStreams, resolveMeta, supports } from "../lib/addons";
 import { assessPlayback, shouldUseRemuxFallback } from "../lib/playback";
 import { safeHttpUrl } from "../lib/security";
+import { DetailsTrace, detailsDebugEnabled, timed, type TimingStatus } from "../lib/detailsDebug";
+import { DetailsDebugPanel } from "./DetailsDebug";
 import {
   enrichMetadata,
   loadSeasonCast,
@@ -252,41 +254,45 @@ function backdropColor(url: string): Promise<string> {
   });
 }
 
-function preloadImage(url: string): Promise<void> {
+function preloadImage(url: string, trace?: DetailsTrace, label = "Artwork"): Promise<void> {
+  const endTiming = trace?.start(label, "download + decode (5s limit)");
   return new Promise((resolve) => {
     const image = new Image();
     let settled = false;
-    const finish = () => {
+    const finish = (status: TimingStatus = "done") => {
       if (settled) return;
       settled = true;
       window.clearTimeout(timer);
+      endTiming?.(status);
       resolve();
     };
-    const timer = window.setTimeout(finish, 5_000);
+    const timer = window.setTimeout(() => finish("timeout"), 5_000);
     image.decoding = "async";
     image.onload = () => {
-      if (typeof image.decode === "function") image.decode().then(finish, finish);
+      if (typeof image.decode === "function") image.decode().then(() => finish(), () => finish("error"));
       else finish();
     };
-    image.onerror = finish;
+    image.onerror = () => finish("error");
     image.src = url;
     if (image.complete) {
-      if (typeof image.decode === "function") image.decode().then(finish, finish);
-      else finish();
+      if (typeof image.decode === "function") image.decode().then(() => finish(), () => finish("error"));
+      else finish(image.naturalWidth ? "done" : "error");
     }
   });
 }
 
-async function prepareDetailLayout(meta: Meta): Promise<void> {
-  const assets = [meta.background, meta.logo]
-    .filter((url): url is string => !!url)
-    .map(preloadImage);
-  const fonts = document.fonts?.ready
-    ? Promise.race([
-        document.fonts.ready.then(() => undefined),
-        new Promise<void>((resolve) => window.setTimeout(resolve, 2_000)),
-      ])
-    : Promise.resolve();
+async function prepareDetailLayout(meta: Meta, trace?: DetailsTrace): Promise<void> {
+  const assets = [
+    meta.background && preloadImage(meta.background, trace, "Backdrop image"),
+    meta.logo && preloadImage(meta.logo, trace, "Title logo"),
+  ].filter(Boolean);
+  const fonts = new Promise<void>(resolve => {
+    const end = trace?.start("Fonts ready", "2s limit");
+    const timer = window.setTimeout(() => { end?.("timeout"); resolve(); }, 2_000);
+    Promise.resolve(document.fonts?.ready).then(() => {
+      window.clearTimeout(timer); end?.(); resolve();
+    }, () => { window.clearTimeout(timer); end?.("error"); resolve(); });
+  });
   await Promise.all([Promise.allSettled(assets), fonts]);
 }
 
@@ -462,6 +468,7 @@ export function Details({
     ),
   );
   const [busy, setBusy] = useState(true);
+  const [debugTraces, setDebugTraces] = useState<DetailsTrace[]>([]);
   // Fetched once per series and cached, so paging through seasons asks nobody.
   // Empty until it answers, and empty forever if it cannot — a score is
   // decoration and the list has to render without one.
@@ -733,15 +740,19 @@ export function Details({
   useEffect(() => {
     let live = true;
     setBusy(true);
+    const trace = detailsDebugEnabled() ? new DetailsTrace(seed.name) : undefined;
+    // Settings/addons arriving can restart the effect. Retain those attempts
+    // so their elapsed time does not disappear from the diagnostic report.
+    setDebugTraces(current => trace ? [...current, trace].slice(-5) : []);
     void (async () => {
       let completed = seed;
       try {
-        const next = await resolveMeta(seed, addons);
+        const next = await timed(trace, "Stage: addon metadata", () => resolveMeta(seed, addons, trace));
         if (!live) return;
         // Build the final object while the fixed entry overlay is still up.
         // This prevents addon metadata and integration enrichment from being
         // exposed as two visibly different layouts.
-        completed = await enrichMetadata(next, metadataEnrichment).catch(
+        completed = await timed(trace, "Stage: metadata enrichment", () => enrichMetadata(next, metadataEnrichment, trace)).catch(
           () => next,
         );
       } catch {
@@ -751,7 +762,7 @@ export function Details({
 
       // CSS backgrounds and logos otherwise continue decoding after the data
       // loader disappears. Warm them before committing the completed page.
-      await prepareDetailLayout(completed);
+      await timed(trace, "Stage: artwork and fonts", () => prepareDetailLayout(completed, trace));
       if (!live) return;
       setMeta(completed);
       const first = [
@@ -769,11 +780,12 @@ export function Details({
       // Keep the overlay for two paints after committing. At this point the
       // actual DOM exists, fonts have settled, and layout measurements used by
       // the compact mobile header have run before the user sees the page.
-      await afterDetailLayout();
-      if (live) setBusy(false);
+      await timed(trace, "Stage: DOM layout (two frames)", afterDetailLayout);
+      if (live) { trace?.finish(); setBusy(false); }
     })();
     return () => {
       live = false;
+      if (trace?.ended === undefined) trace?.cancel();
     };
   }, [seed, addons, metadataEnrichment]);
   /**
@@ -1041,6 +1053,7 @@ export function Details({
       style={{ "--detail-dominant": dominantColor } as CSSProperties}
       aria-busy={busy}
     >
+      {debugTraces.length > 0 && <DetailsDebugPanel traces={debugTraces} />}
       <div
         className={`detail-entry-overlay${busy ? " is-visible" : ""}`}
         aria-hidden={!busy}

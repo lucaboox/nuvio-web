@@ -1,4 +1,5 @@
 import { platform } from "../platform/index.ts";
+import { timed, type DetailsTrace } from "./detailsDebug.ts";
 import type { ExternalRating, Meta, MetaTrailer, Person, Video } from "../types";
 
 export type MetadataEnrichmentConfig = {
@@ -44,15 +45,22 @@ async function fetchJsonWithTimeout(url: string): Promise<unknown> {
   return JSON.parse(response.body);
 }
 
-async function cachedJson(url: string): Promise<unknown> {
-  let request = cache.get(url);
-  if (!request) {
-    request = fetchJsonWithTimeout(url);
-    cache.set(url, request);
-    if (cache.size > 160) cache.delete(cache.keys().next().value as string);
-    request.catch(() => cache.delete(url));
-  }
-  return request;
+async function cachedJson(url: string, trace?: DetailsTrace): Promise<unknown> {
+  const cached = cache.has(url);
+  // Only known provider routes, never query parameters (which carry API keys).
+  const resource = new URL(url);
+  const label = resource.hostname === "api.themoviedb.org"
+    ? `TMDB ${resource.pathname.replace(/^\/3\//, "")}` : "MDBList ratings";
+  return timed(trace, label, async () => {
+    let request = cache.get(url);
+    if (!request) {
+      request = fetchJsonWithTimeout(url);
+      cache.set(url, request);
+      if (cache.size > 160) cache.delete(cache.keys().next().value as string);
+      request.catch(() => cache.delete(url));
+    }
+    return request;
+  }, cached ? "cache / shared request" : "network");
 }
 
 /**
@@ -101,6 +109,7 @@ function tmdbUrl(
 async function resolveTmdbId(
   meta: Meta,
   config: MetadataEnrichmentConfig["tmdb"],
+  trace?: DetailsTrace,
 ): Promise<number | undefined> {
   const direct = tmdbIdFrom(meta.id);
   if (direct) return direct;
@@ -111,6 +120,7 @@ async function resolveTmdbId(
       tmdbUrl(`find/${imdb}`, config.apiKey, config.language, {
         external_source: "imdb_id",
       }),
+      trace,
     ),
   );
   const rows = list(found?.[isSeries(meta.type) ? "tv_results" : "movie_results"]);
@@ -432,6 +442,7 @@ async function enrichEpisodes(
   meta: Meta,
   tmdbId: number,
   config: MetadataEnrichmentConfig["tmdb"],
+  trace?: DetailsTrace,
 ): Promise<Meta> {
   if (
     (!config.useEpisodes && !config.useReleaseDates) ||
@@ -446,6 +457,7 @@ async function enrichEpisodes(
       payload: json(
         await cachedJson(
           tmdbUrl(`tv/${tmdbId}/season/${season}`, config.apiKey, config.language),
+          trace,
         ),
       ),
     })),
@@ -500,6 +512,7 @@ async function enrichMdbList(
   meta: Meta,
   imdb: string | undefined,
   config: MetadataEnrichmentConfig["mdbList"],
+  trace?: DetailsTrace,
 ): Promise<Meta> {
   if (!config.enabled || !config.apiKey || !imdb) return meta;
   const media = isSeries(meta.type) ? "show" : "movie";
@@ -510,7 +523,7 @@ async function enrichMdbList(
   // browsers and is considerably cheaper than eight separate requests.
   const url = new URL(`https://api.mdblist.com/imdb/${media}/${imdb}/`);
   url.searchParams.set("apikey", config.apiKey);
-  const payload = await cachedJson(url.toString());
+  const payload = await cachedJson(url.toString(), trace);
   const fetched = mdbListRatings(payload, config.providers);
   if (!fetched.length) return meta;
 
@@ -626,12 +639,13 @@ export function mdbListRatings(
 export async function enrichMetadata(
   meta: Meta,
   config: MetadataEnrichmentConfig,
+  trace?: DetailsTrace,
 ): Promise<Meta> {
   let next = meta;
   let resolvedImdb = imdbId(meta.id);
   if (config.tmdb.enabled && config.tmdb.apiKey) {
     try {
-      const id = await resolveTmdbId(meta, config.tmdb);
+      const id = await resolveTmdbId(meta, config.tmdb, trace);
       if (id) {
         const media = isSeries(meta.type) ? "tv" : "movie";
         const language = normalizeLanguage(config.tmdb.language);
@@ -647,11 +661,13 @@ export async function enrichMetadata(
                     "aggregate_credits,credits,videos,content_ratings,external_ids"
                   : "credits,videos,release_dates,external_ids",
             }),
+            trace,
           ),
           cachedJson(
             tmdbUrl(`${media}/${id}/images`, config.tmdb.apiKey, language, {
               include_image_language: `${languageCode},${language},en,null`,
             }),
+            trace,
           ).catch(() => null),
         ]);
         const details = json(payload);
@@ -659,12 +675,12 @@ export async function enrichMetadata(
           next = applyTmdbPayload(next, details, json(imagePayload), config.tmdb);
           resolvedImdb =
             text(json(details.external_ids)?.imdb_id) || resolvedImdb;
-          next = await enrichEpisodes(next, id, config.tmdb);
+          next = await enrichEpisodes(next, id, config.tmdb, trace);
         }
       }
     } catch {
       // Enrichment is optional; addon metadata remains the authoritative fallback.
     }
   }
-  return enrichMdbList(next, resolvedImdb, config.mdbList).catch(() => next);
+  return enrichMdbList(next, resolvedImdb, config.mdbList, trace).catch(() => next);
 }

@@ -62,6 +62,7 @@ import {
 import { Hero, MediaRow, PosterCard } from "./components/Media";
 import { Player } from "./components/Player";
 import { LoadingScreen } from "./components/LoadingScreen";
+import { DetailsDebugToggle } from "./components/DetailsDebug";
 import { applyResolvedTheme } from "./lib/themeCache";
 import { PersonPage } from "./components/Person";
 import { ProfileSwitcher } from "./components/ProfileSwitcher";
@@ -4909,6 +4910,7 @@ function SettingsPage({
           <h2>Details screens</h2>
           <span>Shared with Nuvio</span>
         </header>
+        <DetailsDebugToggle />
         <label className="setting-select-row">
           <span>
             <strong>Background</strong>

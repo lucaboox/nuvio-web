@@ -1728,10 +1728,21 @@ a {
 .continue-entry-overlay {
   z-index: 190;
 }
+.continue-entry-brand {
+  display: grid;
+  place-items: center;
+  width: min(70vw, 380px);
+  min-height: 100px;
+  margin-bottom: 18px;
+}
+.continue-entry-brand > img,
+.continue-entry-brand > h2 { grid-area: 1 / 1; }
+.continue-entry-brand > img { max-width: 100%; max-height: 140px; object-fit: contain; }
+.continue-entry-brand > h2 { margin: 0; color: var(--text); font-size: clamp(22px, 4vw, 32px); text-align: center; }
 .source-sheet-desktop-close { display: none; }
 @media (min-width: 1000px) {
   .source-sheet-mobile-back { display: none; }
-  .source-sheet-desktop-close { display: inline-flex; order: 3; }
+  .source-sheet-desktop-close { display: grid; place-items: center; flex: 0 0 auto; order: 3; }
   .source-sheet-refresh { order: -1; flex: 0 0 auto; }
 }
 

@@ -170,6 +170,7 @@ import {
 } from "./lib/progress";
 import { useProgressiveList } from "./lib/useProgressiveList";
 import { useScrollLock } from "./lib/useScrollLock";
+import { ContinueLoadingOverlay } from "./components/ContinueLoadingOverlay";
 import { useSwipeBack } from "./lib/useSwipeBack";
 import { providerCredential } from "./lib/providerCredentials";
 import type { MetadataEnrichmentConfig } from "./lib/metadataEnrichment";
@@ -602,11 +603,11 @@ export function App() {
     startAtBeginning?: boolean;
   } | null>(null);
   const [loading, setLoading] = useState(false);
-  const [resolvingContinue, setResolvingContinue] = useState(false);
-  useScrollLock(resolvingContinue);
+  const [resolvingContinue, setResolvingContinue] = useState<Meta | null>(null);
+  useScrollLock(resolvingContinue !== null);
   const cancelContinueLaunch = useCallback(() => {
     episodeSwitch.current += 1;
-    setResolvingContinue(false);
+    setResolvingContinue(null);
   }, []);
   useEffect(() => {
     if (!resolvingContinue) return;
@@ -681,7 +682,7 @@ export function App() {
   }, []);
   const activateProfile = useCallback((next: Profile | null) => {
     episodeSwitch.current += 1;
-    setResolvingContinue(false);
+    setResolvingContinue(null);
     setProfileStarting(next !== null);
     profileGeneration.current += 1;
     profileLoadGeneration.current += 1;
@@ -1988,7 +1989,7 @@ export function App() {
       // own episode over the one just asked for.
       const generation = ++episodeSwitch.current;
       const openTitle = () => {
-        setResolvingContinue(false);
+        setResolvingContinue(null);
         setDetailLaunch({
           video: card.video,
           videoId: card.video?.id,
@@ -2014,11 +2015,11 @@ export function App() {
       }
       // This is a user-requested playback launch, not a background refresh.
       // Cover the page until the source/player or manual picker takes over.
-      setResolvingContinue(true);
+      setResolvingContinue(card.item);
       // Only the run that still owns the screen puts the spinner away; an
       // overtaken one leaves it to whichever replaced it.
       const finish = () => {
-        if (generation === episodeSwitch.current) setResolvingContinue(false);
+        if (generation === episodeSwitch.current) setResolvingContinue(null);
       };
       // The full metadata alongside the sources: without it the player has no
       // episode list, so next-up and the episode picker would both be empty.
@@ -2207,14 +2208,8 @@ export function App() {
     <>
       <div className={`app-shell${playback ? " player-active" : ""}${profileStarting ? " is-loading" : ""}`}>
       {resolvingContinue && (
-        <div className="detail-entry-overlay is-visible continue-entry-overlay">
-          <div className="detail-entry-loading-content" role="status" aria-label={t("common.loading")}>
-            <i className="mini-spinner" aria-hidden="true" />
-          </div>
-          <button className="circle-button back" aria-label={t("action.cancel")} onClick={cancelContinueLaunch}>
-            <ArrowLeft />
-          </button>
-        </div>
+        <ContinueLoadingOverlay key={`${resolvingContinue.type}:${resolvingContinue.id}`}
+          item={resolvingContinue} onCancel={cancelContinueLaunch} />
       )}
       {loading && !profileStarting && (
         <div className="app-loading-status" role="status">

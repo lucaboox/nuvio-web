@@ -26,6 +26,7 @@ export function nativePlayerPreferences(settings: WebPlayerSettings): Record<str
     subtitle_use_forced_subtitles: settings.subtitleUseForcedSubtitles,
     subtitle_show_only_preferred_languages: settings.subtitleShowOnlyPreferredLanguages,
     use_libass: settings.useLibass,
+    nvidia_rtx_super_resolution_enabled: settings.rtxSuperResolution,
   })) preferences[key] = { type: "boolean", value };
   return preferences;
 }

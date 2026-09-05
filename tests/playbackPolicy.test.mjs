@@ -101,6 +101,13 @@ test("native launch receives current typed audio/subtitle preferences, not accou
   assert.deepEqual(data.preferred_audio_language, { type: "string", value: "en" });
   assert.equal(data.auto_skip_segment_types, undefined);
 });
+test("each native playback launch carries the current RTX switch, including turning it off", () => {
+  for (const enabled of [true, false]) {
+    const data = nativePlayerPreferences({ ...defaults, rtxSuperResolution: enabled });
+    assert.deepEqual(data.nvidia_rtx_super_resolution_enabled, { type: "boolean", value: enabled });
+  }
+});
+
 test("Fusion imports preserve extra fields, normalize to one active source and enforce three URLs", () => {
   const source = (id) => parseBadgeImport(`https://example.test/${id}`, { filters: [{ name: "HD", pattern: "(?i)1080p", future: 42 }], groups: [{ id: "video", future: true }] });
   let rules = { imports: [], future: true };

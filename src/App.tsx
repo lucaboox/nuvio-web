@@ -169,6 +169,7 @@ import {
   type ContinueCard,
 } from "./lib/progress";
 import { useProgressiveList } from "./lib/useProgressiveList";
+import { useScrollLock } from "./lib/useScrollLock";
 import { useSwipeBack } from "./lib/useSwipeBack";
 import { providerCredential } from "./lib/providerCredentials";
 import type { MetadataEnrichmentConfig } from "./lib/metadataEnrichment";
@@ -601,6 +602,20 @@ export function App() {
     startAtBeginning?: boolean;
   } | null>(null);
   const [loading, setLoading] = useState(false);
+  const [resolvingContinue, setResolvingContinue] = useState(false);
+  useScrollLock(resolvingContinue);
+  const cancelContinueLaunch = useCallback(() => {
+    episodeSwitch.current += 1;
+    setResolvingContinue(false);
+  }, []);
+  useEffect(() => {
+    if (!resolvingContinue) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") cancelContinueLaunch();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [resolvingContinue, cancelContinueLaunch]);
   // Set with profile selection, not in its later effect: account hydration
   // finishing must not uncover the navbar before Home starts fetching.
   const [profileStarting, setProfileStarting] = useState(false);
@@ -665,6 +680,8 @@ export function App() {
     });
   }, []);
   const activateProfile = useCallback((next: Profile | null) => {
+    episodeSwitch.current += 1;
+    setResolvingContinue(false);
     setProfileStarting(next !== null);
     profileGeneration.current += 1;
     profileLoadGeneration.current += 1;
@@ -1971,7 +1988,7 @@ export function App() {
       // own episode over the one just asked for.
       const generation = ++episodeSwitch.current;
       const openTitle = () => {
-        setLoading(false);
+        setResolvingContinue(false);
         setDetailLaunch({
           video: card.video,
           videoId: card.video?.id,
@@ -1995,13 +2012,13 @@ export function App() {
         openTitle();
         return;
       }
-      // Show a small loading status while resolving the source, without
-      // replacing the current page with the app's startup splash.
-      setLoading(true);
+      // This is a user-requested playback launch, not a background refresh.
+      // Cover the page until the source/player or manual picker takes over.
+      setResolvingContinue(true);
       // Only the run that still owns the screen puts the spinner away; an
       // overtaken one leaves it to whichever replaced it.
       const finish = () => {
-        if (generation === episodeSwitch.current) setLoading(false);
+        if (generation === episodeSwitch.current) setResolvingContinue(false);
       };
       // The full metadata alongside the sources: without it the player has no
       // episode list, so next-up and the episode picker would both be empty.
@@ -2189,6 +2206,16 @@ export function App() {
   return (
     <>
       <div className={`app-shell${playback ? " player-active" : ""}${profileStarting ? " is-loading" : ""}`}>
+      {resolvingContinue && (
+        <div className="detail-entry-overlay is-visible continue-entry-overlay">
+          <div className="detail-entry-loading-content" role="status" aria-label={t("common.loading")}>
+            <i className="mini-spinner" aria-hidden="true" />
+          </div>
+          <button className="circle-button back" aria-label={t("action.cancel")} onClick={cancelContinueLaunch}>
+            <ArrowLeft />
+          </button>
+        </div>
+      )}
       {loading && !profileStarting && (
         <div className="app-loading-status" role="status">
           <i className="mini-spinner" aria-hidden="true" />

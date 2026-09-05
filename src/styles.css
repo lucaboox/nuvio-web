@@ -1725,6 +1725,9 @@ a {
   opacity: 0.5;
   cursor: default;
 }
+.continue-entry-overlay {
+  z-index: 190;
+}
 .source-sheet-desktop-close { display: none; }
 @media (min-width: 1000px) {
   .source-sheet-mobile-back { display: none; }

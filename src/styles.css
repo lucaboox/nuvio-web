@@ -2935,6 +2935,15 @@ html.native-player-active .player-view.native-player {
 html.native-player-active .player-view.native-player.native-player-loading {
   background: #000 !important;
 }
+/* Remain opaque while fullscreen is restored and mpv tears down. This class
+   also protects unmounts/source switches; only a ready native frame clears it. */
+html.native-player-active.native-player-covered,
+html.native-player-active.native-player-covered body,
+html.native-player-active.native-player-covered #root,
+html.native-player-active.native-player-covered .app-shell,
+html.native-player-active.native-player-covered .player-view.native-player {
+  background: #000 !important;
+}
 .player-view.native-player video,
 .player-view.native-player .player-canvas {
   display: none !important;

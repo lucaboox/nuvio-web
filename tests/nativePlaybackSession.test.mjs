@@ -52,6 +52,27 @@ test("an overlay removed before its queued launch never opens a player", async (
   assert.deepEqual(calls, []);
 });
 
+test("native teardown waits for the opaque cover to paint", async () => {
+  const painted = pending();
+  const calls = [];
+  const player = {
+    async open() { calls.push("open"); },
+    async stop() { calls.push("stop"); },
+  };
+  const session = startNativePlaybackSession(player, {}, () => {
+    calls.push("cover");
+    return painted.promise;
+  });
+  await session.ready;
+  const closed = session.stop();
+  await Promise.resolve();
+  assert.deepEqual(calls, ["open", "cover"]);
+  painted.resolve();
+  await closed;
+  await session.stop();
+  assert.deepEqual(calls, ["open", "cover", "stop"]);
+});
+
 test("failed prepares still clean up and do not block later sessions", async () => {
   const calls = [];
   const player = {

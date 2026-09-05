@@ -3,6 +3,7 @@ import { SolidPause, SolidPlay } from "./PlaybackIcons";
 import { automaticSkipSegment, nextEpisodeDue, shouldBlurEpisode } from "../lib/playbackPolicy";
 import { nativePlayerPreferences } from "../lib/nativePlayerPreferences";
 import { startNativePlaybackSession } from "../lib/nativePlaybackSession";
+import { coverNativePlayerSurface, revealNativePlayerSurface } from "../lib/nativePlayerSurface";
 import { platform } from "../platform/index.ts";
 import { t } from "../lib/i18n.ts";
 import { languageName } from "../lib/languageName.ts";
@@ -706,11 +707,11 @@ export function Player({
     };
 
     const refresh = async () => {
-      if (polling || !opened || closingRef.current) return;
+      if (polling || !opened || closingRef.current || session.closed) return;
       polling = true;
       try {
         const next = await nativePlayer.state();
-        if (!live) return;
+        if (!live || closingRef.current || session.closed) return;
         setDiagnostics(next.diagnostics);
         nativeProgressSnapshotRef.current = {
           positionMs: Math.max(0, next.positionMs),
@@ -720,6 +721,7 @@ export function Player({
         setWaiting(next.loading);
         setPlaying(next.active && !next.paused && !next.ended);
         if (next.active && !next.loading && !next.error) {
+          revealNativePlayerSurface();
           setNativeSurfaceReady(true);
           if (!nativePictureModeReadyRef.current) {
             nativePictureModeReadyRef.current = true;
@@ -815,14 +817,14 @@ export function Player({
           season: video?.season,
           episode: video?.episode,
         },
-      });
+      }, coverNativePlayerSurface);
     nativeSessionRef.current = session;
     void session.ready.then(async () => {
-        if (!live || closingRef.current) return;
+        if (!live || closingRef.current || session.closed) return;
         await nativePlayer.setVolume(Math.round(rememberedVolume * 100));
-        if (!live || closingRef.current) return;
+        if (!live || closingRef.current || session.closed) return;
         if (rememberedMuted) await nativePlayer.toggleMute();
-        if (!live || closingRef.current) return;
+        if (!live || closingRef.current || session.closed) return;
         opened = true;
         await refresh();
       })
@@ -1490,6 +1492,8 @@ export function Player({
     closingRef.current = true;
     setNextDismissed(true);
     if (nativePlayer) {
+      setNativeSurfaceReady(false);
+      await coverNativePlayerSurface();
       const snapshot = nativeProgressSnapshotRef.current;
       if (snapshot.positionMs > 0 || snapshot.ended) {
         onNativeProgressSnapshot?.(

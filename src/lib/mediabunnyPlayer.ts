@@ -263,8 +263,16 @@ export class MediabunnyPlayer {
   }
 
   get currentTime() {
-    if (!this.playing || !this.context) return this.pausedAt;
-    return this.startedFrom + (this.context.currentTime - this.contextStartTime);
+    if (!this.playing) return this.pausedAt;
+    return this.startedFrom + (this.clockTime() - this.contextStartTime);
+  }
+
+  private clockTime() {
+    return this.context?.currentTime ?? performance.now() / 1000;
+  }
+
+  private assertActive() {
+    if (this.stopped) throw new Error("Playback was canceled");
   }
 
   get paused() {
@@ -287,10 +295,11 @@ export class MediabunnyPlayer {
     budgetMs = STAGE_TIMEOUT_MS,
     detail: () => string = () => "",
   ): Promise<T> {
+    this.assertActive();
     this.report("loading", label);
     let timer: ReturnType<typeof setTimeout> | undefined;
     try {
-      return await Promise.race([
+      const result = await Promise.race([
         work(),
         new Promise<never>((_, reject) => {
           timer = setTimeout(
@@ -304,6 +313,11 @@ export class MediabunnyPlayer {
           );
         }),
       ]);
+      this.assertActive();
+      return result;
+    } catch (error) {
+      this.stop();
+      throw error;
     } finally {
       if (timer !== undefined) clearTimeout(timer);
     }
@@ -318,6 +332,7 @@ export class MediabunnyPlayer {
         "error",
         "This browser has no WebCodecs support, which this player needs to decode the file. Update your browser, or use an external player.",
       );
+      this.stop();
       return;
     }
     // Before anything commits to the file. Everything below reads it over
@@ -336,6 +351,7 @@ export class MediabunnyPlayer {
     );
     if (!reachable.ok) {
       this.report("error", reachable.reason);
+      this.stop();
       return;
     }
     // Deliberately not a reason to refuse: the reader falls back to reading
@@ -458,13 +474,14 @@ export class MediabunnyPlayer {
     this.audioTrack = audio;
     if (audioTracks.length && !audio) trouble.push("its audio");
 
-    if (!this.videoTrack && !this.audioTrack) {
+    if (!this.videoTrack) {
       this.report(
         "error",
         trouble.length
           ? `This browser cannot decode ${trouble.join(" or ")}. Try an external player.`
           : "This file contains no video or audio track that could be read.",
       );
+      this.stop();
       return;
     }
 
@@ -513,9 +530,9 @@ export class MediabunnyPlayer {
         .webkitAudioContext;
     // Matching the file's rate keeps low-rate audio from being resampled into
     // something that sounds wrong.
-    this.context = new AudioContextClass({
-      sampleRate: await this.audioTrack.getSampleRate(),
-    });
+    const sampleRate = await this.audioTrack.getSampleRate();
+    this.assertActive();
+    this.context = new AudioContextClass({ sampleRate });
     this.gain = this.context.createGain();
     this.gain.connect(this.context.destination);
     this.applyVolume();
@@ -531,6 +548,7 @@ export class MediabunnyPlayer {
    */
   async play() {
     if (this.stopped || this.playing) return;
+    const generation = this.generation;
     const context = this.context;
     // Read through a call so it is genuinely re-checked after the await —
     // Safari's "interrupted" also belongs on the not-running side.
@@ -550,9 +568,10 @@ export class MediabunnyPlayer {
         return;
       }
     }
+    if (this.stopped || this.playing || this.generation !== generation) return;
     this.playing = true;
     this.startedFrom = this.pausedAt;
-    this.contextStartTime = this.context?.currentTime ?? 0;
+    this.contextStartTime = this.clockTime();
     this.run(++this.generation);
     this.report("ready", "");
   }
@@ -571,17 +590,20 @@ export class MediabunnyPlayer {
    * that says how far loading got.
    */
   async seek(seconds: number, keepStatus = false) {
+    if (this.stopped) return;
     const target = Math.max(0, Math.min(seconds, this.duration || seconds));
     const wasPlaying = this.playing;
     this.playing = false;
-    this.generation += 1;
+    const generation = ++this.generation;
     this.silence();
     this.pausedAt = target;
     if (!keepStatus) this.report("buffering", "");
     // A still frame at the destination, so scrubbing shows where it landed
     // rather than freezing on where it left.
     if (this.videoSink) {
-      const frame = await this.videoSink.getCanvas(target).catch(() => null);
+      const frame = await this.videoSink.getCanvas(target);
+      if (this.stopped || this.generation !== generation) return;
+      if (!frame) throw new Error("No video frame could be decoded at this position. Try another source or an external player.");
       if (frame) this.draw(frame);
     }
     if (wasPlaying) await this.play();
@@ -687,6 +709,7 @@ export class MediabunnyPlayer {
   }
 
   private draw(frame: WrappedCanvas) {
+    if (this.stopped) return;
     const context = this.canvas.getContext("2d");
     if (!context) return;
     context.clearRect(0, 0, this.canvas.width, this.canvas.height);
@@ -710,8 +733,13 @@ export class MediabunnyPlayer {
 
   /** Video and audio each run their own loop, both reading the same clock. */
   private run(generation: number) {
-    void this.runVideo(generation);
-    void this.runAudio(generation);
+    const failed = (error: unknown) => {
+      if (this.stopped || this.generation !== generation) return;
+      this.report("error", error instanceof Error ? error.message : "Decoding failed");
+      this.stop();
+    };
+    void this.runVideo(generation).catch(failed);
+    void this.runAudio(generation).catch(failed);
     const tick = () => {
       if (this.generation !== generation || this.stopped) return;
       this.options.onTime?.(this.currentTime, this.duration);

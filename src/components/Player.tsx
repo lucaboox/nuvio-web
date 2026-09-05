@@ -547,7 +547,14 @@ export function Player({
       if (engine) {
         setCurrentTime(target);
         setWaiting(true);
-        await engine.seek(target);
+        try {
+          await engine.seek(target);
+        } catch (reason) {
+          if (engineRef.current !== engine) return;
+          engine.stop();
+          setWaiting(false);
+          setError(reason instanceof Error ? reason.message : "Could not seek this source.");
+        }
         return;
       }
       if (!element) return;
@@ -868,11 +875,15 @@ export function Player({
     let disposed = false;
     setSwitching(false);
     setNextDismissed(false);
+    setError("");
+    setDecoding(false);
+    setWaiting(true);
     let audioWatch: number | undefined;
     let preferredAudioApplied = false;
     let preferredSubtitleApplied = false;
     const isHls = /\.m3u8(?:$|\?)/i.test(url);
     const fail = () => {
+      if (disposed) return;
       setWaiting(false);
       setStatus("");
       setError(
@@ -1074,7 +1085,7 @@ export function Player({
     const verdict = assessPlayback(url, sourceText);
     if (shouldUseRemuxFallback(url, sourceText)) {
       const canvas = canvasRef.current;
-      if (!canvas) return;
+      if (!canvas) return cleanup;
       setRemuxActive(true);
       setDecoding(true);
       const engine = new MediabunnyPlayer(
@@ -1133,10 +1144,18 @@ export function Player({
           applyBrowserPictureMode(resizeModeRef.current);
           // Autoplay without a gesture is refused on iOS and increasingly
           // elsewhere; the centre button is then the gesture.
-          void engine.play().then(() => setPlaying(!engine.paused));
+          void engine.play().then(() => {
+            if (!disposed) setPlaying(!engine.paused);
+          }).catch((reason: unknown) => {
+            if (disposed) return;
+            engine.stop();
+            setWaiting(false);
+            setError(reason instanceof Error ? reason.message : "Playback could not start.");
+          });
         })
         .catch((reason: unknown) => {
           if (disposed) return;
+          engine.stop();
           setWaiting(false);
           setError(
             reason instanceof Error
@@ -1145,8 +1164,8 @@ export function Player({
           );
         });
       return () => {
-        disposed = true;
-        engineRef.current = null;
+        cleanup();
+        if (engineRef.current === engine) engineRef.current = null;
         engine.stop();
       };
     }
@@ -1232,7 +1251,12 @@ export function Player({
     return cleanup;
     // Volume is initialized once per source; UI changes update the element directly.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [url, showControls, settings, meta.language]);
+  }, [url, showControls, meta.language,
+    // Background profile sync produces a fresh settings object. Unrelated
+    // theme/layout changes must not tear down an in-flight browser decoder.
+    settings.preferredAudioLanguage, settings.secondaryPreferredAudioLanguage,
+    settings.preferredSubtitleLanguage, settings.secondaryPreferredSubtitleLanguage,
+    settings.subtitleBottomOffset]);
 
   useEffect(() => {
     localStorage.setItem("nuvio-web-volume", String(volume));

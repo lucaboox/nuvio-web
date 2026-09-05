@@ -85,6 +85,8 @@ export type WebPlayerSettings = {
   animeSkipEnabled: boolean;
   reuseLastStream: boolean;
   reuseLastStreamHours: number;
+  /** NVIDIA RTX Video Super Resolution, where a shell can drive it. */
+  rtxSuperResolution: boolean;
 };
 
 export type StreamBadgeFilter = {
@@ -361,6 +363,9 @@ function playerSettings(blob: SettingsBlob | null): WebPlayerSettings {
     autoSkipSegmentTypes: stringSet("auto_skip_segment_types").filter((kind) => ["intro", "recap", "outro"].includes(kind)),
     useLibass: booleanValue("use_libass", false),
     skipIntroEnabled: booleanValue("skip_intro_enabled", true),
+    // The key the official desktop client writes, so the switch here and the
+    // one there are the same setting rather than two that happen to agree.
+    rtxSuperResolution: booleanValue("nvidia_rtx_super_resolution_enabled", false),
     animeSkipEnabled: booleanValue("animeskip_enabled", false),
     // Off by default, matching the desktop client: skipping the stream picker
     // is a shortcut you opt into, not something that should start happening.

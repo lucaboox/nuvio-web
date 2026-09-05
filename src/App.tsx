@@ -5317,6 +5317,30 @@ function SettingsPage({
             <option value="Stretch">Stretch</option>
           </select>
         </label>
+        {/* Only where a shell can actually drive it. The capability is absent
+            in a browser, on a Mac, and on a Windows machine with no NVIDIA
+            adapter, so the row is simply not there rather than being a switch
+            that does nothing. */}
+        {platform.player?.videoEnhancement?.kind === "rtx-super-resolution" && (
+          <SettingToggle
+            title={t("toggle.rtxSuperResolution.title")}
+            description={
+              platform.player.videoEnhancement.appliesToCurrentPlayback
+                ? t("toggle.rtxSuperResolution.body")
+                : `${t("toggle.rtxSuperResolution.body")} ${t("toggle.rtxSuperResolution.nextPlayback")}`
+            }
+            checked={settings.player.rtxSuperResolution}
+            disabled={!settingsReady}
+            onChange={(next) =>
+              onTypedSetting(
+                "player_settings",
+                "nvidia_rtx_super_resolution_enabled",
+                "boolean",
+                next,
+              )
+            }
+          />
+        )}
       </div>
       <div className="setting-card settings-category-card" hidden={category !== "playback"}>
         <header><h2>{t("settings.card.streamAutoPlay")}</h2></header>

@@ -174,6 +174,20 @@ export type PlayerApi = {
   skipSegments?(options: { contentId: string; videoId: string; season?: number; episode?: number; animeSkipEnabled: boolean; animeSkipClientId: string }): Promise<Array<{ startMs: number; endMs: number; type: string; provider: string }>>;
   /** Expands the native window, rather than a transparent webview element. */
   setFullscreen?(fullscreen: boolean): Promise<void>;
+  /**
+   * Hardware video enhancement this machine can actually perform.
+   *
+   * Absent everywhere it cannot be done, which is how the setting stays off
+   * the screen for the browser, for a Mac, and for a Windows machine with no
+   * NVIDIA adapter — rather than the settings page asking what it is running
+   * on. `appliesToCurrentPlayback` is false where the pipeline is fixed when
+   * the player starts, so the UI can say so instead of appearing to do
+   * nothing.
+   */
+  videoEnhancement?: {
+    kind: "rtx-super-resolution";
+    appliesToCurrentPlayback: boolean;
+  };
   stop(): Promise<void>;
 };
 

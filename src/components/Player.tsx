@@ -20,6 +20,7 @@ import {
   shouldUseRemuxFallback,
 } from "../lib/playback";
 import { MediabunnyPlayer } from "../lib/mediabunnyPlayer";
+import { NativeMkvPlayer } from "../lib/nativeMkvPlayer";
 import {
   browserColor,
   type WebPlayerSettings,
@@ -1083,6 +1084,26 @@ export function Player({
     // machine can decode them, so the container is skipped entirely: frames go
     // to a canvas and audio to Web Audio.
     const verdict = assessPlayback(url, sourceText);
+    // Opt-in until real iOS device playback/seek testing is complete. Normal
+    // MKV playback retains the existing canvas fallback.
+    if (/\.mkv(?:$|[?#\s])/i.test(`${url} ${sourceText}`) &&
+      new URLSearchParams(window.location.search).get("nativeMkv") === "1") {
+      const remux = new NativeMkvPlayer(element, url, reason => {
+        if (disposed) return;
+        setWaiting(false);
+        setStatus("");
+        setError(reason instanceof Error ? reason.message : "Native remux failed.");
+      }, stream.behaviorHints?.proxyHeaders?.request, settings.preferredAudioLanguage);
+      setStatus("Preparing native MKV playback…");
+      void remux.start(startPositionMs / 1000).catch(reason => {
+        if (disposed) return;
+        remux.stop();
+        setWaiting(false);
+        setStatus("");
+        setError(reason instanceof Error ? reason.message : "Native remux failed.");
+      });
+      return () => { cleanup(); remux.stop(); };
+    }
     if (shouldUseRemuxFallback(url, sourceText)) {
       const canvas = canvasRef.current;
       if (!canvas) return cleanup;

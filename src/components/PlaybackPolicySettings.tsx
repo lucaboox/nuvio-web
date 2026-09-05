@@ -43,7 +43,7 @@ export function PlaybackPolicySettings({ section, settings, ready, addonNames = 
       </select>
     </label>
     <details className="playback-addon-scope"><summary>Choose auto-play addons</summary><p>No selection means all installed addons. This does not hide sources from the manual list.</p>
-      {[...new Set([...addonNames, ...settings.autoPlaySelectedAddons])].map((name) => <label key={name}><input type="checkbox" disabled={!ready} checked={settings.autoPlaySelectedAddons.includes(name)} onChange={(event) => save("stream_auto_play_selected_addons", "string_set", event.target.checked ? [...settings.autoPlaySelectedAddons, name] : settings.autoPlaySelectedAddons.filter((value) => value !== name))} /> {name}</label>)}
+      {[...new Set([...addonNames, ...settings.autoPlaySelectedAddons])].map((name) => <label className="toggle-row" key={name}><span>{name}</span><span className="switch"><input type="checkbox" disabled={!ready} checked={settings.autoPlaySelectedAddons.includes(name)} onChange={(event) => save("stream_auto_play_selected_addons", "string_set", event.target.checked ? [...settings.autoPlaySelectedAddons, name] : settings.autoPlaySelectedAddons.filter((value) => value !== name))} /><i /></span></label>)}
     </details>
     {toggle("Reuse binge group", "Prefer the previously used release when auto-selecting another source for this title.", "stream_auto_play_reuse_binge_group", settings.reuseBingeGroup)}
   </>;
@@ -51,7 +51,7 @@ export function PlaybackPolicySettings({ section, settings, ready, addonNames = 
     <p>{platform.player ? "Use native IntroDB/AniSkip timing providers, with optional AnimeSkip. Not every title has timings." : "Skip buttons use available IntroDB timings. Not every title has timings; additional native providers are not available in browsers."}</p>
     {platform.player && toggle("AnimeSkip", "Also use AnimeSkip timings with your client ID below.", "animeskip_enabled", settings.animeSkipEnabled)}
     <div className="playback-addon-scope"><strong>Automatically skip</strong>
-      {[["intro", "Intros"], ["recap", "Recaps"], ["outro", "End credits"]].map(([value, label]) => <label key={value}><input type="checkbox" disabled={!ready || !settings.skipIntroEnabled} checked={settings.autoSkipSegmentTypes.includes(value)} onChange={(event) => save("auto_skip_segment_types", "string_set", event.target.checked ? [...settings.autoSkipSegmentTypes, value] : settings.autoSkipSegmentTypes.filter((kind) => kind !== value))} /> {label}</label>)}
+      {[["intro", "Intros"], ["recap", "Recaps"], ["outro", "End credits"]].map(([value, label]) => <label className="toggle-row" key={value}><span>{label}</span><span className="switch"><input type="checkbox" disabled={!ready || !settings.skipIntroEnabled} checked={settings.autoSkipSegmentTypes.includes(value)} onChange={(event) => save("auto_skip_segment_types", "string_set", event.target.checked ? [...settings.autoSkipSegmentTypes, value] : settings.autoSkipSegmentTypes.filter((kind) => kind !== value))} /><i /></span></label>)}
     </div>
   </>;
   return <>

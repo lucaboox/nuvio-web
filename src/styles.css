@@ -2161,7 +2161,8 @@ a {
   max-width: 800px;
   margin: 24px 0;
 }
-.addon-install input {
+.addon-install input,
+.fusion-settings form input {
   flex: 1;
   background: #171b20;
   color: white;
@@ -2380,18 +2381,35 @@ a {
   transform: scale(1.15);
 }
 .playback-addon-scope { display: grid; gap: 12px; padding: 18px 0; }
-.playback-addon-scope > label { display: flex; align-items: center; gap: 10px; }
-.playback-addon-scope input { accent-color: var(--accent); }
+
 .playback-addon-scope summary { cursor: pointer; font-weight: 700; }
 .fusion-settings { display: grid; gap: 16px; min-width: 0; }
 .fusion-settings form, .fusion-import-actions { display: flex; flex-wrap: wrap; gap: 10px; }
-.fusion-settings form input { flex: 1; min-width: 160px; }
+.fusion-settings form input { min-width: 160px; }
 .fusion-settings section { display: grid; gap: 12px; padding: 16px 0; border-top: 1px solid var(--panel-border); }
 .fusion-settings section > small { overflow-wrap: anywhere; color: var(--muted); }
 .fusion-preview { display: grid; gap: 12px; max-height: 320px; overflow: auto; padding: 14px 0; }
-.fusion-preview label { display: flex; align-items: center; gap: 10px; }
 .fusion-preview img { max-width: 110px; height: 26px; object-fit: contain; }
-.fusion-preview input { accent-color: var(--accent); }
+/* Name on the left, switch on the right — the shape every other setting in
+   the app uses. These lists were the last checkboxes left, and a checkbox
+   beside a row of switches reads as a different kind of control rather than
+   the same one drawn differently. */
+.toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  cursor: pointer;
+}
+.toggle-row > span:first-child {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.toggle-row .switch {
+  flex: none;
+}
 .addon-controls {
   display: flex;
   align-items: center;

@@ -36,21 +36,21 @@ export function FusionBadgeSettings({ serialized, disabled, onSave }: { serializ
     <p>Import up to three Fusion badge JSON URLs. One collection is active at a time, matching Nuvio desktop. Imports and selection sync to your profile.</p>
     <form onSubmit={(event) => { event.preventDefault(); void importUrl(url); }}>
       <input aria-label="Fusion badge JSON URL" type="url" placeholder="https://…/badges.json" value={url} disabled={locked} onChange={(event) => setUrl(event.target.value)} />
-      <button disabled={locked || !url.trim()}>{busy ? "Importing…" : "Import"}</button>
+      <button className="primary" disabled={locked || !url.trim()}>{busy ? "Importing…" : "Import"}</button>
     </form>
     {message && <p role="status">{message}</p>}
     {rules.imports.map((source) => <section key={source.sourceUrl}>
       <strong>{source.isActive ? "Active · " : ""}{source.filters.filter((filter) => filter.isEnabled !== false).length} enabled badges</strong>
       <small>{source.sourceUrl}</small>
       <div className="fusion-import-actions">
-        <button disabled={locked || source.isActive} onClick={() => onSave(JSON.stringify(normalizeBadgeRules({ ...rules, imports: rules.imports.map((entry) => ({ ...entry, isActive: entry.sourceUrl === source.sourceUrl })) })))}>Use</button>
-        <button disabled={locked} onClick={() => void importUrl(source.sourceUrl)}>Refresh</button>
-        <button disabled={locked} onClick={() => onSave(JSON.stringify(normalizeBadgeRules({ ...rules, imports: rules.imports.filter((entry) => entry.sourceUrl !== source.sourceUrl) })))}>Remove</button>
+        <button className="secondary" disabled={locked || source.isActive} onClick={() => onSave(JSON.stringify(normalizeBadgeRules({ ...rules, imports: rules.imports.map((entry) => ({ ...entry, isActive: entry.sourceUrl === source.sourceUrl })) })))}>Use</button>
+        <button className="secondary" disabled={locked} onClick={() => void importUrl(source.sourceUrl)}>Refresh</button>
+        <button className="danger" disabled={locked} onClick={() => onSave(JSON.stringify(normalizeBadgeRules({ ...rules, imports: rules.imports.filter((entry) => entry.sourceUrl !== source.sourceUrl) })))}>Remove</button>
       </div>
       <details><summary>Preview & enabled badges</summary><div className="fusion-preview">
-        {source.filters.map((filter, index) => <label key={`${filter.id}:${index}`}>
-          <input type="checkbox" disabled={locked} checked={filter.isEnabled !== false} onChange={(event) => onSave(JSON.stringify({ ...rules, imports: rules.imports.map((entry) => entry.sourceUrl !== source.sourceUrl ? entry : { ...entry, filters: entry.filters.map((value, position) => position === index ? { ...value, isEnabled: event.target.checked } : value) }) }))} />
-          {safeHttpUrl(filter.imageURL) && <img loading="lazy" src={safeHttpUrl(filter.imageURL)!} alt="" />}{filter.name}
+        {source.filters.map((filter, index) => <label className="toggle-row" key={`${filter.id}:${index}`}>
+          <span>{safeHttpUrl(filter.imageURL) && <img loading="lazy" src={safeHttpUrl(filter.imageURL)!} alt="" />}{filter.name}</span>
+          <span className="switch"><input type="checkbox" disabled={locked} checked={filter.isEnabled !== false} onChange={(event) => onSave(JSON.stringify({ ...rules, imports: rules.imports.map((entry) => entry.sourceUrl !== source.sourceUrl ? entry : { ...entry, filters: entry.filters.map((value, position) => position === index ? { ...value, isEnabled: event.target.checked } : value) }) }))} /><i /></span>
         </label>)}
       </div></details>
     </section>)}

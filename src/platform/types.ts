@@ -143,6 +143,17 @@ export type PlayerState = {
   error?: string;
   warning?: string;
   tracks: PlayerTrack[];
+  diagnostics?: {
+    rtxRequested: boolean;
+    gpuApi?: string;
+    hardwareDecoder?: string;
+    videoFilters?: string;
+    videoCodec?: string;
+    sourceWidth?: number;
+    sourceHeight?: number;
+    outputWidth?: number;
+    outputHeight?: number;
+  } | null;
 };
 
 export type PlayerApi = {

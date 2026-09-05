@@ -1725,6 +1725,34 @@ a {
   opacity: 0.5;
   cursor: default;
 }
+.source-sheet-desktop-close { display: none; }
+@media (min-width: 1000px) {
+  .source-sheet-mobile-back { display: none; }
+  .source-sheet-desktop-close { display: inline-flex; order: 3; }
+  .source-sheet-refresh { order: -1; flex: 0 0 auto; }
+}
+
+.player-diagnostics {
+  position: absolute;
+  z-index: 25;
+  top: max(84px, env(safe-area-inset-top));
+  right: 24px;
+  width: min(420px, calc(100% - 48px));
+  max-height: calc(100% - 180px);
+  overflow-y: auto;
+  padding: 18px;
+  border: 1px solid var(--panel-border);
+  border-radius: 20px;
+  background: var(--app-bg, #080a0d);
+  color: var(--text);
+  font-size: 14px;
+}
+.player-diagnostics header { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.player-diagnostics header button { display: grid; place-items: center; padding: 8px; border-radius: 50%; background: var(--panel-soft); color: inherit; }
+.player-diagnostics dl { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.player-diagnostics dt, .player-diagnostics p { color: var(--muted); }
+.player-diagnostics dd { margin: 0; overflow-wrap: anywhere; }
+.player-diagnostics p { line-height: 1.5; margin-bottom: 0; }
 /* The title takes the slack so the pickers and the way out stay together on
    the right, and both halves may shrink rather than wrapping into height the
    pinned header would then keep for the whole scroll. */

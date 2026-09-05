@@ -1610,7 +1610,7 @@ export function Details({
               {/* Outside the tools group so a phone can wrap the pickers onto
                   their own row and leave the way out at the top right. */}
               <button
-                className="circle-button source-sheet-back"
+                className="circle-button source-sheet-back source-sheet-mobile-back"
                 aria-label={t("sources.back")}
                 onClick={closeSource}
               >
@@ -1629,6 +1629,14 @@ export function Details({
                 onClick={() => void sources(sourceVideo ?? undefined, true)}
               >
                 <RefreshCw />
+              </button>
+              <button
+                className="circle-button source-sheet-desktop-close"
+                aria-label="Close sources"
+                title="Close sources"
+                onClick={closeSource}
+              >
+                <X />
               </button>
             </header>
             {downloadNote && <div className="sheet-note">{downloadNote}</div>}

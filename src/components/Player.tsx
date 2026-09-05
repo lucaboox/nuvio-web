@@ -2,10 +2,11 @@ import type Hls from "hls.js";
 import { SolidPause, SolidPlay } from "./PlaybackIcons";
 import { automaticSkipSegment, nextEpisodeDue, shouldBlurEpisode } from "../lib/playbackPolicy";
 import { nativePlayerPreferences } from "../lib/nativePlayerPreferences";
+import { startNativePlaybackSession } from "../lib/nativePlaybackSession";
 import { platform } from "../platform/index.ts";
 import { t } from "../lib/i18n.ts";
 import { languageName } from "../lib/languageName.ts";
-import type { ResizeMode } from "../platform/types.ts";
+import type { ResizeMode, PlayerState } from "../platform/types.ts";
 import { safeHttpUrl } from "../lib/security";
 import {
   mediaRectForResizeMode,
@@ -26,6 +27,7 @@ import {
   ArrowLeft,
   Copy,
   Eye,
+  Info,
   ExternalLink,
   FastForward,
   List,
@@ -322,6 +324,10 @@ export function Player({
   const [audioTracks, setAudioTracks] = useState<AudioChoice[]>([]);
   const [selectedAudio, setSelectedAudio] = useState(-1);
   const [nativeFullscreen, setNativeFullscreen] = useState(false);
+  const nativeSessionRef = useRef<ReturnType<typeof startNativePlaybackSession> | null>(null);
+  const closingRef = useRef(false);
+  const [infoOpen, setInfoOpen] = useState(false);
+  const [diagnostics, setDiagnostics] = useState<PlayerState["diagnostics"]>();
   // WebView2 must stay opaque until libmpv reports playback-restart.  Before
   // that event its child video window can still be transparent, which would
   // otherwise expose whatever desktop window happens to sit behind Nuvio.
@@ -677,7 +683,10 @@ export function Player({
     }
 
     let live = true;
+    closingRef.current = false;
+    setDiagnostics(undefined);
     let polling = false;
+    let opened = false;
     const transparentRoots = [document.documentElement, document.body];
     transparentRoots.forEach((node) => node.classList.add("native-player-active"));
     setSwitching(false);
@@ -697,11 +706,12 @@ export function Player({
     };
 
     const refresh = async () => {
-      if (polling) return;
+      if (polling || !opened || closingRef.current) return;
       polling = true;
       try {
         const next = await nativePlayer.state();
         if (!live) return;
+        setDiagnostics(next.diagnostics);
         nativeProgressSnapshotRef.current = {
           positionMs: Math.max(0, next.positionMs),
           durationMs: Math.max(0, next.durationMs),
@@ -784,8 +794,7 @@ export function Player({
     );
     const rememberedMuted =
       localStorage.getItem("nuvio-web-muted") === "true";
-    void nativePlayer
-      .open({
+    const session = startNativePlaybackSession(nativePlayer, {
         preferences: nativePlayerPreferences(settings),
         url: sourceUrl,
         externalUrl,
@@ -806,10 +815,15 @@ export function Player({
           season: video?.season,
           episode: video?.episode,
         },
-      })
-      .then(async () => {
+      });
+    nativeSessionRef.current = session;
+    void session.ready.then(async () => {
+        if (!live || closingRef.current) return;
         await nativePlayer.setVolume(Math.round(rememberedVolume * 100));
+        if (!live || closingRef.current) return;
         if (rememberedMuted) await nativePlayer.toggleMute();
+        if (!live || closingRef.current) return;
+        opened = true;
         await refresh();
       })
       .catch((reason: unknown) => {
@@ -821,6 +835,8 @@ export function Player({
 
     return () => {
       live = false;
+      void session.stop().catch(() => undefined);
+      if (nativeSessionRef.current === session) nativeSessionRef.current = null;
       window.clearInterval(timer);
       transparentRoots.forEach((node) => node.classList.remove("native-player-active"));
     };
@@ -829,7 +845,8 @@ export function Player({
     meta.id,
     meta.name,
     meta.type,
-    startPositionMs,
+    // Resume progress changes as playback is saved. It is an initial position,
+    // not a reason to prepare this same source again while it is playing.
     stream.behaviorHints?.proxyHeaders?.request,
     url,
     video?.episode,
@@ -1367,7 +1384,7 @@ export function Player({
     // down mid-play can leave the remuxer fetching for a moment after.
     const element = videoRef.current;
     element?.pause();
-    if (nativePlayer) void nativePlayer.stop();
+    if (nativePlayer) void nativeSessionRef.current?.stop().catch(() => undefined);
     // Where it got to here, so the other player picks up mid-scene rather than
     // at the last saved checkpoint.
     onExternalPlay(
@@ -1454,8 +1471,8 @@ export function Player({
    */
   const startEpisode = useCallback(
     (next: Video) => {
-      if (switching || next.id === video?.id) return;
-      if (nativePlayer) void nativePlayer.stop();
+      if (closingRef.current || switching || next.id === video?.id) return;
+      if (nativePlayer) void nativeSessionRef.current?.stop().catch(() => undefined);
       engineRef.current?.pause();
       videoRef.current?.pause();
       setPlaying(false);
@@ -1469,6 +1486,9 @@ export function Player({
   );
 
   const closePlayer = useCallback(async () => {
+    if (closingRef.current) return;
+    closingRef.current = true;
+    setNextDismissed(true);
     if (nativePlayer) {
       const snapshot = nativeProgressSnapshotRef.current;
       if (snapshot.positionMs > 0 || snapshot.ended) {
@@ -1489,7 +1509,7 @@ export function Player({
       }
       setNativeFullscreen(false);
       try {
-        await nativePlayer.stop();
+        await nativeSessionRef.current?.stop();
       } catch {
         // The player may already have stopped at EOF.
       }
@@ -1864,12 +1884,34 @@ export function Player({
                 <PictureModeGlyph />
               </button>
             )}
+            {nativePlayer && (
+              <button aria-label="Playback information" title="Playback information" aria-expanded={infoOpen}
+                onClick={() => { showControls(); setInfoOpen((open) => !open); }}>
+                <Info />
+              </button>
+            )}
             <button aria-label={t("player.fullscreen")} onClick={toggleFullscreen}>
               <Maximize />
             </button>
           </div>
         </div>
       </div>
+      {nativePlayer && infoOpen && (
+        <section className="player-diagnostics" aria-label="Playback information">
+          <header><strong>Playback information</strong><button aria-label="Close playback information" onClick={() => setInfoOpen(false)}><X size={18} /></button></header>
+          {diagnostics ? <dl>
+            <dt>RTX requested</dt><dd>{diagnostics.rtxRequested ? "On for this stream" : "Off for this stream"}</dd>
+            <dt>Hardware decoder</dt><dd>{diagnostics.hardwareDecoder || "Not reported yet"}</dd>
+            <dt>GPU API setting</dt><dd>{diagnostics.gpuApi || "Not reported yet"}</dd>
+            <dt>Video codec</dt><dd>{diagnostics.videoCodec || "Not reported yet"}</dd>
+            <dt>Decoded video</dt><dd>{diagnostics.sourceWidth && diagnostics.sourceHeight ? `${diagnostics.sourceWidth} × ${diagnostics.sourceHeight}` : "Not reported yet"}</dd>
+            <dt>After video filters</dt><dd>{diagnostics.outputWidth && diagnostics.outputHeight ? `${diagnostics.outputWidth} × ${diagnostics.outputHeight}` : "Not reported yet"}</dd>
+            <dt>Video filters</dt><dd>{diagnostics.videoFilters || "None reported"}</dd>
+          </dl> : <p>Waiting for mpv diagnostics…</p>}
+          <p>For RTX, look for d3d11va and a d3d11vpp filter with scaling-mode=nvidia. Larger output dimensions show scaling. These are live mpv readings; they do not confirm NVIDIA driver enhancement activity.</p>
+          {warning && <p>{warning}</p>}
+        </section>
+      )}
       {skippable && !error && (
         <button
           className="player-skip"

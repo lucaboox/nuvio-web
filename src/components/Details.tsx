@@ -42,6 +42,7 @@ import {
 } from "../lib/metadataEnrichment";
 import { platform } from "../platform/index.ts";
 import { canPlayInApp } from "../lib/externalPlayer";
+import { needsUnsendableHeaders, saveFilename } from "../lib/fileDownload";
 import {
   applyDebridStreamSettings,
   type DebridRules,
@@ -912,6 +913,42 @@ export function Details({
       sourceName: stream.name || stream.title || stream.addonName,
       filename: stream.behaviorHints?.filename,
     });
+  }
+
+  /**
+   * One stream, handed to the browser's own download manager.
+   *
+   * Not the queue above, which is a shell capability and absent here. This
+   * ends at the click: the browser takes the address, the file goes wherever
+   * that viewer keeps downloads, and nothing comes back to say how it went. So
+   * the note is the whole of the feedback, and it says which file and — where
+   * the source asked for headers a page cannot attach — that it may not arrive
+   * at all.
+   */
+  function saveToFiles(stream: Stream, video: Video | undefined) {
+    const filename = saveFilename({
+      url: stream.url!,
+      filename: stream.behaviorHints?.filename,
+      title: video?.title || meta.name,
+      showName: meta.type === "series" ? meta.name : undefined,
+      season: video?.season,
+      episode: video?.episode,
+    });
+    const started = platform.fileSave!.save(stream.url!, filename);
+    const note = !started
+      ? t("sources.saveFileRefused")
+      : needsUnsendableHeaders(stream.behaviorHints?.proxyHeaders?.request)
+        ? t("sources.saveFileHeaders", { filename })
+        : t("sources.saveFileStarted", { filename });
+    setDownloadNote(note);
+    // Unlike the queue's note there is no later state to report, so this one
+    // clears itself rather than sitting over the list for the rest of the
+    // session — but only if it is still the one showing, so a second save or a
+    // season queue started meanwhile is not wiped by this one's timer.
+    window.setTimeout(
+      () => setDownloadNote((current) => (current === note ? "" : current)),
+      6000,
+    );
   }
 
   /**
@@ -1864,6 +1901,20 @@ export function Details({
                                   },
                                 ]
                               : []),
+                          ]
+                        : []),
+                      // The browser's own download manager, where there is no
+                      // queue to use instead. A shell that has one does not
+                      // offer this capability at all, so its presence is the
+                      // whole condition — see `FileSaveApi`.
+                      ...(platform.fileSave
+                        ? [
+                            {
+                              label: t("sources.saveFile"),
+                              icon: <DownloadIcon size={16} />,
+                              onSelect: () =>
+                                saveToFiles(sourceMenu.stream, sourceVideo),
+                            },
                           ]
                         : []),
                     ]}

@@ -417,6 +417,25 @@ export type DownloadsApi = {
   moveStorage(path: string): Promise<void>;
 };
 
+/**
+ * Handing one address to the host's own download manager.
+ *
+ * Distinct from `downloads`, not a lesser form of it. That queue is the app's:
+ * it writes files the app can find again, resumes them across a restart, and
+ * plays them back with no network. This is the host's. The file lands wherever
+ * that viewer's browser puts files, there is no progress to show and nothing
+ * to cancel from inside the app, and we never see it again.
+ *
+ * Which is why a shell holding the queue does not offer this as well. Where
+ * both could exist the managed download is strictly the better of the two, and
+ * two entries both reading "Download" that mean different things is worse than
+ * one. The UI can therefore render this on its own presence alone.
+ */
+export type FileSaveApi = {
+  /** False only for an address the app would never navigate to. */
+  save(url: string, filename: string): boolean;
+};
+
 export type DebridProvider = "torbox" | "premiumize" | "realdebrid";
 
 export type DebridService = {
@@ -502,6 +521,7 @@ export type UpdatesApi = {
 
 export type Platform = {
   downloads?: DownloadsApi;
+  fileSave?: FileSaveApi;
   debrid?: DebridApi;
   ratings?: RatingsApi;
   updates?: UpdatesApi;

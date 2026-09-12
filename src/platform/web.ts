@@ -7,6 +7,9 @@
  *
  * `downloads` and `debrid` are absent, which is the whole point of them being
  * optional. See `types.ts` for why neither is a matter of trying harder.
+ *
+ * `fileSave` is the one that goes the other way: the browser has a download
+ * manager of its own, and this is the capability that says so.
  */
 
 import {
@@ -17,12 +20,14 @@ import {
   launchExternalPlayer,
 } from "../lib/externalPlayer.ts";
 import { authVault } from "../lib/authVault.ts";
+import { saveToDevice } from "../lib/fileDownload.ts";
 import { deleteValue, getValue, setValue } from "../lib/idb.ts";
 import { webRequest } from "../lib/webRequest.ts";
 import type { Platform } from "./types.ts";
 
 export const webPlatform: Platform = {
   auth: authVault,
+  fileSave: { save: saveToDevice },
   externalPlayer: {
     options: externalPlayerOptions,
     label: externalPlayerLabel,

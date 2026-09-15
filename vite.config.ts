@@ -84,6 +84,9 @@ export default defineConfig(({ mode }) => {
         registerType: "autoUpdate",
         includeAssets: [
           "app-icon-1024.png",
+          "icon-192.png",
+          "icon-512.png",
+          "icon-maskable-512.png",
           "Nuvio-icon.png",
           "theme-bootstrap.js",
           "nuvio-wordmark.png",
@@ -98,12 +101,27 @@ export default defineConfig(({ mode }) => {
           orientation: "any",
           start_url: base,
           scope: base,
+          // Stated rather than defaulted. Without it an app's identity is its
+          // start_url, so moving the site — to a custom domain, or off the
+          // /<repo>/ prefix — would read as a different app to anything that
+          // had already installed this one.
+          id: base,
+          // Android mints an actual signed package to install a web app, and
+          // that is a different path from the browser's own installability
+          // check: the check passed on a lone 1024px icon while Chrome still
+          // declined to build the package, leaving only a shortcut that opens
+          // in a tab. The conventional 192/512 pair is what every working
+          // installable app ships, so it is what is shipped here.
           icons: [
+            { src: `${base}icon-192.png`, sizes: "192x192", type: "image/png", purpose: "any" },
+            { src: `${base}icon-512.png`, sizes: "512x512", type: "image/png", purpose: "any" },
             { src: `${base}app-icon-1024.png`, sizes: "1024x1024", type: "image/png", purpose: "any" },
-            // Kept separate from "any": a maskable icon is cropped to the
-            // platform's safe zone, so declaring one entry as both lets
-            // Android crop artwork that was never padded for it.
-            { src: `${base}app-icon-1024.png`, sizes: "1024x1024", type: "image/png", purpose: "maskable" }
+            // Its own file, not the one above. A maskable icon is cropped to
+            // the platform's safe zone, so this one has the artwork inset to
+            // the middle 80% and the rest padded; pointing both purposes at
+            // the unpadded artwork is what would let Android cut the corners
+            // off the play mark.
+            { src: `${base}icon-maskable-512.png`, sizes: "512x512", type: "image/png", purpose: "maskable" }
           ]
         },
         workbox: {

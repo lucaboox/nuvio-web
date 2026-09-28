@@ -8,6 +8,7 @@ import {
   MAX_RETRIES,
 } from "./requestPolicy.ts";
 import { mediaTypeLabel, type HomeLayout } from "./account";
+import { isTitleType } from "./contentTypes.ts";
 import { platform } from "../platform/index.ts";
 import type {
   AddonManifest,
@@ -1093,7 +1094,7 @@ export function discoverCatalogs(addons: InstalledAddon[]): DiscoverCatalog[] {
   for (const addon of addons) {
     if (!addon.enabled || !addon.manifest) continue;
     for (const catalog of addon.manifest.catalogs ?? []) {
-      if (!supportsDiscover(catalog)) continue;
+      if (!isTitleType(catalog.type) || !supportsDiscover(catalog)) continue;
       const key = `${addon.manifest.id}:${catalog.type}:${catalog.id}`;
       if (seen.has(key)) continue;
       seen.add(key);

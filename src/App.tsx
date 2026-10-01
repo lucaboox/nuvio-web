@@ -168,6 +168,7 @@ import {
   type WatchIndex,
   type ContinueCard,
 } from "./lib/progress";
+import { tallyWatched } from "./lib/libraryStats";
 import { useProgressiveList } from "./lib/useProgressiveList";
 import { useScrollLock } from "./lib/useScrollLock";
 import { ContinueLoadingOverlay } from "./components/ContinueLoadingOverlay";
@@ -2991,6 +2992,9 @@ function LibraryView({
     () => (tab === "all" ? items : items.filter((item) => item.type === tab)),
     [items, tab],
   );
+  const tally = useMemo(() => tallyWatched(items, index.watched), [items, index]);
+  const shown = tally[tab];
+  const watchedShare = shown.total ? shown.watched / shown.total : 0;
   const { visible } = useProgressiveList(filtered, { resetKey: tab });
   const tabs = [
     { key: "all", label: t("library.all"), count: counts.all },
@@ -3028,6 +3032,30 @@ function LibraryView({
           {t("library.randomPick")}
         </button>
       </div>
+      {shown.total > 0 && (
+        <div className="library-watched">
+          <div
+            className="library-watched-bar"
+            role="progressbar"
+            aria-valuemin={0}
+            aria-valuemax={shown.total}
+            aria-valuenow={shown.watched}
+            aria-label={t("library.watchedOf", shown)}
+          >
+            <i style={{ width: `${watchedShare * 100}%` }} />
+          </div>
+          <span className="library-watched-text">
+            <strong>{t("library.watchedOf", shown)}</strong>
+            {/* On All, the split by type, so one number does not hide the other. */}
+            {tab === "all" && tally.movie.total > 0 && tally.series.total > 0 && (
+              <>
+                <em>{t("library.movies")} {tally.movie.watched}/{tally.movie.total}</em>
+                <em>{t("library.series")} {tally.series.watched}/{tally.series.total}</em>
+              </>
+            )}
+          </span>
+        </div>
+      )}
       {filtered.length === 0 ? (
         <div className="empty-state">
           <strong>{t("library.empty.title")}</strong>

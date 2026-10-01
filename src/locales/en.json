@@ -61,6 +61,7 @@
   "library.movies": "Movies",
   "library.randomPick": "Random pick",
   "library.series": "Series",
+  "library.watchedOf": "{watched}/{total} watched",
   "library.title": "Your library",
   "nav.addons": "Addons",
   "nav.calendar": "Calendar",

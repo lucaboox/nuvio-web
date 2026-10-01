@@ -5124,6 +5124,44 @@ body.is-locked {
   font-style: normal;
   font-variant-numeric: tabular-nums;
 }
+/* How much of the library is watched, for the tab in view: a slim bar in
+   the accent and the count beside it. */
+.library-watched {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 16px 0 4px;
+}
+.library-watched-bar {
+  flex: 0 1 280px;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.08);
+}
+.library-watched-bar i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent, #ef3d50);
+  transition: width 0.4s ease;
+}
+.library-watched-text {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 14px;
+  color: #8d97a2;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.library-watched-text strong {
+  color: #e8ebef;
+  font-weight: 700;
+}
+.library-watched-text em {
+  font-style: normal;
+}
 .library-random-button {
   display: inline-flex;
   align-items: center;

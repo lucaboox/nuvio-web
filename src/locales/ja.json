@@ -61,6 +61,7 @@
   "library.movies": "映画",
   "library.randomPick": "ランダム選択",
   "library.series": "シリーズ",
+  "library.watchedOf": "{watched}/{total} 視聴済み",
   "library.title": "ライブラリ",
   "nav.addons": "アドオン",
   "nav.calendar": "カレンダー",

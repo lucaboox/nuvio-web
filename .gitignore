@@ -16,3 +16,6 @@ cert.pem
 vite.config.js
 vite.config.d.ts
 *.tsbuildinfo
+
+# Serena (local code-assistant index)
+.serena/

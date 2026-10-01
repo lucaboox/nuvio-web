@@ -142,8 +142,9 @@ test("the platform list is suppressed, and only where there is a mouse", () => {
   assert.match(source, /if \(menu\.current\?\.contains\(event\.target as Node\)\) return;/);
   assert.doesNotMatch(source, /select-scrim/);
   // And the element itself stays: it is what the stylesheets target, what a
-  // screen reader announces, and what holds the value.
-  assert.match(source, /<select\n\s*\{\.\.\.rest\}/);
+  // screen reader announces, and what holds the value. `\r?` because a Windows
+  // checkout has CRLF line endings.
+  assert.match(source, /<select\r?\n\s*\{\.\.\.rest\}/);
 });
 
 test("the dropdown and the tooltip outrank every overlay in the app", () => {

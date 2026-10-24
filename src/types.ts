@@ -77,6 +77,13 @@ export type Video = {
   /** Which service the score came from, so the badge can be honest about it. */
   ratingSource?: "imdb" | "tmdb";
   available?: boolean;
+  /**
+   * The same episode on IMDb, where an anime catalog maps it. Subtitle addons
+   * mostly know only IMDb ids.
+   */
+  imdbId?: string;
+  imdbSeason?: number;
+  imdbEpisode?: number;
 };
 export type PluginRow = {
   url: string;
@@ -179,6 +186,8 @@ export type Meta = {
   externalRatings: ExternalRating[];
   defaultVideoId?: string;
   selectedVideoId?: string;
+  /** For a catalog not keyed by IMDb, the title's IMDb id if it sent one. */
+  imdbId?: string;
   videos: Video[];
   manifestUrl: string;
   addonName: string;

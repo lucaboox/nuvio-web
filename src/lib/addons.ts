@@ -10,6 +10,7 @@ import {
 import { mediaTypeLabel, type HomeLayout } from "./account";
 import { isTitleType } from "./contentTypes.ts";
 import { platform } from "../platform/index.ts";
+import { idForPrefixes } from "./subtitles.ts";
 import type {
   AddonManifest,
   AddonRow,
@@ -226,6 +227,11 @@ function episodeRating(value: Record<string, unknown>): string | undefined {
   return Number.isFinite(score) && score > 0 ? String(raw) : undefined;
 }
 
+/** Only a real IMDb id; anything else would be sent to addons as if it were. */
+function imdbIdOf(value: unknown): string | undefined {
+  return typeof value === "string" && /^tt\d+$/.test(value) ? value : undefined;
+}
+
 function mapVideo(value: Record<string, unknown>): Video {
   return {
     id: String(value.id ?? ""),
@@ -240,6 +246,10 @@ function mapVideo(value: Record<string, unknown>): Video {
     // Only an addon-supplied score is an IMDb one; enrichment marks its own.
     ratingSource: episodeRating(value) ? "imdb" : undefined,
     available: value.available !== false,
+    imdbId: imdbIdOf(value.imdb_id),
+    imdbSeason: value.imdbSeason == null ? undefined : Number(value.imdbSeason),
+    imdbEpisode:
+      value.imdbEpisode == null ? undefined : Number(value.imdbEpisode),
   };
 }
 
@@ -375,6 +385,7 @@ export function mapMeta(
     releaseInfo: value.releaseInfo ? String(value.releaseInfo) : undefined,
     released: value.released ? String(value.released) : undefined,
     imdbRating: value.imdbRating ? String(value.imdbRating) : undefined,
+    imdbId: imdbIdOf(value.imdb_id),
     genres: Array.isArray(value.genres) ? value.genres.map(String) : [],
     runtime: value.runtime ? String(value.runtime) : undefined,
     cast,
@@ -1059,10 +1070,14 @@ export async function loadStreams(
  *
  * Only the small index is loaded here. A title can have hundreds of matches,
  * so the player fetches just the subtitle file the viewer actually selects.
+ *
+ * `ids` are alternatives for the same title, best first; each addon is asked
+ * with the first one its declared prefixes accept. For anime that is often
+ * the IMDb mapping rather than the Kitsu id the catalog uses.
  */
 export async function loadSubtitles(
   type: string,
-  id: string,
+  ids: string[],
   addons: InstalledAddon[],
   signal?: AbortSignal,
 ): Promise<Subtitle[]> {
@@ -1074,6 +1089,15 @@ export async function loadSubtitles(
   );
   const batches = await Promise.all(
     targets.map(async (addon) => {
+      const resource = addon.manifest!.resources?.find(
+        (item) => typeof item !== "string" && item.name === "subtitles",
+      );
+      const id = idForPrefixes(
+        ids,
+        (typeof resource === "object" ? resource.idPrefixes : undefined) ??
+          addon.manifest!.idPrefixes,
+      );
+      if (!id) return [];
       try {
         const payload = await fetchJson<{
           subtitles?: Array<Record<string, unknown>>;

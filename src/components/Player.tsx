@@ -21,6 +21,7 @@ import {
   chooseBrowserSubtitle,
   isForcedSubtitle,
   parseBrowserSubtitles,
+  subtitleRequestIds,
   type BrowserSubtitleCue,
 } from "../lib/subtitles.ts";
 import type { ResizeMode, PlayerState } from "../platform/types.ts";
@@ -512,6 +513,12 @@ export function Player({
   >([]);
   const [subtitleIndexBusy, setSubtitleIndexBusy] = useState(false);
   const [subtitleFileBusy, setSubtitleFileBusy] = useState(false);
+  /**
+   * Seconds added to every addon cue. Addon files are often timed for another
+   * release of the same episode — a BD rip against a TV broadcast, say — and
+   * end up a steady second or two off.
+   */
+  const [subtitleDelay, setSubtitleDelay] = useState(0);
   const subtitleFileGeneration = useRef(0);
   /** mpv's own convention: -1, or "no", means subtitles are off. */
   const [selectedSubtitle, setSelectedSubtitle] = useState(-1);
@@ -522,13 +529,14 @@ export function Player({
   useEffect(() => {
     if (nativePlayer) return;
     const controller = new AbortController();
-    const subtitleId = video?.id || meta.id;
+    const subtitleIds = subtitleRequestIds(meta, video);
     subtitleFileGeneration.current += 1;
     setAddonSubtitles([]);
     setBrowserSubtitleCues([]);
     setSelectedSubtitle(-1);
+    setSubtitleDelay(0);
     setSubtitleIndexBusy(true);
-    void loadSubtitles(meta.type, subtitleId, addons, controller.signal)
+    void loadSubtitles(meta.type, subtitleIds, addons, controller.signal)
       .then((tracks) => {
         if (!controller.signal.aborted) setAddonSubtitles(tracks);
       })
@@ -536,7 +544,19 @@ export function Player({
         if (!controller.signal.aborted) setSubtitleIndexBusy(false);
       });
     return () => controller.abort();
-  }, [addons, meta.id, meta.type, video?.id]);
+    // Keyed on identity, not the whole objects: a metadata refresh mid-episode
+    // must not throw away the chosen subtitle.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    addons,
+    meta.id,
+    meta.imdbId,
+    meta.type,
+    video?.id,
+    video?.imdbId,
+    video?.imdbSeason,
+    video?.imdbEpisode,
+  ]);
   /** Dismissed by hand, so it does not come back for the rest of the episode. */
   const [nextDismissed, setNextDismissed] = useState(false);
   const [skipSegments, setSkipSegments] = useState<SkipSegment[]>([]);
@@ -2025,7 +2045,7 @@ export function Player({
       if (!response.ok) throw new Error(`Subtitle host returned HTTP ${response.status}.`);
       const cues = parseBrowserSubtitles(response.body);
       if (!cues.length)
-        throw new Error("This subtitle is not a readable WebVTT or SRT file.");
+        throw new Error("This subtitle is not a readable WebVTT, SRT or ASS file.");
       if (generation === subtitleFileGeneration.current)
         setBrowserSubtitleCues(cues);
     } catch (reason) {
@@ -2093,8 +2113,11 @@ export function Player({
     () =>
       nativePlayer || selectedSubtitle < 0
         ? ""
-        : activeBrowserSubtitleText(browserSubtitleCues, currentTime),
-    [browserSubtitleCues, currentTime, selectedSubtitle],
+        : activeBrowserSubtitleText(
+            browserSubtitleCues,
+            currentTime - subtitleDelay,
+          ),
+    [browserSubtitleCues, currentTime, selectedSubtitle, subtitleDelay],
   );
 
   const selectAudio = (id: number) => {
@@ -2747,6 +2770,37 @@ export function Player({
                         <ChevronRight />
                       </em>
                     </button>
+                  )}
+                  {!nativePlayer && selectedSubtitle >= 0 && (
+                    <div className="settings-row caption-style-step">
+                      <span>Delay</span>
+                      <em>
+                        <button
+                          aria-label="Show subtitles earlier"
+                          onClick={() =>
+                            setSubtitleDelay(
+                              (value) => Math.round((value - 0.25) * 100) / 100,
+                            )
+                          }
+                        >
+                          <Minus />
+                        </button>
+                        <i>
+                          {subtitleDelay > 0 ? "+" : ""}
+                          {subtitleDelay.toFixed(2)}s
+                        </i>
+                        <button
+                          aria-label="Show subtitles later"
+                          onClick={() =>
+                            setSubtitleDelay(
+                              (value) => Math.round((value + 0.25) * 100) / 100,
+                            )
+                          }
+                        >
+                          <Plus />
+                        </button>
+                      </em>
+                    </div>
                   )}
                   {/* Always offered, even with no tracks: turning subtitles
                       off is the thing most often wanted here, and it has to be

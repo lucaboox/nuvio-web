@@ -2145,18 +2145,43 @@ export function App() {
       const finish = () => {
         if (generation === episodeSwitch.current) setResolvingContinue(null);
       };
+      const remembered = (streams: Stream[]) =>
+        (platform.debrid
+          ? applyDebridStreamSettings(streams, debridRules)
+          : streams
+        ).find(
+          (stream) =>
+            (stream.url || stream.externalUrl) &&
+            stream.behaviorHints?.bingeGroup === group,
+        );
+      // Settled by the first addon to return the remembered release, not the
+      // last addon to answer: waiting on every scraper is what made continuing
+      // take as long as the slowest one installed. Whatever is still in
+      // flight then is cancelled. With no match anywhere, it waits them all
+      // out and the title page takes over, as before.
+      const lookup = new AbortController();
+      const source = new Promise<Stream | undefined>((resolve) => {
+        void loadStreams(
+          card.item.type,
+          target.id,
+          addons,
+          lookup.signal,
+          (_name, _batch, ordered) => {
+            const match = remembered(ordered);
+            if (match) resolve(match);
+          },
+        )
+          .then((streams) => resolve(remembered(streams)))
+          .catch(() => resolve(undefined));
+      }).finally(() => lookup.abort());
       // The full metadata alongside the sources: without it the player has no
       // episode list, so next-up and the episode picker would both be empty.
       void Promise.all([
-        loadStreams(card.item.type, target.id, addons),
+        source,
         resolveMeta(card.item, addons).catch(() => card.item),
       ])
-        .then(([streams, meta]) => {
+        .then(([chosen, meta]) => {
           if (generation !== episodeSwitch.current) return;
-          const orderedStreams = platform.debrid
-            ? applyDebridStreamSettings(streams, debridRules)
-            : streams;
-          const chosen = orderedStreams.find((stream) => (stream.url || stream.externalUrl) && stream.behaviorHints?.bingeGroup === group);
           finish();
           if (!chosen) {
             openTitle();

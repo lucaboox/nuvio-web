@@ -101,8 +101,9 @@ type ExternalPlayerDefinition = {
   label: string | Partial<Record<PlayerPlatform, string>>;
   platforms: Record<ExternalPlayerSurface, readonly PlayerPlatform[]>;
   /**
-   * Whether the player tells us what happened when it is done. Outplayer and
-   * Lenna do; everything else is a one-way trip and has to be asked afterwards.
+   * Whether the player tells us what happened when it is done. Outplayer,
+   * Lenna and SenPlayer do; everything else is a one-way trip and has to be
+   * asked afterwards.
    */
   reportsBack?: boolean;
 };
@@ -173,6 +174,14 @@ const externalPlayerDefinitions: readonly ExternalPlayerDefinition[] = [
     mode: "lenna",
     label: "Lenna",
     platforms: { settings: ["apple-mobile"], player: ["apple-mobile"] },
+    reportsBack: true,
+  },
+  {
+    // SenPlayer ships for macOS as well as iOS and iPadOS, and answers the
+    // same scheme on all of them.
+    mode: "senplayer",
+    label: "SenPlayer",
+    platforms: { settings: ["apple-mobile", "macos"], player: ["apple-mobile", "macos"] },
     reportsBack: true,
   },
   {
@@ -388,6 +397,37 @@ export function lennaPlaybackUrl(
   return `lenna://x-callback-url/play?${query.toString()}`;
 }
 
+/**
+ * SenPlayer's x-callback-url form, as documented in the URLSchemes.md it ships
+ * (6.1.0 and later for `position` and the report back).
+ *
+ * `position` starts it where you left off, and has to be a whole number of
+ * seconds. x-success is its only callback. It opens it when the player is
+ * closed or reaches the end, appending `position` and, as `lastPlayedUrl`, the
+ * stream URL, but not the duration. So it is always "stopped" here, and the
+ * app works out whether that was the end when it knows the runtime.
+ *
+ * Spaces in the title are written as %20. Form encoding writes a space as
+ * "+", which only means a space to a reader that knows it is reading a form,
+ * and %20 means a space to every reader. URLSearchParams writes a literal "+"
+ * as %2B, so every "+" left in the query is a space.
+ */
+export function senplayerPlaybackUrl(
+  url: string,
+  title: string,
+  options: ExternalPlayerLaunchOptions = {},
+) {
+  const query = new URLSearchParams({ url });
+  if (title) query.set("name", title);
+  if (options.subtitleUrl) query.set("sub", options.subtitleUrl);
+  // A whole, non-negative number of seconds is all it accepts.
+  const position = Math.floor(options.positionSeconds ?? 0);
+  query.set("position", String(Number.isFinite(position) && position > 0 ? position : 0));
+  if (options.returnUrlFor)
+    query.set("x-success", options.returnUrlFor("?nuvio-external=stopped"));
+  return `senplayer://x-callback-url/play?${query.toString().replaceAll("+", "%20")}`;
+}
+
 /** Hands a stream to a registered player outside the browser. */
 export function launchExternalPlayer(
   mode: ExternalPlayerMode,
@@ -448,6 +488,10 @@ export function launchExternalPlayer(
   }
   if (mode === "lenna") {
     window.location.href = lennaPlaybackUrl(safeUrl, options);
+    return;
+  }
+  if (mode === "senplayer") {
+    window.location.href = senplayerPlaybackUrl(safeUrl, title, options);
     return;
   }
   if (mode === "infuse") {

@@ -297,6 +297,7 @@ export type ExternalPlayerMode =
   | "android-chooser"
   | "outplayer"
   | "lenna"
+  | "senplayer"
   | "infuse"
   | "iina"
   | "m3u";

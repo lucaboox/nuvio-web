@@ -46,7 +46,10 @@ import { Details } from "./components/Details";
 import { Discover } from "./components/Discover";
 import { Downloads } from "./components/Downloads";
 import { DownloadSettings } from "./components/DownloadSettings";
-import { ExternalWatchPrompt } from "./components/ExternalWatchPrompt";
+import {
+  ExternalWatchPrompt,
+  runtimeMinutes,
+} from "./components/ExternalWatchPrompt";
 import { createReturnReportCheck } from "./lib/externalReturn";
 import {
   CollectionFolderView,
@@ -155,6 +158,7 @@ import {
   readExternalHandoff,
   rememberExternalHandoff,
   takeExternalReport,
+  withKnownDuration,
   type ExternalPlayerReport,
 } from "./lib/externalHandoff";
 import {
@@ -1847,8 +1851,19 @@ export function App() {
       setExternalWatch(watched);
       return;
     }
+    // A position with no length is SenPlayer's normal report. Only a title's
+    // own runtime stands in for the length: an episode's, or a film's. A
+    // series' runtime is the show's, and an episode longer than that would be
+    // marked finished, which throws away where it stopped.
+    const runtime =
+      watched.video?.runtime && watched.video.runtime > 0
+        ? watched.video.runtime
+        : watched.meta.type === "movie"
+          ? runtimeMinutes(watched.meta)
+          : null;
+    const measured = withKnownDuration(report, runtime ? runtime * 60_000 : null);
     clearExternalReturn();
-    savePlaybackProgress(watched, report.positionMs, report.durationMs, false);
+    savePlaybackProgress(watched, measured.positionMs, measured.durationMs, false);
     setMessage("Saved your position.");
   }
 
@@ -5450,8 +5465,9 @@ function SettingsPage({
             <p className="setting-warning">
               <TriangleAlert aria-hidden="true" />
               <span>
-                Outplayer saves your position when you close it, and reaching
-                you back here sends the stream URL through a Cloudflare Worker.
+                Outplayer and SenPlayer save your position when you close
+                them, and reaching you back here sends the stream URL through
+                a Cloudflare Worker.
                 Nothing is logged and nobody can read it — the Worker holds a
                 position for a few minutes, hands it back, and forgets it.
               </span>

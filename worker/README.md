@@ -44,7 +44,10 @@ Which of the two happens is a property of the player. **Outplayer does the
 second**, measured rather than assumed: it parses the address and its
 parameters land in the query, so with Outplayer the stream URL is sent. The
 fragment is kept anyway — it costs a character and would take effect for any
-player that appends plainly, or if Outplayer ever changes.
+player that appends plainly, or if Outplayer ever changes. SenPlayer does the
+same, measured on its macOS build (6.2.2): it re-encodes the address, appends
+the stream URL as `lastPlayedUrl` and the position to the query ahead of the
+fragment, and sends no duration.
 
 This is not a gap left in the design, and no rearrangement closes it. Recovering
 a position at all requires an `https` receiver, because that is the only kind of

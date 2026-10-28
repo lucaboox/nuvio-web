@@ -73,10 +73,11 @@ export function clearExternalHandoff() {
 /**
  * What the other player reported on its way back.
  *
- * Only Outplayer and Lenna say anything: their callbacks reopen us with the
- * outcome, and the one fired on closing appends where it stopped and how long
- * the video was. That is exactly what the prompt would otherwise have to ask, so
- * when this is present the prompt is skipped and the position simply saved.
+ * Only Outplayer, Lenna and SenPlayer say anything: their callbacks reopen us
+ * with the outcome, and the one fired on closing appends where it stopped and,
+ * except from SenPlayer, how long the video was. That is exactly what the
+ * prompt would otherwise have to ask, so when this is present the prompt is
+ * skipped and the position simply saved.
  */
 export type ExternalPlayerReport =
   | { outcome: "finished" }
@@ -115,6 +116,24 @@ export function parseExternalReport(
   };
 }
 
+/**
+ * Fills in a length the player did not report.
+ *
+ * SenPlayer reports where it stopped but not how long the video was. A
+ * position with no length can never count as finished, so an episode watched
+ * to the credits would stay in Continue Watching. When the title's own runtime
+ * is known it stands in for the length. Without one the position is still
+ * worth keeping as it is: it resumes correctly, and only finishing goes
+ * unrecorded.
+ */
+export function withKnownDuration(
+  report: Extract<ExternalPlayerReport, { outcome: "stopped" }>,
+  runtimeMs: number | null,
+): Extract<ExternalPlayerReport, { outcome: "stopped" }> {
+  if (report.durationMs > 0 || !runtimeMs || runtimeMs <= 0) return report;
+  return { ...report, durationMs: runtimeMs };
+}
+
 /** Reads the report out of the address bar and takes it back out again. */
 export function takeExternalReport(): ExternalPlayerReport | null {
   if (typeof window === "undefined") return null;
@@ -129,6 +148,9 @@ export function takeExternalReport(): ExternalPlayerReport | null {
     "url",
     "position",
     "duration",
+    // SenPlayer's name for the stream URL, which has no place in the address
+    // bar either.
+    "lastPlayedUrl",
     "errorCode",
     "errorMessage",
   ])

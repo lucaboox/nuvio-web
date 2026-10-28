@@ -24,15 +24,17 @@ export type ExternalHandoff = {
   video?: Video;
 };
 
+/** Returns when it was handed off, which is also how other tabs tell it apart. */
 export function rememberExternalHandoff(
   profileIndex: number,
   meta: Meta,
   video?: Video,
 ) {
+  const at = Date.now();
   try {
     const payload: ExternalHandoff = {
       profileIndex,
-      at: Date.now(),
+      at,
       // The episode list is re-fetched from the addon on the way back and is
       // far and away the biggest thing here — a long-running series would put
       // this near the storage quota on its own.
@@ -43,6 +45,7 @@ export function rememberExternalHandoff(
   } catch {
     // A blocked or full store costs the resume, never the hand-off itself.
   }
+  return at;
 }
 
 /** The pending hand-off, or null when there is none worth resuming. */
@@ -67,6 +70,42 @@ export function clearExternalHandoff() {
     localStorage.removeItem(KEY);
   } catch {
     // Nothing to do — a stale entry ages out by itself.
+  }
+}
+
+export const EXTERNAL_ANSWER_KEY = "nuvio-external-answer";
+
+/** How a hand-off was settled, in whichever tab settled it. */
+export type ExternalHandoffAnswer =
+  | ExternalPlayerReport
+  | { outcome: "dismissed" };
+
+/**
+ * Tells other tabs that a hand-off has been answered.
+ *
+ * On a Mac, and in a Safari tab on iOS, a player's callback opens a new tab
+ * rather than going back to the one that launched it. The new tab records the
+ * report, and the old one would go on asking where you stopped, for a title
+ * that is already saved. Writing the answer here fires a storage event in
+ * every other tab, and stays readable for a tab that was asleep when it fired.
+ */
+export function announceExternalAnswer(at: number, answer: ExternalHandoffAnswer) {
+  try {
+    localStorage.setItem(EXTERNAL_ANSWER_KEY, JSON.stringify({ at, answer }));
+  } catch {
+    // The other tab keeps its prompt, which is how it was before.
+  }
+}
+
+/** The answer to the hand-off made at `at`, if another tab gave one. */
+export function readExternalAnswer(at: number): ExternalHandoffAnswer | null {
+  try {
+    const raw = localStorage.getItem(EXTERNAL_ANSWER_KEY);
+    if (!raw) return null;
+    const value = JSON.parse(raw) as { at?: number; answer?: ExternalHandoffAnswer };
+    return value?.at === at && value.answer ? value.answer : null;
+  } catch {
+    return null;
   }
 }
 

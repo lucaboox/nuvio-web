@@ -151,10 +151,14 @@ import {
   relayReturnUrl,
 } from "./lib/returnRelay";
 import {
+  announceExternalAnswer,
   clearExternalHandoff,
+  EXTERNAL_ANSWER_KEY,
+  readExternalAnswer,
   readExternalHandoff,
   rememberExternalHandoff,
   takeExternalReport,
+  type ExternalHandoffAnswer,
   type ExternalPlayerReport,
 } from "./lib/externalHandoff";
 import {
@@ -472,9 +476,10 @@ export function App() {
    * What was last handed to another player, for as long as we are still owed
    * an answer about it. A report can arrive well after boot — bringing an
    * already-running app to the front does not mount anything — so the title it
-   * refers to has to outlive the moment the app started.
+   * refers to has to outlive the moment the app started. `at` is when it was
+   * handed off, which is how an answer from another tab is matched to it.
    */
-  const handedOff = useRef<{ meta: Meta; video?: Video } | null>(null);
+  const handedOff = useRef<{ meta: Meta; video?: Video; at?: number } | null>(null);
   /** Orders the episode switches, so a slow one cannot overtake a later one. */
   const episodeSwitch = useRef(0);
   /**
@@ -831,7 +836,7 @@ export function App() {
     clearExternalHandoff();
     setSelected(bootHandoff.meta);
     const watched = { meta: bootHandoff.meta, video: bootHandoff.video };
-    handedOff.current = watched;
+    handedOff.current = { ...watched, at: bootHandoff.at };
     if (bootReport) setPendingReport(bootReport);
     else setExternalWatch(watched);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -912,6 +917,45 @@ export function App() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  /**
+   * Stops asking about a hand-off another tab has already answered.
+   *
+   * The answer is looked for once a profile is open, since a tab still on the
+   * picker or a PIN can be answered elsewhere before it holds the hand-off;
+   * when it is written; and on coming back to this tab, since a tab in the
+   * background may not hear it written. What was saved there is shown here
+   * too, without being sent a second time.
+   */
+  useEffect(() => {
+    if (!profile) return;
+    const settle = () => {
+      const watched = handedOff.current;
+      const answer = watched?.at ? readExternalAnswer(watched.at) : null;
+      if (!watched || !answer) return;
+      clearExternalReturn();
+      if (answer.outcome === "finished") {
+        reflectWatched(watched.meta, watched.video, true);
+        setMessage("Marked as watched.");
+      } else if (answer.outcome === "stopped") {
+        reflectNativePlaybackProgress(watched, answer.positionMs, answer.durationMs, false);
+        setMessage("Saved your position.");
+      }
+    };
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === EXTERNAL_ANSWER_KEY) settle();
+    };
+    const onVisible = () => {
+      if (document.visibilityState === "visible") settle();
+    };
+    settle();
+    window.addEventListener("storage", onStorage);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      window.removeEventListener("storage", onStorage);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile]);
   const openProfile = useCallback(
     (next: Profile) => {
       localStorage.setItem("nuvio-active-profile", String(next.profileIndex));
@@ -1774,7 +1818,8 @@ export function App() {
    * Reflects a checkpoint the desktop shell has already accepted for sync.
    * This performs no RPC: libmpv's Rust reporter remains the only persistent
    * writer, while React stops showing a stale resume point after Back. The
-   * browser/PWA player never calls this path.
+   * browser/PWA player never calls this path; the browser only calls it for a
+   * position another tab has already saved.
    */
   function reflectNativePlaybackProgress(
     current: { meta: Meta; video?: Video },
@@ -1826,12 +1871,29 @@ export function App() {
     setExternalWatch(null);
   }
 
+  /** Settles the hand-off here, and in any other tab still asking about it. */
+  function answerExternalReturn(
+    answer: ExternalHandoffAnswer,
+    title: { meta: Meta; video?: Video },
+  ) {
+    const handed = handedOff.current;
+    // A copied link is asked about too, but it was never handed off, and the
+    // hand-off still held may be for another title.
+    if (
+      handed?.at &&
+      handed.meta.id === title.meta.id &&
+      handed.video?.id === title.video?.id
+    )
+      announceExternalAnswer(handed.at, answer);
+    clearExternalReturn();
+  }
+
   /** Records a player's return report at boot or when the app wakes again. */
   function applyExternalReport(report: ExternalPlayerReport) {
     const watched = handedOff.current;
     if (!watched) return;
     if (report.outcome === "finished") {
-      clearExternalReturn();
+      answerExternalReturn(report, watched);
       void toggleWatched(watched.meta, watched.video, true);
       setMessage("Marked as watched.");
       return;
@@ -1847,7 +1909,7 @@ export function App() {
       setExternalWatch(watched);
       return;
     }
-    clearExternalReturn();
+    answerExternalReturn(report, watched);
     savePlaybackProgress(watched, report.positionMs, report.durationMs, false);
     setMessage("Saved your position.");
   }
@@ -1883,9 +1945,9 @@ export function App() {
     externalReturnGeneration.current += 1;
     setPendingReport(null);
     if (profile && mode !== "copy" && mode !== "m3u") {
-      rememberExternalHandoff(profile.profileIndex, meta, video);
+      const at = rememberExternalHandoff(profile.profileIndex, meta, video);
       // Also held in memory, for the return that finds the app still running.
-      handedOff.current = { meta, video };
+      handedOff.current = { meta, video, at };
     }
     const resumeMs = positionMs ?? resumePositionMs(meta, video);
     // The relay is the only route that carries a position into an installed
@@ -2010,9 +2072,29 @@ export function App() {
       season: video?.season,
       episode: video?.episode,
     };
-    const key = watchKey(meta.id, video?.season, video?.episode);
     const previousWatched = watchedItems;
     const previousProgress = progress;
+    reflectWatched(meta, video, next);
+    try {
+      await setWatched(
+        profileIndex,
+        identity,
+        video?.title || meta.name,
+        next,
+        previousProgress,
+      );
+    } catch (error) {
+      if (!isCurrent()) return;
+      setWatchedItems(previousWatched);
+      setProgress(previousProgress);
+      setMessage(
+        error instanceof Error ? error.message : "Could not save watched state",
+      );
+    }
+  }
+  /** Shows a title as watched or not, without telling the server. */
+  function reflectWatched(meta: Meta, video: Video | undefined, next: boolean) {
+    const key = watchKey(meta.id, video?.season, video?.episode);
     setWatchedItems((current) =>
       next
         ? [
@@ -2038,22 +2120,6 @@ export function App() {
         (row) => watchKey(row.contentId, row.season, row.episode) !== key,
       ),
     );
-    try {
-      await setWatched(
-        profileIndex,
-        identity,
-        video?.title || meta.name,
-        next,
-        previousProgress,
-      );
-    } catch (error) {
-      if (!isCurrent()) return;
-      setWatchedItems(previousWatched);
-      setProgress(previousProgress);
-      setMessage(
-        error instanceof Error ? error.message : "Could not save watched state",
-      );
-    }
   }
   /**
    * Sends one episode back to never-started: no resume point, no progress bar,
@@ -2662,16 +2728,16 @@ export function App() {
           video={externalWatch.video}
           /* Answered here, so there is nothing left to resume on a later open. */
           onDismiss={() => {
-            clearExternalReturn();
+            answerExternalReturn({ outcome: "dismissed" }, externalWatch);
           }}
           onFinished={() => {
             const current = externalWatch;
-            clearExternalReturn();
+            answerExternalReturn({ outcome: "finished" }, current);
             void toggleWatched(current.meta, current.video, true);
           }}
           onStopped={(positionMs, durationMs) => {
             const current = externalWatch;
-            clearExternalReturn();
+            answerExternalReturn({ outcome: "stopped", positionMs, durationMs }, current);
             savePlaybackProgress(current, positionMs, durationMs, false);
             setMessage("Saved your position.");
           }}

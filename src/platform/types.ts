@@ -62,8 +62,13 @@ export type AuthApi = {
     email: string,
     password: string,
   ): Promise<Session>;
-  /** Resumes a stored session, rotating whatever credential persisted it. */
-  restore(): Promise<Session>;
+  /**
+   * Resumes a stored session, rotating whatever credential persisted it.
+   * Null when there is none, or it was refused. Rejects with `retryable: true`
+   * when the backend could not be reached: the session is kept, and asking
+   * again later may succeed.
+   */
+  restore(): Promise<Session | null>;
   signOut(): Promise<void>;
   /** One authorized call against the account backend, made on our behalf. */
   request<T>(

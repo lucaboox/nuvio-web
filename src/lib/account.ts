@@ -155,13 +155,26 @@ export async function signIn(
  * Restores by rotating the persisted refresh credential inside the Worker.
  * The Window receives identity/backend metadata, never either credential.
  */
+/** The saved session could not be checked: keep it, and try again. */
+export class SessionUnavailableError extends Error {}
+
+/**
+ * The saved session, or null when there is none to resume.
+ *
+ * Throws `SessionUnavailableError` when the backend could not be reached.
+ * That is not being signed out, and must not be shown as if it were.
+ */
 export async function restoreSession(): Promise<Session | null> {
   activeSession = null;
   try {
     const session = await platform.auth.restore();
     activeSession = session;
     return session;
-  } catch {
+  } catch (error) {
+    if ((error as { retryable?: boolean }).retryable === true)
+      throw new SessionUnavailableError(
+        error instanceof Error ? error.message : "Could not reach Nuvio.",
+      );
     return null;
   }
 }

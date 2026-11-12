@@ -27,7 +27,7 @@ type VaultCommand =
 
 type VaultResponse =
   | { id: number; ok: true; value: unknown }
-  | { id: number; ok: false; error: string };
+  | { id: number; ok: false; error: string; retryable?: boolean };
 
 let vaultMessageId = 0;
 const vaultPending = new Map<
@@ -57,7 +57,12 @@ function vault(): Worker {
     if (!pending) return;
     vaultPending.delete(event.data.id);
     if (event.data.ok) pending.resolve(event.data.value);
-    else pending.reject(new Error(event.data.error));
+    else
+      pending.reject(
+        Object.assign(new Error(event.data.error), {
+          retryable: event.data.retryable === true,
+        }),
+      );
   });
 
   worker.addEventListener("error", () => {

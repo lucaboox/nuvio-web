@@ -49,7 +49,15 @@ type LegacyRefreshSession = {
 
 type WorkerResponse =
   | { id: number; ok: true; value: unknown }
-  | { id: number; ok: false; error: string };
+  | { id: number; ok: false; error: string; retryable?: boolean };
+
+/**
+ * A refresh that could not be made, as opposed to one that was refused. The
+ * stored session is kept and the page tries again rather than signing out.
+ */
+class RetryableError extends Error {
+  readonly retryable = true;
+}
 
 class RequestError extends Error {
   constructor(message: string, readonly status: number) {
@@ -319,9 +327,17 @@ async function handle(command: WorkerCommand): Promise<unknown> {
         return { user, backend: targetBackend };
       } catch (error) {
         clearMemorySession();
-        if (error instanceof RequestError && [400, 401, 403].includes(error.status))
+        // Refused: the refresh token is spent or revoked, so the session is
+        // over. Anything else (offline, a timeout, a 5xx, a 429) says nothing
+        // about the session, and signing out over it is what put people on the
+        // sign-in screen whenever the backend had a bad moment at launch.
+        if (error instanceof RequestError && [400, 401, 403].includes(error.status)) {
           await deleteValue(SESSION_KEY);
-        throw error;
+          return null;
+        }
+        throw new RetryableError(
+          error instanceof Error ? error.message : "Could not reach Nuvio.",
+        );
       }
     });
   }
@@ -388,6 +404,7 @@ self.addEventListener("message", (event: MessageEvent<WorkerCommand>) => {
         id: command.id,
         ok: false,
         error: error instanceof Error ? error.message : "Authentication failed.",
+        retryable: error instanceof RetryableError,
       } satisfies WorkerResponse),
   );
 });

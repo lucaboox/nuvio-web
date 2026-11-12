@@ -1,4 +1,5 @@
 import { ProfileGate } from "./components/ProfileGate";
+import { SessionUnavailable } from "./components/SessionUnavailable";
 import { HomeShelf } from "./components/HomeShelf";
 import { profileForReload, profileSessionMarker, SESSION_PROFILE_KEY } from "./lib/profileSession";
 import { effectiveAddonProfileIndex } from "./lib/account";
@@ -84,6 +85,7 @@ import {
   pushProgress,
   isComplete,
   restoreSession,
+  SessionUnavailableError,
   removeFromLibrary,
   saveAddons,
   settingsPlatform,
@@ -790,13 +792,47 @@ export function App() {
     setExternalWatch(null);
     setProfile(next);
   }, []);
-  useEffect(() => {
-    restoreSession()
-      .then((value) => {
+  /**
+   * The saved session could not be checked yet. The boot splash stays up
+   * through a few quick retries, and only after those does the app say so,
+   * never by falling through to the sign-in screen.
+   */
+  const [sessionUnavailable, setSessionUnavailable] = useState(false);
+  const [sessionRetrying, setSessionRetrying] = useState(false);
+  const bootAttempt = useRef(0);
+  const resumeSession = useCallback(async (quickRetries: number) => {
+    const attempt = ++bootAttempt.current;
+    setSessionRetrying(true);
+    for (let tries = 0; ; tries += 1) {
+      try {
+        const value = await restoreSession();
+        if (attempt !== bootAttempt.current) return;
+        setSessionUnavailable(false);
         setSession(value);
-      })
-      .finally(() => setBooting(false));
+        break;
+      } catch (error) {
+        if (attempt !== bootAttempt.current) return;
+        if (!(error instanceof SessionUnavailableError) || tries >= quickRetries) {
+          setSessionUnavailable(error instanceof SessionUnavailableError);
+          break;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 1500 * 2 ** tries));
+        if (attempt !== bootAttempt.current) return;
+      }
+    }
+    setSessionRetrying(false);
+    setBooting(false);
   }, []);
+  useEffect(() => {
+    void resumeSession(2);
+  }, [resumeSession]);
+  // Back online is the moment a retry is most likely to work.
+  useEffect(() => {
+    if (!sessionUnavailable) return;
+    const onOnline = () => void resumeSession(0);
+    window.addEventListener("online", onOnline);
+    return () => window.removeEventListener("online", onOnline);
+  }, [sessionUnavailable, resumeSession]);
   /**
    * Puts this browser in the account's device list, and keeps it there.
    *
@@ -2250,6 +2286,18 @@ export function App() {
   );
   if (booting)
     return null;
+  if (!session && sessionUnavailable)
+    return (
+      <SessionUnavailable
+        retrying={sessionRetrying}
+        onRetry={() => void resumeSession(0)}
+        onSignIn={() => {
+          bootAttempt.current += 1;
+          setSessionRetrying(false);
+          setSessionUnavailable(false);
+        }}
+      />
+    );
   if (!session)
     return <AuthScreen onSession={setSession} />;
   // Signed in but nobody chosen yet: the picker, and nothing else. A PIN

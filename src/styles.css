@@ -10149,3 +10149,40 @@ body.is-locked {
     transition: none;
   }
 }
+
+/* The saved session could not be checked: still signed in, try again. */
+.session-unavailable {
+  text-align: center;
+}
+.session-unavailable h1 {
+  margin: 18px 0 8px;
+  font-size: 22px;
+}
+.session-unavailable p {
+  margin: 0 0 20px;
+  color: #a3adb8;
+  line-height: 1.45;
+}
+.session-unavailable .primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+}
+.session-unavailable .primary svg {
+  width: 17px;
+  height: 17px;
+}
+.session-unavailable-alt {
+  margin-top: 14px;
+  border: 0;
+  background: none;
+  color: #8d97a2;
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+.session-unavailable-alt:hover {
+  color: #e8ebef;
+}

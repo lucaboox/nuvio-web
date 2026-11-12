@@ -7,6 +7,7 @@ import {
   runPool,
   MAX_RETRIES,
 } from "./requestPolicy.ts";
+import { parseSeasonPosters } from "./seasonPosters.ts";
 import { mediaTypeLabel, type HomeLayout } from "./account";
 import { isTitleType } from "./contentTypes.ts";
 import { platform } from "../platform/index.ts";
@@ -240,6 +241,9 @@ function mapVideo(value: Record<string, unknown>): Video {
     // Only an addon-supplied score is an IMDb one; enrichment marks its own.
     ratingSource: episodeRating(value) ? "imdb" : undefined,
     available: value.available !== false,
+    seasonPoster: value.seasonPoster
+      ? String(value.seasonPoster)
+      : undefined,
   };
 }
 
@@ -358,6 +362,11 @@ export function mapMeta(
         }))
         .filter((item) => item.source && Number.isFinite(item.value))
     : [];
+  const videos = Array.isArray(value.videos)
+    ? (value.videos as Array<Record<string, unknown>>).map((video) =>
+        mapVideo(video),
+      )
+    : [];
   return {
     id: String(value.id ?? ""),
     type: String(value.type ?? "movie"),
@@ -392,11 +401,11 @@ export function mapMeta(
               "",
           ) || undefined
         : undefined,
-    videos: Array.isArray(value.videos)
-      ? (value.videos as Array<Record<string, unknown>>).map((video) =>
-          mapVideo(video),
-        )
-      : [],
+    videos,
+    seasonPosters: parseSeasonPosters(
+      appExtras,
+      videos.flatMap((video) => (video.season == null ? [] : [video.season])),
+    ),
     manifestUrl,
     addonName,
   };

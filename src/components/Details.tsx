@@ -698,6 +698,22 @@ export function Details({
     [meta],
   );
   const regularSeasonCount = seasons.filter((value) => value > 0).length;
+  /**
+   * Each season's own poster, the way Nuvio picks it: one set on an episode of
+   * that season first, then the title's per-season list. Empty when the addon
+   * sends none, and the season dropdown stays in that case.
+   */
+  const seasonPosters = useMemo(() => {
+    const posters = new Map<number, string>();
+    for (const value of seasons) {
+      const own =
+        meta.videos.find((video) => (video.season ?? 0) === value && video.seasonPoster)
+          ?.seasonPoster ?? meta.seasonPosters?.[value];
+      if (own) posters.set(value, own);
+    }
+    return posters;
+  }, [meta, seasons]);
+  const seasonStripRef = useDragScroll<HTMLDivElement>();
   const [season, setSeason] = useState<number | undefined>();
   /**
    * The selected season's own cast, where TMDB has one.
@@ -1395,7 +1411,7 @@ export function Details({
               <h2>{meta.name}</h2>
             </div>
             <div className="episode-header-controls">
-              <label className="season-select-wrap">
+              <label className={`season-select-wrap${seasonPosters.size > 0 && seasons.length > 1 ? " has-poster-strip" : ""}`}>
                 <span>SEASON</span>
                 <Select
                   value={season ?? ""}
@@ -1423,6 +1439,36 @@ export function Details({
               </button>
             </div>
           </header>
+          {seasonPosters.size > 0 && seasons.length > 1 && (
+            <div className="season-poster-strip" ref={seasonStripRef} role="tablist" aria-label="Seasons">
+              {seasons.map((value) => {
+                const poster = seasonPosters.get(value) ?? meta.poster;
+                const label = value === 0 ? "Specials" : `Season ${value}`;
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    role="tab"
+                    aria-selected={value === (season ?? seasons[0])}
+                    className={value === (season ?? seasons[0]) ? "is-selected" : undefined}
+                    onClick={() => {
+                      setSeason(value);
+                      setEpisodeQuery("");
+                    }}
+                  >
+                    <span className="season-poster-image">
+                      {poster ? (
+                        <img src={poster} alt="" loading="lazy" decoding="async" />
+                      ) : (
+                        <span className="poster-fallback">{value === 0 ? "S" : value}</span>
+                      )}
+                    </span>
+                    <strong>{label}</strong>
+                  </button>
+                );
+              })}
+            </div>
+          )}
           <label className="episode-search">
             <Search size={19} />
             <input

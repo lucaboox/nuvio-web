@@ -174,6 +174,8 @@ import {
   type ContinueCard,
 } from "./lib/progress";
 import { tallyWatched } from "./lib/libraryStats";
+import { isFresh, loadCachedTitles, saveCachedTitles, type CachedTitle } from "./lib/continueWatchingCache";
+import { runPool } from "./lib/requestPolicy";
 import { useCatalogPaging } from "./lib/useCatalogPaging";
 import { PagingStatus } from "./components/PagingStatus";
 import { useProgressiveList } from "./lib/useProgressiveList";
@@ -1055,6 +1057,14 @@ export function App() {
       // Everything the catalogs do not depend on runs on its own and lands
       // when it lands. Gathering all seven into one Promise.all meant the
       // slowest request — usually the watched history — held up the rows.
+      // The row as it was last time, on screen before anything is fetched.
+      const cachedTitlesTask = loadCachedTitles(profileIndex);
+      void cachedTitlesTask.then((cached) => {
+        if (!isCurrent() || !cached.size) return;
+        setRecentMetadata((current) =>
+          current.length ? current : [...cached.values()].map((entry) => entry.meta),
+        );
+      });
       const libraryTask = loadLibrary(profileIndex)
         .then((items) => {
           if (isCurrent()) setLibrary(items);
@@ -1117,6 +1127,86 @@ export function App() {
       // Rows appear as each catalog lands instead of after every addon has
       // answered, which is what left the page blank on a slow connection.
       setSections([]);
+      const continueTask = (async () => {
+        const [nextLibrary, nextProgress, nextWatched, cached] = await Promise.all([
+          libraryTask,
+          progressTask,
+          watchedTask,
+          cachedTitlesTask,
+        ]);
+        if (!isCurrent()) return;
+        const known = new Map<string, Meta>();
+        for (const item of nextLibrary) known.set(item.id, item);
+        const watchedTitles = new Map(
+          nextWatched.map((item) => [item.contentId, item.title]),
+        );
+        // Only titles that could actually yield a card, newest first. A title
+        // with no metadata is dropped from the row, so this cap is really a
+        // cap on how much of it is shown.
+        const pending = continueWatchingCandidates(nextProgress, nextWatched).slice(0, 80);
+        const resolved = new Map<string, CachedTitle>();
+        const publish = () => {
+          if (!isCurrent()) return;
+          setRecentMetadata(
+            pending.flatMap(({ id }) => {
+              const entry = resolved.get(id) ?? cached.get(id);
+              return entry ? [entry.meta] : [];
+            }),
+          );
+        };
+        // A title fetched recently is used as it is; the rest are asked for
+        // again, a few at a time, with the row updating as they land rather
+        // than in batches that each wait for their slowest request.
+        let lastPublish = 0;
+        await runPool(pending, 8, async ({ id, type }) => {
+          const hit = cached.get(id);
+          if (hit && isFresh(hit)) {
+            resolved.set(id, hit);
+            return;
+          }
+          const existing = known.get(id);
+          let meta: Meta;
+          if (existing?.videos.length) meta = existing;
+          else {
+            const seed: Meta = {
+              id,
+              type,
+              name: watchedTitles.get(id) || existing?.name || hit?.meta.name || "Recently watched",
+              genres: [],
+              cast: [],
+              director: [],
+              writer: [],
+              trailers: [],
+              externalRatings: [],
+              videos: [],
+              manifestUrl: existing?.manifestUrl || hit?.meta.manifestUrl || "",
+              addonName: existing?.addonName || hit?.meta.addonName || "",
+            };
+            try {
+              meta = await resolveMeta(seed, installed);
+            } catch {
+              // Keep last time's details over a bare placeholder.
+              meta = hit?.meta ?? existing ?? seed;
+            }
+          }
+          if (!isCurrent()) return;
+          resolved.set(id, { meta, at: meta === hit?.meta ? hit.at : Date.now() });
+          const now = Date.now();
+          if (now - lastPublish > 400) {
+            lastPublish = now;
+            publish();
+          }
+        });
+        publish();
+        if (isCurrent())
+          void saveCachedTitles(
+            profileIndex,
+            pending.flatMap(({ id }) => {
+              const entry = resolved.get(id);
+              return entry ? [entry] : [];
+            }),
+          );
+      })().catch(() => undefined);
       const home = await loadHome(
         installed,
         (section) => {
@@ -1134,66 +1224,8 @@ export function App() {
       setLoading(false);
       setProfileStarting(false);
 
-      // Continue Watching needs all three, so it resolves last — by which
-      // point the catalogs are already on screen.
-      const [nextLibrary, nextProgress, nextWatched] = await Promise.all([
-        libraryTask,
-        progressTask,
-        watchedTask,
-      ]);
-      if (!isCurrent()) return;
-      const known = new Map<string, Meta>();
-      for (const item of [
-        ...home.sections.flatMap((section) => section.items),
-        ...nextLibrary,
-      ])
-        known.set(item.id, item);
-      const watchedTitles = new Map(
-        nextWatched.map((item) => [item.contentId, item.title]),
-      );
-      // Only titles that could actually yield a card, newest first.
-      const unique = continueWatchingCandidates(nextProgress, nextWatched);
-
-      // A title with no metadata is dropped from Continue Watching entirely,
-      // so this cap is really a cap on how much of the list is shown. Twenty
-      // was hiding rows for anyone with more in flight than that.
-      const RESOLVE_LIMIT = 80;
-      const RESOLVE_CONCURRENCY = 6;
-      const pending = unique.slice(0, RESOLVE_LIMIT);
-      const resolved: Meta[] = [];
-      // Batched rather than one Promise.all over the whole set: sixty parallel
-      // requests to a handful of addon hosts is how you get rate-limited.
-      for (let cursor = 0; cursor < pending.length; cursor += RESOLVE_CONCURRENCY) {
-        const batch = await Promise.all(
-          pending
-            .slice(cursor, cursor + RESOLVE_CONCURRENCY)
-            .map(async ({ id, type }) => {
-              const existing = known.get(id);
-              if (existing?.videos.length) return existing;
-              const seed: Meta = {
-                id,
-                type,
-                name:
-                  watchedTitles.get(id) || existing?.name || "Recently watched",
-                genres: [],
-                cast: [],
-                director: [],
-                writer: [],
-                trailers: [],
-                externalRatings: [],
-                videos: [],
-                manifestUrl: existing?.manifestUrl || "",
-                addonName: existing?.addonName || "",
-              };
-              return resolveMeta(seed, installed).catch(() => existing ?? seed);
-            }),
-        );
-        if (!isCurrent()) return;
-        resolved.push(...batch);
-        // Publish each batch so the row fills in rather than appearing whole
-        // at the end.
-        setRecentMetadata([...resolved]);
-      }
+      // Continue Watching resolves alongside the catalogs; see continueTask.
+      await continueTask;
       if (home.errors.length && isCurrent())
         setMessage(
           `${home.errors.length} addon request${home.errors.length === 1 ? "" : "s"} could not load in this browser.`,

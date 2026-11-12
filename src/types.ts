@@ -77,6 +77,8 @@ export type Video = {
   /** Which service the score came from, so the badge can be honest about it. */
   ratingSource?: "imdb" | "tmdb";
   available?: boolean;
+  /** This episode's season poster, where the addon puts it per episode. */
+  seasonPoster?: string;
 };
 export type PluginRow = {
   url: string;
@@ -163,6 +165,8 @@ export type Meta = {
   /** Stremio's posterShape: "poster" | "landscape" | "square". */
   posterShape?: string;
   logo?: string;
+  /** Season number to poster, from `app_extras`. */
+  seasonPosters?: Record<number, string>;
   description?: string;
   releaseInfo?: string;
   released?: string;

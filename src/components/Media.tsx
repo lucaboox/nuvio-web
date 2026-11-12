@@ -25,17 +25,71 @@ function PosterImage({ poster, id, name }: { poster?: string; id: string; name: 
   const candidates = useMemo(() => posterCandidates(poster, id), [poster, id]);
   const [attempt, setAttempt] = useState(0);
   useEffect(() => setAttempt(0), [candidates]);
+  const image = useRef<HTMLImageElement | null>(null);
   const src = candidates[attempt];
+  // A host that is slow rather than failing never fires onError, so a poster
+  // could sit blank for as long as the request hung. Once it is on screen it
+  // gets a few seconds before the next address is tried. Only when there is
+  // a next one: the last is left to finish however long it takes.
+  useEffect(() => {
+    const node = image.current;
+    if (!node || attempt >= candidates.length - 1) return;
+    return watchStall(node, () => setAttempt((current) => Math.max(current, attempt + 1)));
+  }, [attempt, candidates.length, src]);
   if (!src) return <span className="poster-fallback">{name.slice(0, 1)}</span>;
   return (
     <img
+      ref={image}
       key={src}
       src={src}
       alt=""
       loading="lazy"
+      decoding="async"
       onError={() => setAttempt((current) => current + 1)}
     />
   );
+}
+
+const STALL_MS = 8_000;
+const stallTimers = new Map<Element, number>();
+const stallHandlers = new Map<Element, () => void>();
+let stallObserver: IntersectionObserver | null = null;
+
+/**
+ * Calls `onStall` if `node` has been on screen for STALL_MS without loading.
+ * One observer for every poster rather than one each: a catalog grid holds
+ * hundreds of them.
+ */
+function watchStall(node: HTMLImageElement, onStall: () => void): () => void {
+  if (typeof IntersectionObserver === "undefined" || node.complete) return () => undefined;
+  stallObserver ??= new IntersectionObserver((entries) => {
+    for (const entry of entries) {
+      const target = entry.target as HTMLImageElement;
+      if (!entry.isIntersecting || target.complete) {
+        window.clearTimeout(stallTimers.get(target));
+        stallTimers.delete(target);
+        continue;
+      }
+      if (stallTimers.has(target)) continue;
+      stallTimers.set(
+        target,
+        window.setTimeout(() => {
+          stallTimers.delete(target);
+          if (!target.complete) stallHandlers.get(target)?.();
+        }, STALL_MS),
+      );
+    }
+  });
+  stallHandlers.set(node, onStall);
+  stallObserver.observe(node);
+  const stop = () => {
+    stallObserver?.unobserve(node);
+    window.clearTimeout(stallTimers.get(node));
+    stallTimers.delete(node);
+    stallHandlers.delete(node);
+  };
+  node.addEventListener("load", stop, { once: true });
+  return stop;
 }
 
 /**

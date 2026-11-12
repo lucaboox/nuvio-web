@@ -10186,3 +10186,65 @@ body.is-locked {
 .session-unavailable-alt:hover {
   color: #e8ebef;
 }
+
+/* Seasons as posters, when the addon sends them (AIOMetadata does). The
+   dropdown it replaces is hidden; the posters are tabs, reachable the same
+   way by keyboard and screen readers. */
+.season-poster-strip {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  padding: 2px 2px 10px;
+  margin: 4px 0 14px;
+  scrollbar-width: thin;
+}
+.season-poster-strip > button {
+  flex: 0 0 auto;
+  width: 104px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #c8d1db;
+  text-align: center;
+  font: inherit;
+  cursor: pointer;
+}
+.season-poster-image {
+  display: block;
+  aspect-ratio: 2 / 3;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #181c21;
+  border: 1px solid #ffffff1a;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+.season-poster-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.season-poster-strip > button:hover .season-poster-image {
+  transform: translateY(-2px);
+}
+.season-poster-strip > button.is-selected .season-poster-image {
+  border: 2px solid var(--accent);
+}
+.season-poster-strip > button > strong {
+  display: block;
+  margin-top: 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.season-poster-strip > button.is-selected > strong {
+  color: #f7f8fa;
+}
+.season-select-wrap.has-poster-strip {
+  display: none;
+}
+@media (max-width: 760px) {
+  .season-poster-strip > button {
+    width: 84px;
+  }
+}
